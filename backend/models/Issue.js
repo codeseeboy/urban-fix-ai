@@ -21,7 +21,20 @@ const issueSchema = mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: false, // Changed from true to false to support Municipal Page posts
+    },
+    municipalPage: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'MunicipalPage',
+    },
+    authorType: {
+        type: String,
+        enum: ['User', 'MunicipalPage'],
+        default: 'User',
+    },
+    officialUpdateType: {
+        type: String,
+        enum: ['Announcement', 'ProjectUpdate', 'Emergency', 'WorkCompletion', 'PublicNotice'],
     },
     title: {
         type: String,

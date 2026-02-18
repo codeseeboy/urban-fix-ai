@@ -86,16 +86,20 @@ export default function ProfileScreen({ navigation }: any) {
                 {/* Stats Grid */}
                 <View style={styles.statsGrid}>
                     <View style={styles.statItem}>
-                        <Text style={styles.statNum}>{user?.points || 0}</Text>
-                        <Text style={styles.statLabel}>Points</Text>
-                    </View>
-                    <View style={[styles.statItem, styles.statBorder]}>
                         <Text style={styles.statNum}>{user?.reportsCount || 0}</Text>
                         <Text style={styles.statLabel}>Reports</Text>
                     </View>
                     <View style={[styles.statItem, styles.statBorder]}>
                         <Text style={styles.statNum}>{user?.reportsResolved || 0}</Text>
                         <Text style={styles.statLabel}>Resolved</Text>
+                    </View>
+                    <View style={[styles.statItem, styles.statBorder]}>
+                        <Text style={styles.statNum}>{user?.followingCount || 0}</Text>
+                        <Text style={styles.statLabel}>Following</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statNum}>{user?.points || 0}</Text>
+                        <Text style={styles.statLabel}>Points</Text>
                     </View>
                 </View>
 
