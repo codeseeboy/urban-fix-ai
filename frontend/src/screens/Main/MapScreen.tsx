@@ -1,82 +1,505 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Dimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MapView, { Marker, UrlTile } from 'react-native-maps';
+import MapView, { Marker, Circle, Region } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { issuesAPI } from '../../services/api';
 import { colors, fonts, radius } from '../../theme/colors';
 
-const getColor = (s: string) => s === 'Critical' ? '#FF003C' : s === 'High' ? '#FF453A' : s === 'Medium' ? '#FFD60A' : '#30D158';
+const { width } = Dimensions.get('window');
+
+const SEVERITY_COLORS: Record<string, string> = {
+    Critical: '#FF003C',
+    High: '#FF6B35',
+    Medium: '#FFD60A',
+    Low: '#30D158',
+    Resolved: '#30D158',
+};
+
+const CATEGORIES = [
+    { id: 'all', icon: 'layers-outline', label: 'All' },
+    { id: 'roads', icon: 'car-outline', label: 'Roads' },
+    { id: 'lighting', icon: 'bulb-outline', label: 'Lights' },
+    { id: 'trash', icon: 'trash-outline', label: 'Trash' },
+    { id: 'water', icon: 'water-outline', label: 'Water' },
+    { id: 'parks', icon: 'leaf-outline', label: 'Parks' },
+];
+
+const STATUS_FILTERS = [
+    { id: 'all', label: 'All Status' },
+    { id: 'Submitted', label: 'Submitted' },
+    { id: 'InProgress', label: 'In Progress' },
+    { id: 'Resolved', label: 'Resolved' },
+];
 
 export default function MapScreen({ navigation }: any) {
     const insets = useSafeAreaInsets();
+    const mapRef = useRef<MapView>(null);
     const [issues, setIssues] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeCategory, setActiveCategory] = useState('all');
+    const [activeStatus, setActiveStatus] = useState('all');
+    const [showStatusFilter, setShowStatusFilter] = useState(false);
+    const [selectedIssue, setSelectedIssue] = useState<any>(null);
+    const [showHeatmap, setShowHeatmap] = useState(false);
+    const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [initialRegion, setInitialRegion] = useState<Region>({
+        latitude: 28.6139,
+        longitude: 77.209,
+        latitudeDelta: 0.04,
+        longitudeDelta: 0.04,
+    });
 
     useEffect(() => {
-        fetchIssues();
+        initMap();
     }, []);
 
+    const initMap = async () => {
+        // Get user location first
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status === 'granted') {
+                const loc = await Location.getCurrentPositionAsync({});
+                const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+                setUserLocation(coords);
+                setInitialRegion({ ...coords, latitudeDelta: 0.02, longitudeDelta: 0.02 });
+
+                // Seed demo issues near user's location (first time only)
+                try {
+                    await issuesAPI.seedNearby(coords.latitude, coords.longitude);
+                } catch (e) {
+                    console.log('Seed nearby skipped:', e);
+                }
+            }
+        } catch (e) {
+            console.log('Location error:', e);
+        }
+        // Then fetch issues
+        await fetchIssues();
+    };
+
     const fetchIssues = async () => {
+        setLoading(true);
         try {
             const { data } = await issuesAPI.getFeed();
             setIssues(data);
-        } catch (e) { console.log('Map error:', e); }
+        } catch (e) {
+            console.log('Map fetch error:', e);
+        }
+        setLoading(false);
+    };
+
+    const filteredIssues = issues.filter((i) => {
+        const catMatch = activeCategory === 'all' || i.category === activeCategory;
+        const statusMatch = activeStatus === 'all' || i.status === activeStatus;
+        return catMatch && statusMatch && i.location?.coordinates;
+    });
+
+    const handleLocateMe = async () => {
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission Denied', 'Location access is needed.');
+                return;
+            }
+            const loc = await Location.getCurrentPositionAsync({});
+            const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+            setUserLocation(coords);
+            mapRef.current?.animateToRegion({ ...coords, latitudeDelta: 0.01, longitudeDelta: 0.01 }, 800);
+        } catch (e) {
+            console.log('Location error:', e);
+        }
+    };
+
+    const getSeverityColor = (severity: string) => SEVERITY_COLORS[severity] || '#888';
+
+    const getCategoryIcon = (cat: string) => {
+        switch (cat) {
+            case 'roads': return 'car';
+            case 'lighting': return 'bulb';
+            case 'trash': return 'trash';
+            case 'water': return 'water';
+            case 'parks': return 'leaf';
+            default: return 'alert';
+        }
     };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
+            {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Issue Map</Text>
-                <Text style={styles.headerSub}>{issues.length} issues pinned</Text>
-            </View>
-
-            <MapView
-                style={styles.map}
-                initialRegion={{ latitude: 28.6139, longitude: 77.209, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
-            >
-                <UrlTile urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} flipY={false} />
-                {issues.filter(i => i.location?.coordinates).map((m) => (
-                    <Marker key={m._id}
-                        coordinate={{ latitude: m.location.coordinates[1], longitude: m.location.coordinates[0] }}
-                        title={m.title} description={`${m.aiSeverity} • ${m.status}`}
-                        onCalloutPress={() => navigation.navigate('IssueDetail', { issueId: m._id })}
+                <View>
+                    <Text style={styles.headerTitle}>🗺️ Civic Map</Text>
+                    <Text style={styles.headerSub}>
+                        {loading ? 'Loading...' : `${filteredIssues.length} issues pinned`}
+                    </Text>
+                </View>
+                <View style={styles.headerActions}>
+                    {/* Heatmap Toggle */}
+                    <TouchableOpacity
+                        style={[styles.headerBtn, showHeatmap && styles.headerBtnActive]}
+                        onPress={() => setShowHeatmap(!showHeatmap)}
                     >
-                        <View style={[styles.pin, { backgroundColor: getColor(m.aiSeverity) }]}>
-                            <Ionicons name="alert" size={14} color="#FFF" />
-                        </View>
-                    </Marker>
-                ))}
-            </MapView>
-
-            <View style={styles.legend}>
-                {['Critical', 'High', 'Medium', 'Low'].map((s) => (
-                    <View key={s} style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: getColor(s) }]} />
-                        <Text style={styles.legendText}>{s}</Text>
-                    </View>
-                ))}
+                        <Ionicons name="flame-outline" size={16} color={showHeatmap ? '#FFF' : colors.textSecondary} />
+                    </TouchableOpacity>
+                    {/* Status Filter */}
+                    <TouchableOpacity
+                        style={[styles.headerBtn, showStatusFilter && styles.headerBtnActive]}
+                        onPress={() => setShowStatusFilter(!showStatusFilter)}
+                    >
+                        <Ionicons name="funnel-outline" size={16} color={showStatusFilter ? '#FFF' : colors.textSecondary} />
+                    </TouchableOpacity>
+                </View>
             </View>
+
+            {/* Category Filter Bar */}
+            <View style={styles.filterBar}>
+                <FlatList
+                    horizontal
+                    data={CATEGORIES}
+                    keyExtractor={(c) => c.id}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingHorizontal: 12, gap: 6 }}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity
+                            style={[styles.filterChip, activeCategory === item.id && styles.filterChipActive]}
+                            onPress={() => setActiveCategory(item.id)}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons
+                                name={item.icon as any}
+                                size={14}
+                                color={activeCategory === item.id ? '#FFF' : colors.textSecondary}
+                            />
+                            <Text style={[styles.filterText, activeCategory === item.id && styles.filterTextActive]}>
+                                {item.label}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                />
+            </View>
+
+            {/* Status Filter Dropdown */}
+            {showStatusFilter && (
+                <View style={styles.statusDropdown}>
+                    {STATUS_FILTERS.map((s) => (
+                        <TouchableOpacity
+                            key={s.id}
+                            style={[styles.statusItem, activeStatus === s.id && styles.statusItemActive]}
+                            onPress={() => { setActiveStatus(s.id); setShowStatusFilter(false); }}
+                        >
+                            <Text style={[styles.statusItemText, activeStatus === s.id && { color: '#FFF' }]}>{s.label}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
+
+            {/* Map */}
+            <View style={styles.mapContainer}>
+                {loading ? (
+                    <View style={styles.loadingOverlay}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={styles.loadingText}>Loading civic data...</Text>
+                    </View>
+                ) : (
+                    <MapView
+                        ref={mapRef}
+                        style={styles.map}
+                        initialRegion={initialRegion}
+                        showsUserLocation={true}
+                        showsMyLocationButton={false}
+                        showsCompass={false}
+                        userInterfaceStyle="dark"
+                        onPress={() => setSelectedIssue(null)}
+                    >
+                        {/* Heatmap Density Circles */}
+                        {showHeatmap && filteredIssues.map((issue) => (
+                            <Circle
+                                key={`heat-${issue._id}`}
+                                center={{
+                                    latitude: issue.location.coordinates[1],
+                                    longitude: issue.location.coordinates[0],
+                                }}
+                                radius={
+                                    issue.aiSeverity === 'Critical' ? 600 :
+                                        issue.aiSeverity === 'High' ? 450 :
+                                            issue.aiSeverity === 'Medium' ? 300 : 200
+                                }
+                                fillColor={
+                                    issue.aiSeverity === 'Critical' ? 'rgba(255,0,60,0.20)' :
+                                        issue.aiSeverity === 'High' ? 'rgba(255,107,53,0.18)' :
+                                            issue.aiSeverity === 'Medium' ? 'rgba(255,214,10,0.15)' :
+                                                'rgba(48,209,88,0.12)'
+                                }
+                                strokeColor={
+                                    issue.aiSeverity === 'Critical' ? 'rgba(255,0,60,0.35)' :
+                                        issue.aiSeverity === 'High' ? 'rgba(255,107,53,0.30)' :
+                                            issue.aiSeverity === 'Medium' ? 'rgba(255,214,10,0.25)' :
+                                                'rgba(48,209,88,0.20)'
+                                }
+                                strokeWidth={1}
+                            />
+                        ))}
+
+                        {/* Issue Markers */}
+                        {filteredIssues.map((issue) => (
+                            <Marker
+                                key={issue._id}
+                                coordinate={{
+                                    latitude: issue.location.coordinates[1],
+                                    longitude: issue.location.coordinates[0],
+                                }}
+                                onPress={() => setSelectedIssue(issue)}
+                            >
+                                <View style={[styles.markerOuter, { borderColor: getSeverityColor(issue.aiSeverity) }]}>
+                                    <View style={[styles.markerInner, { backgroundColor: getSeverityColor(issue.aiSeverity) }]}>
+                                        <Ionicons name={getCategoryIcon(issue.category) as any} size={14} color="#FFF" />
+                                    </View>
+                                    {issue.emergency && <View style={styles.emergencyDot} />}
+                                </View>
+                            </Marker>
+                        ))}
+                    </MapView>
+                )}
+
+                {/* GPS Locate Button */}
+                <TouchableOpacity style={styles.locateBtn} onPress={handleLocateMe} activeOpacity={0.8}>
+                    <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.locateBtnGrad}>
+                        <Ionicons name="navigate" size={20} color="#FFF" />
+                    </LinearGradient>
+                </TouchableOpacity>
+
+                {/* Refresh Button */}
+                <TouchableOpacity style={styles.refreshBtn} onPress={fetchIssues} activeOpacity={0.8}>
+                    <View style={styles.refreshBtnInner}>
+                        <Ionicons name="refresh" size={18} color={colors.text} />
+                    </View>
+                </TouchableOpacity>
+
+                {/* Legend */}
+                <View style={styles.legend}>
+                    {Object.entries(SEVERITY_COLORS).filter(([k]) => k !== 'Resolved').map(([label, color]) => (
+                        <View key={label} style={styles.legendItem}>
+                            <View style={[styles.legendDot, { backgroundColor: color }]} />
+                            <Text style={styles.legendText}>{label}</Text>
+                        </View>
+                    ))}
+                </View>
+
+                {/* Issue Count Badge */}
+                <View style={styles.countBadge}>
+                    <Text style={styles.countText}>{filteredIssues.length}</Text>
+                    <Text style={styles.countLabel}>Issues</Text>
+                </View>
+            </View>
+
+            {/* Selected Issue Card (Bottom Sheet Preview) */}
+            {selectedIssue && (
+                <View style={styles.issueCardContainer}>
+                    <TouchableOpacity
+                        style={styles.issueCard}
+                        activeOpacity={0.95}
+                        onPress={() => navigation.navigate('IssueDetail', { issueId: selectedIssue._id })}
+                    >
+                        {/* Severity Glow Bar */}
+                        <View style={[styles.cardGlow, { backgroundColor: getSeverityColor(selectedIssue.aiSeverity) }]} />
+
+                        <View style={styles.cardContent}>
+                            {/* Image */}
+                            {selectedIssue.image && (
+                                <Image source={{ uri: selectedIssue.image }} style={styles.cardImage} />
+                            )}
+
+                            <View style={styles.cardInfo}>
+                                <View style={styles.cardRow}>
+                                    <View style={[styles.sevChip, { backgroundColor: getSeverityColor(selectedIssue.aiSeverity) + '20' }]}>
+                                        <Text style={[styles.sevChipText, { color: getSeverityColor(selectedIssue.aiSeverity) }]}>
+                                            {selectedIssue.aiSeverity}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.statusChip}>
+                                        <Text style={styles.statusChipText}>{selectedIssue.status}</Text>
+                                    </View>
+                                    {selectedIssue.emergency && (
+                                        <View style={styles.emergencyTag}>
+                                            <Ionicons name="warning" size={10} color="#FF003C" />
+                                        </View>
+                                    )}
+                                </View>
+
+                                <Text style={styles.cardTitle} numberOfLines={2}>{selectedIssue.title}</Text>
+
+                                <View style={styles.cardMeta}>
+                                    <Ionicons name="location-outline" size={11} color={colors.textMuted} />
+                                    <Text style={styles.cardAddr} numberOfLines={1}>
+                                        {selectedIssue.location?.address || 'Unknown'}
+                                    </Text>
+                                </View>
+
+                                <View style={styles.cardStats}>
+                                    <View style={styles.cardStat}>
+                                        <Ionicons name="arrow-up-circle" size={13} color={colors.primary} />
+                                        <Text style={styles.cardStatText}>{selectedIssue.upvotes?.length || 0}</Text>
+                                    </View>
+                                    <View style={styles.cardStat}>
+                                        <Ionicons name="chatbubble-outline" size={11} color={colors.textMuted} />
+                                        <Text style={styles.cardStatText}>{selectedIssue.commentCount || 0}</Text>
+                                    </View>
+                                    <Text style={styles.cardCtaArrow}>View Details →</Text>
+                                </View>
+                            </View>
+
+                            {/* Close */}
+                            <TouchableOpacity style={styles.cardClose} onPress={() => setSelectedIssue(null)}>
+                                <Ionicons name="close" size={16} color={colors.textMuted} />
+                            </TouchableOpacity>
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-    headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 24, color: colors.text },
-    headerSub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.textSecondary, marginTop: 2 },
-    map: { flex: 1 },
-    pin: {
-        width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center',
-        borderWidth: 2, borderColor: '#FFF', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 4, elevation: 4,
+
+    // Header
+    header: {
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        paddingHorizontal: 16, paddingVertical: 8,
+        borderBottomWidth: 1, borderBottomColor: colors.border,
     },
+    headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, color: colors.text },
+    headerSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textSecondary, marginTop: 1 },
+    headerActions: { flexDirection: 'row', gap: 8 },
+    headerBtn: {
+        width: 36, height: 36, borderRadius: 18,
+        justifyContent: 'center', alignItems: 'center',
+        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    },
+    headerBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+
+    // Category Filter
+    filterBar: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
+    filterChip: {
+        flexDirection: 'row', alignItems: 'center', gap: 4,
+        paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14,
+        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    },
+    filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    filterText: { fontFamily: 'Inter_500Medium', color: colors.textSecondary, fontSize: 11 },
+    filterTextActive: { color: '#FFF' },
+
+    // Status Dropdown
+    statusDropdown: {
+        position: 'absolute', top: 110, right: 16, zIndex: 100,
+        backgroundColor: colors.surface, borderRadius: radius.lg,
+        borderWidth: 1, borderColor: colors.border, padding: 4,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 8,
+    },
+    statusItem: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.md },
+    statusItemActive: { backgroundColor: colors.primary },
+    statusItemText: { fontFamily: 'Inter_500Medium', color: colors.text, fontSize: 13 },
+
+    // Map
+    mapContainer: { flex: 1, position: 'relative' },
+    map: { flex: 1 },
+    loadingOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+    loadingText: { fontFamily: 'Inter_500Medium', color: colors.textMuted, fontSize: 13, marginTop: 12 },
+
+    // Markers
+    markerOuter: {
+        width: 34, height: 34, borderRadius: 17, borderWidth: 2.5,
+        justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)',
+    },
+    markerInner: {
+        width: 24, height: 24, borderRadius: 12,
+        justifyContent: 'center', alignItems: 'center',
+    },
+    emergencyDot: {
+        position: 'absolute', top: -3, right: -3,
+        width: 10, height: 10, borderRadius: 5,
+        backgroundColor: '#FF003C', borderWidth: 2, borderColor: '#000',
+    },
+
+    // GPS Locate
+    locateBtn: { position: 'absolute', bottom: 80, right: 16 },
+    locateBtnGrad: {
+        width: 46, height: 46, borderRadius: 23,
+        justifyContent: 'center', alignItems: 'center',
+        shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
+    },
+
+    // Refresh
+    refreshBtn: { position: 'absolute', bottom: 80, left: 16 },
+    refreshBtnInner: {
+        width: 42, height: 42, borderRadius: 21,
+        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+        justifyContent: 'center', alignItems: 'center',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
+    },
+
+    // Legend
     legend: {
-        position: 'absolute', bottom: 90, left: 16,
-        flexDirection: 'row', gap: 12,
-        backgroundColor: 'rgba(10,10,15,0.9)', borderRadius: radius.md, padding: 10,
+        position: 'absolute', bottom: 12, left: 12, right: 12,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
+        backgroundColor: 'rgba(10,10,15,0.88)',
+        borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 8,
         borderWidth: 1, borderColor: colors.border,
     },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     legendDot: { width: 8, height: 8, borderRadius: 4 },
-    legendText: { fontFamily: 'Inter_500Medium', color: colors.text, fontSize: 11 },
+    legendText: { fontFamily: 'Inter_500Medium', color: '#CCC', fontSize: 10 },
+
+    // Count Badge
+    countBadge: {
+        position: 'absolute', top: 12, right: 12,
+        backgroundColor: 'rgba(10,10,15,0.88)', borderRadius: radius.md,
+        paddingHorizontal: 10, paddingVertical: 4, alignItems: 'center',
+        borderWidth: 1, borderColor: colors.border,
+    },
+    countText: { fontFamily: 'Inter_800ExtraBold', color: colors.primary, fontSize: 16 },
+    countLabel: { fontFamily: 'Inter_400Regular', color: colors.textMuted, fontSize: 9 },
+
+    // Issue Card Container — sits ABOVE tab bar
+    issueCardContainer: {
+        position: 'absolute', bottom: 70, left: 0, right: 0,
+        paddingHorizontal: 12, zIndex: 200,
+    },
+    issueCard: {
+        backgroundColor: colors.surface, borderRadius: radius.xl,
+        borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+        shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 10,
+    },
+    cardGlow: { height: 3, width: '100%' },
+    cardContent: { flexDirection: 'row', padding: 12, gap: 10 },
+    cardImage: { width: 64, height: 64, borderRadius: radius.md },
+    cardInfo: { flex: 1 },
+    cardRow: { flexDirection: 'row', gap: 5, marginBottom: 3 },
+    sevChip: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+    sevChipText: { fontFamily: 'Inter_700Bold', fontSize: 9, textTransform: 'uppercase' },
+    statusChip: {
+        paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+        backgroundColor: colors.primary + '15',
+    },
+    statusChipText: { fontFamily: 'Inter_500Medium', fontSize: 9, color: colors.primary },
+    emergencyTag: {
+        paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6,
+        backgroundColor: '#FF003C15',
+    },
+    cardTitle: { fontFamily: 'Inter_600SemiBold', color: colors.text, fontSize: 13, lineHeight: 17 },
+    cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
+    cardAddr: { fontFamily: 'Inter_400Regular', color: colors.textMuted, fontSize: 10, flex: 1 },
+    cardStats: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+    cardStat: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    cardStatText: { fontFamily: 'Inter_500Medium', color: colors.textSecondary, fontSize: 11 },
+    cardCtaArrow: { fontFamily: 'Inter_600SemiBold', color: colors.primary, fontSize: 11, marginLeft: 'auto' },
+    cardClose: {
+        position: 'absolute', top: 6, right: 6,
+        width: 24, height: 24, borderRadius: 12,
+        backgroundColor: colors.surfaceLight, justifyContent: 'center', alignItems: 'center',
+    },
 });

@@ -77,7 +77,7 @@ const issues = [
     {
         _id: 'issue_001', user: 'user_001', title: 'Large Pothole on Main Street — Risk of Accident',
         description: 'A massive pothole has developed on Main Street near the bus stop. Multiple vehicles have been damaged. This is causing major traffic issues and is a serious safety hazard.',
-        image: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600',
+        image: '/public/images/pothole.jpg',
         video: null,
         location: { type: 'Point', coordinates: [77.209, 28.6139], address: '101 Main St, Downtown' },
         departmentTag: 'Roads', status: 'Acknowledged', category: 'roads',
@@ -93,7 +93,7 @@ const issues = [
     {
         _id: 'issue_002', user: 'user_002', title: 'Street Light Out Near Park — Unsafe at Night',
         description: 'The street light at the corner of Park Avenue and 5th Street has been out for 2 weeks. The area becomes very dark and unsafe after 7pm. Several residents have complained.',
-        image: 'https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=600',
+        image: '/public/images/streetlight.webp',
         location: { type: 'Point', coordinates: [77.219, 28.6229], address: '45 Park Avenue' },
         departmentTag: 'Electricity', status: 'Submitted', category: 'lighting',
         priorityScore: 32, aiSeverity: 'Medium', aiTags: ['street-light', 'safety', 'electrical'],
@@ -107,7 +107,7 @@ const issues = [
     {
         _id: 'issue_003', user: 'user_003', title: 'Garbage Pileup Near School — Health Hazard',
         description: 'Garbage has been accumulating for over a week near Central Public School. The stench is unbearable and it poses a health risk to school children. rats and stray dogs are seen regularly.',
-        image: 'https://images.unsplash.com/photo-1530587198077-5e1fd509533b?w=600',
+        image: '/public/images/garbage.avif',
         location: { type: 'Point', coordinates: [77.225, 28.6100], address: 'Central Public School' },
         departmentTag: 'Sanitation', status: 'InProgress', category: 'trash',
         priorityScore: 96, aiSeverity: 'Critical', aiTags: ['garbage', 'health-hazard', 'school-zone'],
@@ -123,14 +123,14 @@ const issues = [
     {
         _id: 'issue_004', user: 'user_001', title: 'Broken Footpath — Senior Citizens Struggling',
         description: 'The footpath along River Walk has several broken tiles causing difficulty for senior citizens and wheelchair users.',
-        image: 'https://images.unsplash.com/photo-1567789884554-0b844b597180?w=600',
+        image: '/public/images/brokenfootpath.jpg',
         location: { type: 'Point', coordinates: [77.200, 28.6180], address: '32 River Walk' },
         departmentTag: 'Public Works', status: 'Resolved', category: 'roads',
         priorityScore: 20, aiSeverity: 'Low', aiTags: ['footpath', 'accessibility'],
         upvotes: ['user_002'], downvotes: [], followers: [], commentCount: 2,
         assignedTo: 'worker_001', resolvedBy: 'worker_001',
         resolutionProof: {
-            afterImage: 'https://images.unsplash.com/photo-1567789884554-0b844b597180?w=600',
+            afterImage: '/public/images/brokenfootpath.jpg',
             workerRemarks: 'Broken tiles replaced. Footpath leveled and verified for elderly access.',
             resolvedAt: '2025-12-01T16:00:00Z',
             resolvedBy: 'worker_001'
@@ -146,7 +146,7 @@ const issues = [
     {
         _id: 'issue_005', user: 'user_002', title: 'Water Pipe Burst on MG Road',
         description: 'A major water pipe has burst on MG Road causing water logging and traffic disruption. Water is being wasted at an alarming rate.',
-        image: 'https://images.unsplash.com/photo-1504297050568-910d24c426d3?w=600',
+        image: '/public/images/burst-pipe.jpg',
         location: { type: 'Point', coordinates: [77.215, 28.620], address: 'MG Road, Sector 5' },
         departmentTag: 'Water', status: 'Submitted', category: 'water',
         priorityScore: 78, aiSeverity: 'Critical', aiTags: ['water-pipe', 'waterlogging', 'infrastructure'],

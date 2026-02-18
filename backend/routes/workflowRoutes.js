@@ -89,7 +89,7 @@ router.put('/:id/worker-update', protect, fieldWorker, (req, res) => {
     if (status === 'Resolved') {
         issue.resolvedBy = req.user._id;
         issue.resolutionProof = {
-            afterImage: proofImage || 'https://images.unsplash.com/photo-1567789884554-0b844b597180?w=600',
+            afterImage: proofImage || '/public/images/brokenfootpath.jpg',
             workerRemarks: comment || 'Work completed and verified by site visit.',
             resolvedAt: new Date().toISOString(),
             resolvedBy: req.user._id
