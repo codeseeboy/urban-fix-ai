@@ -3,8 +3,18 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const store = require('../data/store');
 
+// Helper: resolve image path to full URL
+const PORT = process.env.PORT || 5000;
+function resolveImageUrl(path, req) {
+    if (!path) return null;
+    if (path.startsWith('http')) return path; // already absolute
+    // Build full URL from request host or fallback
+    const host = req ? `${req.protocol}://${req.get('host')}` : `http://localhost:${PORT}`;
+    return `${host}${path}`;
+}
+
 // Helper: enrich issue with user data
-function enrichIssue(issue) {
+function enrichIssue(issue, req) {
     let author;
     if (issue.authorType === 'MunicipalPage') {
         const page = store.municipalPages.find(p => p._id === issue.municipalPage);
@@ -18,6 +28,7 @@ function enrichIssue(issue) {
     const comments = store.comments.filter(c => c.issueId === issue._id);
     return {
         ...issue,
+        image: resolveImageUrl(issue.image, req),
         user: author,
         timeAgo,
         commentCount: comments.length,
@@ -61,7 +72,84 @@ router.get('/', (req, res) => {
     }
 
     result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    res.json(result.map(enrichIssue));
+    res.json(result.map(i => enrichIssue(i, req)));
+});
+
+// POST /api/issues/seed-nearby — Generate demo issues near user location
+const seededLocations = new Set(); // track seeded areas
+router.post('/seed-nearby', (req, res) => {
+    const { latitude, longitude } = req.body;
+    if (!latitude || !longitude) return res.status(400).json({ message: 'latitude & longitude required' });
+
+    // Prevent duplicate seeding for same rough area (round to 2 decimals)
+    const areaKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+    if (seededLocations.has(areaKey)) {
+        return res.json({ message: 'Area already seeded', count: 0 });
+    }
+    seededLocations.add(areaKey);
+
+    const NEARBY_ISSUES = [
+        { title: 'Pothole on nearby road — Risk of accident', desc: 'A deep pothole has formed on the main road causing vehicles to swerve dangerously. Multiple commuters have reported near-misses.', cat: 'roads', sev: 'High', dept: 'Roads', img: '/public/images/pothole.jpg' },
+        { title: 'Streetlight not working — Dark zone at night', desc: 'The streetlight near the junction has been non-functional for over a week. Residents feel unsafe walking after dark.', cat: 'lighting', sev: 'Medium', dept: 'Electricity', img: '/public/images/streetlight.webp' },
+        { title: 'Garbage dump overflowing — Stench & flies', desc: 'The community garbage bin has not been cleared for 5 days. Overflowing waste is attracting stray animals and creating a health hazard.', cat: 'trash', sev: 'Critical', dept: 'Sanitation', img: '/public/images/garbage.avif' },
+        { title: 'Water pipe leaking — Wastage on street', desc: 'A major water pipe is leaking continuously near the residential block. Significant water wastage and road damage.', cat: 'water', sev: 'High', dept: 'Water', img: '/public/images/burst-pipe.jpg' },
+        { title: 'Broken park bench — Unsafe for elderly', desc: 'The wooden bench in the park has broken slats exposing nails. Senior citizens frequently use this area and it poses injury risk.', cat: 'parks', sev: 'Low', dept: 'Public Works', img: '/public/images/brokenfootpath.jpg' },
+        { title: 'Open manhole — Extreme danger to pedestrians', desc: 'An uncovered manhole on the footpath is an extreme hazard, especially at night when visibility is poor. Immediate action needed.', cat: 'roads', sev: 'Critical', dept: 'Roads', emergency: true, img: '/public/images/pothole.jpg' },
+    ];
+
+    const statuses = ['Submitted', 'Acknowledged', 'InProgress', 'Submitted', 'Submitted', 'Submitted'];
+    const created = [];
+
+    NEARBY_ISSUES.forEach((tmpl, i) => {
+        // Scatter within ~2km radius
+        const offLat = (Math.random() - 0.5) * 0.02;
+        const offLng = (Math.random() - 0.5) * 0.02;
+        const issue = {
+            _id: store.generateId('issue'),
+            user: 'user_001',
+            title: tmpl.title,
+            description: tmpl.desc,
+            image: tmpl.img,
+            video: null,
+            location: {
+                type: 'Point',
+                coordinates: [longitude + offLng, latitude + offLat],
+                address: `Near your location (${(latitude + offLat).toFixed(4)}, ${(longitude + offLng).toFixed(4)})`,
+            },
+            departmentTag: tmpl.dept,
+            status: statuses[i],
+            category: tmpl.cat,
+            priorityScore: Math.floor(Math.random() * 80) + 20,
+            aiSeverity: tmpl.sev,
+            aiTags: [tmpl.cat, 'nearby'],
+            upvotes: ['user_001'], downvotes: [], followers: [], commentCount: Math.floor(Math.random() * 15),
+            statusTimeline: [{ status: 'Submitted', timestamp: new Date().toISOString(), comment: 'Issue reported by citizen' }],
+            assignedTo: null, resolvedBy: null, resolutionProof: null,
+            anonymous: false, emergency: tmpl.emergency || false,
+            createdAt: new Date(Date.now() - Math.random() * 7 * 86400000).toISOString(),
+        };
+        store.issues.push(issue);
+        created.push(issue._id);
+    });
+
+    res.json({ message: `Seeded ${created.length} issues near your location`, count: created.length, ids: created });
+});
+
+// GET /api/issues/geojson — GeoJSON FeatureCollection for map
+router.get('/geojson', (req, res) => {
+    const features = store.issues
+        .filter(i => i.location?.coordinates)
+        .map(i => ({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: i.location.coordinates },
+            properties: {
+                id: i._id, title: i.title, severity: i.aiSeverity,
+                status: i.status, category: i.category,
+                upvotes: i.upvotes?.length || 0, emergency: i.emergency || false,
+                address: i.location.address, image: i.image,
+            },
+        }));
+    res.json({ type: 'FeatureCollection', features });
 });
 
 // GET /api/issues/:id — Single issue
@@ -76,7 +164,7 @@ router.get('/:id', (req, res) => {
             return { ...c, user: u ? { _id: u._id, name: u.name, role: u.role } : { name: 'Unknown' }, timeAgo: getTimeAgo(c.createdAt) };
         });
 
-    res.json({ ...enrichIssue(issue), comments });
+    res.json({ ...enrichIssue(issue, req), comments });
 });
 
 // POST /api/issues — Create new issue
@@ -93,7 +181,7 @@ router.post('/', protect, (req, res) => {
         _id: store.generateId('issue'),
         user: anonymous ? 'anonymous' : req.user._id,
         title, description: description || '',
-        image: image || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600',
+        image: image || '/public/images/pothole.jpg',
         video: video || null,
         location: location || { type: 'Point', coordinates: [77.209, 28.614], address: 'Unknown' },
         departmentTag: deptMap[category] || 'General',
@@ -137,7 +225,7 @@ router.post('/', protect, (req, res) => {
         });
     }
 
-    res.status(201).json(enrichIssue(issue));
+    res.status(201).json(enrichIssue(issue, req));
 });
 
 // PUT /api/issues/:id/upvote — Toggle upvote
