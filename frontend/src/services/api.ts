@@ -134,6 +134,8 @@ export const issuesAPI = {
     api.get(`/issues/${id}/comments`),
   addComment: (id: string, text: string) =>
     api.post(`/issues/${id}/comments`, { text }),
+  seedNearby: (latitude: number, longitude: number) =>
+    api.post('/issues/seed-nearby', { latitude, longitude }),
 };
 
 // ── WORKFLOWS (Admin) ──
