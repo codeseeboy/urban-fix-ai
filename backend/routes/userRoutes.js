@@ -11,6 +11,8 @@ router.get('/profile', protect, (req, res) => {
     const userIssues = store.issues.filter(i => i.user === user._id);
     const resolvedCount = userIssues.filter(i => i.status === 'Resolved').length;
 
+    const followingCount = store.follows.filter(f => f.followerId === user._id).length;
+
     res.json({
         _id: user._id, name: user.name, email: user.email, role: user.role,
         points: user.points, badges: user.badges,
@@ -19,6 +21,8 @@ router.get('/profile', protect, (req, res) => {
         levelInfo: store.getLevelInfo(user.points),
         impactScore: user.impactScore || Math.min(100, Math.floor((user.points / 50))),
         region: user.region, avatar: user.avatar,
+        followingCount,
+        followersCount: 0, // Future scope: User-to-User following
     });
 });
 

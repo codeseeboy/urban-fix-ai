@@ -7,10 +7,12 @@ import { useAuth } from '../../context/AuthContext';
 import { issuesAPI, gamificationAPI } from '../../services/api';
 import logger from '../../utils/logger';
 import { colors, fonts, radius } from '../../theme/colors';
+import SuggestedFollows from '../../components/Municipal/SuggestedFollows'; // New Import
 
 const FILTERS = [
     { id: 'all', icon: 'grid-outline', label: 'All' },
     { id: 'trending', icon: 'trending-up-outline', label: 'Trending' },
+    { id: 'following', icon: 'people-outline', label: 'Following' },
     { id: 'high_priority', icon: 'alert-circle-outline', label: 'Critical' },
     { id: 'resolved', icon: 'checkmark-circle-outline', label: 'Resolved' },
     { id: 'my_posts', icon: 'person-outline', label: 'My Posts' },
@@ -86,82 +88,139 @@ export default function HomeFeed({ navigation }: any) {
 
     const getSeverityColor = (s: string) => s === 'Critical' ? '#FF003C' : s === 'High' ? '#FF453A' : s === 'Medium' ? '#FFD60A' : '#30D158';
 
-    const renderIssueCard = ({ item, index }: any) => (
-        <TouchableOpacity style={styles.card} activeOpacity={0.85}
-            onPress={() => navigation.navigate('IssueDetail', { issueId: item._id })}>
-            {/* Severity glow line */}
-            <View style={[styles.glowLine, { backgroundColor: getSeverityColor(item.aiSeverity) }]} />
+    const renderIssueCard = ({ item }: any) => {
+        const isMunicipal = item.authorType === 'MunicipalPage';
 
-            {/* Header */}
-            <View style={styles.cardHeader}>
-                <View style={styles.cardUser}>
-                    <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.avatar}>
-                        <Text style={styles.avatarText}>{(item.user?.name || 'A')[0]}</Text>
-                    </LinearGradient>
-                    <View>
-                        <Text style={styles.userName}>{item.user?.name || 'Anonymous'}</Text>
-                        <Text style={styles.timeText}>{item.timeAgo} • {item.location?.address || 'Unknown'}</Text>
-                    </View>
-                </View>
-                <View style={[styles.sevBadge, { backgroundColor: getSeverityColor(item.aiSeverity) + '20' }]}>
-                    <Text style={[styles.sevText, { color: getSeverityColor(item.aiSeverity) }]}>{item.aiSeverity}</Text>
-                </View>
-            </View>
+        return (
+            <TouchableOpacity style={[styles.card, isMunicipal && styles.municipalCard]} activeOpacity={0.9}
+                onPress={() => isMunicipal ? navigation.navigate('MunicipalProfile', { pageId: item.municipalPage }) : navigation.navigate('IssueDetail', { issueId: item._id })}>
 
-            {/* Title */}
-            <Text style={styles.cardTitle}>{item.title}</Text>
+                {/* Severity glow line - Only for user issues */}
+                {!isMunicipal && <View style={[styles.glowLine, { backgroundColor: getSeverityColor(item.aiSeverity) }]} />}
+                {isMunicipal && <View style={[styles.glowLine, { backgroundColor: '#0055CC' }]} />}
 
-            {/* Image */}
-            {item.image && (
-                <View style={styles.imageWrap}>
-                    <Image source={{ uri: item.image }} style={styles.cardImage} />
-                    <View style={styles.imgOverlay}>
-                        <View style={styles.deptTag}>
-                            <Text style={styles.deptText}>{item.departmentTag}</Text>
+                {/* Header */}
+                <View style={styles.cardHeader}>
+                    <View style={styles.cardUser}>
+                        {isMunicipal ? (
+                            <Image source={{ uri: item.user?.avatar || 'https://via.placeholder.com/40' }} style={styles.avatar} />
+                        ) : (
+                            <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.avatar}>
+                                <Text style={styles.avatarText}>{(item.user?.name || 'A')[0]}</Text>
+                            </LinearGradient>
+                        )}
+
+                        <View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Text style={styles.userName}>{item.user?.name || 'Anonymous'}</Text>
+                                {isMunicipal && <Ionicons name="checkmark-circle" size={14} color={colors.primary} />}
+                            </View>
+                            <Text style={styles.timeText}>
+                                {isMunicipal ? 'Official Update' : item.timeAgo} • {item.location?.address || 'Unknown'}
+                            </Text>
                         </View>
                     </View>
-                </View>
-            )}
 
-            {/* Status + Emergency */}
-            <View style={styles.statusRow}>
-                <View style={[styles.statusBadge, { backgroundColor: item.status === 'Resolved' ? colors.success + '15' : item.status === 'InProgress' ? colors.primary + '15' : colors.warning + '15' }]}>
-                    <Ionicons name={item.status === 'Resolved' ? 'checkmark-circle' : item.status === 'InProgress' ? 'sync' : 'time'} size={12}
-                        color={item.status === 'Resolved' ? colors.success : item.status === 'InProgress' ? colors.primary : colors.warning} />
-                    <Text style={[styles.statusText, { color: item.status === 'Resolved' ? colors.success : item.status === 'InProgress' ? colors.primary : colors.warning }]}>
-                        {item.status === 'InProgress' ? 'In Progress' : item.status}
-                    </Text>
+                    {!isMunicipal ? (
+                        <View style={[styles.sevBadge, { backgroundColor: getSeverityColor(item.aiSeverity) + '20' }]}>
+                            <Text style={[styles.sevText, { color: getSeverityColor(item.aiSeverity) }]}>{item.aiSeverity}</Text>
+                        </View>
+                    ) : (
+                        <View style={[styles.sevBadge, { backgroundColor: '#0055CC20' }]}>
+                            <Text style={[styles.sevText, { color: '#0055CC' }]}>{item.officialUpdateType || 'UPDATE'}</Text>
+                        </View>
+                    )}
                 </View>
-                {item.emergency && (
-                    <View style={styles.emergencyBadge}>
-                        <Ionicons name="warning" size={11} color="#FF003C" />
-                        <Text style={styles.emergencyText}>EMERGENCY</Text>
+
+                {/* Title */}
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                {/* Description for Official Updates */}
+                {isMunicipal && item.description && (
+                    <Text style={styles.cardDesc} numberOfLines={3}>{item.description}</Text>
+                )}
+
+                {/* Image */}
+                {item.image && (
+                    <View style={styles.imageWrap}>
+                        <Image source={{ uri: item.image }} style={styles.cardImage} />
+                        {!isMunicipal && (
+                            <View style={styles.imgOverlay}>
+                                <View style={styles.deptTag}>
+                                    <Text style={styles.deptText}>{item.departmentTag}</Text>
+                                </View>
+                            </View>
+                        )}
                     </View>
                 )}
-            </View>
 
-            {/* Actions */}
-            <View style={styles.actionsRow}>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => handleUpvote(item._id)}>
-                    <Ionicons name={item.upvotes?.includes(user?._id) ? 'arrow-up-circle' : 'arrow-up-circle-outline'}
-                        size={20} color={item.upvotes?.includes(user?._id) ? colors.primary : colors.textSecondary} />
-                    <Text style={[styles.actionText, item.upvotes?.includes(user?._id) && { color: colors.primary }]}>{item.upvotes?.length || 0}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => handleDownvote(item._id)}>
-                    <Ionicons name={(item.downvotes || []).includes(user?._id) ? 'arrow-down-circle' : 'arrow-down-circle-outline'}
-                        size={20} color={(item.downvotes || []).includes(user?._id) ? '#FF453A' : colors.textSecondary} />
-                    <Text style={[styles.actionText, (item.downvotes || []).includes(user?._id) && { color: '#FF453A' }]}>{(item.downvotes || []).length}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('IssueDetail', { issueId: item._id })}>
-                    <Ionicons name="chatbubble-outline" size={18} color={colors.textSecondary} />
-                    <Text style={styles.actionText}>{item.commentCount || 0}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => handleShare(item)}>
-                    <Ionicons name="share-social-outline" size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
-            </View>
-        </TouchableOpacity>
-    );
+                {/* Status + Emergency (User Only) */}
+                {!isMunicipal && (
+                    <View style={styles.statusRow}>
+                        <View style={[styles.statusBadge, { backgroundColor: item.status === 'Resolved' ? colors.success + '15' : item.status === 'InProgress' ? colors.primary + '15' : colors.warning + '15' }]}>
+                            <Ionicons name={item.status === 'Resolved' ? 'checkmark-circle' : item.status === 'InProgress' ? 'sync' : 'time'} size={12}
+                                color={item.status === 'Resolved' ? colors.success : item.status === 'InProgress' ? colors.primary : colors.warning} />
+                            <Text style={[styles.statusText, { color: item.status === 'Resolved' ? colors.success : item.status === 'InProgress' ? colors.primary : colors.warning }]}>
+                                {item.status === 'InProgress' ? 'In Progress' : item.status}
+                            </Text>
+                        </View>
+                        {item.emergency && (
+                            <View style={styles.emergencyBadge}>
+                                <Ionicons name="warning" size={11} color="#FF003C" />
+                                <Text style={styles.emergencyText}>EMERGENCY</Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                {/* Actions */}
+                <View style={styles.actionsRow}>
+                    {!isMunicipal ? (
+                        <>
+                            <TouchableOpacity style={styles.actionBtn} onPress={() => handleUpvote(item._id)}>
+                                <Ionicons name={item.upvotes?.includes(user?._id) ? 'arrow-up-circle' : 'arrow-up-circle-outline'}
+                                    size={20} color={item.upvotes?.includes(user?._id) ? colors.primary : colors.textSecondary} />
+                                <Text style={[styles.actionText, item.upvotes?.includes(user?._id) && { color: colors.primary }]}>{item.upvotes?.length || 0}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.actionBtn} onPress={() => handleDownvote(item._id)}>
+                                <Ionicons name={(item.downvotes || []).includes(user?._id) ? 'arrow-down-circle' : 'arrow-down-circle-outline'}
+                                    size={20} color={(item.downvotes || []).includes(user?._id) ? '#FF453A' : colors.textSecondary} />
+                                <Text style={[styles.actionText, (item.downvotes || []).includes(user?._id) && { color: '#FF453A' }]}>{(item.downvotes || []).length}</Text>
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <View style={styles.actionBtn}>
+                            <Ionicons name="eye-outline" size={18} color={colors.textSecondary} />
+                            <Text style={styles.actionText}>Official Post</Text>
+                        </View>
+                    )}
+
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => !isMunicipal && navigation.navigate('IssueDetail', { issueId: item._id })}>
+                        <Ionicons name="chatbubble-outline" size={18} color={colors.textSecondary} />
+                        <Text style={styles.actionText}>{item.commentCount || 0}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleShare(item)}>
+                        <Ionicons name="share-social-outline" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+    const dataWithSuggestions = React.useMemo(() => {
+        if (loading || issues.length === 0) return issues;
+        // Inject suggestions after the 2nd item
+        const insertionIndex = Math.min(2, issues.length);
+        const newDetails = [...issues];
+        newDetails.splice(insertionIndex, 0, { _id: 'suggestion_injection', type: 'suggestion' });
+        return newDetails;
+    }, [issues, loading]);
+
+    const renderItem = ({ item }: any) => {
+        if (item.type === 'suggestion') {
+            return <SuggestedFollows navigation={navigation} />;
+        }
+        return renderIssueCard({ item });
+    };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -204,8 +263,8 @@ export default function HomeFeed({ navigation }: any) {
                 <View style={styles.loadWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
             ) : (
                 <FlatList
-                    data={issues}
-                    renderItem={renderIssueCard}
+                    data={dataWithSuggestions}
+                    renderItem={renderItem}
                     keyExtractor={i => i._id}
                     contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
                     showsVerticalScrollIndicator={false}
@@ -285,4 +344,6 @@ const styles = StyleSheet.create({
     },
     actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
     actionText: { fontFamily: 'Inter_500Medium', color: colors.textSecondary, fontSize: 13 },
+    municipalCard: { backgroundColor: colors.surface, borderColor: colors.primary + '40', borderWidth: 1 },
+    cardDesc: { fontFamily: 'Inter_400Regular', color: colors.textSecondary, fontSize: 13, paddingHorizontal: 14, paddingBottom: 10, lineHeight: 18 },
 });
