@@ -24,12 +24,15 @@ import logger from '../utils/logger';
 
 // ← CHANGE THIS to your PC's LAN IP if using a physical device
 const LAN_IP = '192.168.0.105'; // ← Your PC's LAN IP (auto-detected)
+const PROD_URL = 'https://urban-fix-ai.onrender.com';
 
-const BASE = Platform.select({
-  android: `http://${LAN_IP}:5000`,   // Physical Android device
-  ios:     `http://${LAN_IP}:5000`,   // Physical iOS device
-  default: 'http://localhost:5000',
-});
+const BASE = __DEV__
+    ? Platform.select({
+        android: `http://${LAN_IP}:5000`,   // Physical Android device
+        ios: `http://${LAN_IP}:5000`,   // Physical iOS device
+        default: 'http://localhost:5000',
+    })
+    : PROD_URL;
 
 // Uncomment below to use emulator instead:
 // const BASE = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
