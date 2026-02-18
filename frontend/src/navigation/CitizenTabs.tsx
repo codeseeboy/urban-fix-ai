@@ -60,7 +60,7 @@ export default function CitizenTabs() {
                     tabBarLabel: () => null,
                 }}
                 listeners={({ navigation }) => ({
-                    tabPress: (e) => { e.preventDefault(); navigation.navigate('ReportIssue'); },
+                    tabPress: (e: any) => { e.preventDefault(); navigation.navigate('ReportIssue'); },
                 })}
             />
             <Tab.Screen name="Alerts" component={NotificationsScreen}
