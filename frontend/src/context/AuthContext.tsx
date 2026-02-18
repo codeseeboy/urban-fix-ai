@@ -20,6 +20,8 @@ interface User {
     ward?: string;
     interests?: string[];
     department?: string;
+    followingCount?: number;
+    followersCount?: number;
     levelInfo?: {
         level: number;
         name: string;

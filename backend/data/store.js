@@ -208,7 +208,21 @@ function generateId(prefix) {
     return `${prefix}_${Date.now()}_${idCounter}`;
 }
 
+// ── MUNICIPAL PAGES ──
+const municipalPages = [
+    {
+        _id: 'page_001', name: 'Roads Department', handle: 'RoadsDept', department: 'Roads',
+        region: { city: 'New Delhi', ward: 'Central' }, verified: true, followersCount: 45,
+        avatar: null, coverImage: null, description: 'Official updates from Roads Dept.',
+        createdByAdminId: 'admin_001', contactEmail: 'roads@delhi.gov.in',
+        isActive: true, pageType: 'Department', createdAt: '2025-01-01T10:00:00Z'
+    }
+];
+
+// ── FOLLOWS ──
+const follows = [];
+
 module.exports = {
-    users, issues, comments, notifications, badges,
+    users, issues, comments, notifications, badges, municipalPages, follows,
     generateToken, getUserById, generateId, getLevelInfo, JWT_SECRET,
 };

@@ -5,12 +5,20 @@ const store = require('../data/store');
 
 // Helper: enrich issue with user data
 function enrichIssue(issue) {
-    const user = store.getUserById(issue.user);
+    let author;
+    if (issue.authorType === 'MunicipalPage') {
+        const page = store.municipalPages.find(p => p._id === issue.municipalPage);
+        author = page ? { _id: page._id, name: page.name, avatar: page.avatar, handle: page.handle, isPage: true, verified: page.verified } : { name: 'Unknown Page' };
+    } else {
+        const user = store.getUserById(issue.user);
+        author = user ? { _id: user._id, name: user.name, avatar: user.avatar, role: user.role } : { name: 'Anonymous' };
+    }
+
     const timeAgo = getTimeAgo(issue.createdAt);
     const comments = store.comments.filter(c => c.issueId === issue._id);
     return {
         ...issue,
-        user: user ? { _id: user._id, name: user.name, avatar: user.avatar } : { name: 'Anonymous' },
+        user: author,
         timeAgo,
         commentCount: comments.length,
     };
@@ -39,6 +47,17 @@ router.get('/', (req, res) => {
         result.sort((a, b) => b.upvotes.length - a.upvotes.length);
     } else if (filter === 'my_posts' && userId) {
         result = result.filter(i => i.user === userId);
+    } else if (filter === 'following' && userId) {
+        // Get list of pages user follows
+        const followingIds = store.follows
+            .filter(f => f.followerId === userId)
+            .map(f => f.followingId);
+
+        // Filter issues from those pages
+        result = result.filter(i =>
+            (i.authorType === 'MunicipalPage' && followingIds.includes(i.municipalPage)) ||
+            (i.followers && i.followers.includes(userId)) // Also include issues the user explicitly follows
+        );
     }
 
     result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

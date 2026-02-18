@@ -18,6 +18,7 @@ app.use('/api/issues', require('./routes/issueRoutes'));
 app.use('/api/workflows', require('./routes/workflowRoutes'));
 app.use('/api/gamification', require('./routes/gamificationRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/municipal', require('./routes/municipal'));
 app.use('/api/users', require('./routes/userRoutes'));
 
 const PORT = process.env.PORT || 5000;
