@@ -19,6 +19,13 @@ interface User {
     city?: string;
     ward?: string;
     interests?: string[];
+    department?: string;
+    levelInfo?: {
+        level: number;
+        name: string;
+        nextLevelXp: number;
+        progress: number;
+    };
 }
 
 interface AuthContextType {
