@@ -11,7 +11,7 @@ app.use('/public', express.static(require('path').join(__dirname, 'public')));
 app.use(require('./middleware/requestLogger'));
 
 app.get('/', (req, res) => {
-    res.json({ status: 'UrbanFix AI API is running', version: '1.0.0' });
+    res.json({ status: 'UrbanFix AI API is running', version: '1.0.0', database: 'Supabase PostgreSQL' });
 });
 
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -25,5 +25,6 @@ app.use('/api/users', require('./routes/userRoutes'));
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`✅ UrbanFix AI API running on http://localhost:${PORT}`);
-    console.log(`📊 Seeded: ${require('./data/store').users.length} users, ${require('./data/store').issues.length} issues`);
+    console.log(`🗄️  Database: Supabase PostgreSQL`);
+    console.log(`📡 Project: ${process.env.SUPABASE_URL || 'NOT SET'}`);
 });

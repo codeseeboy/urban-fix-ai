@@ -9,6 +9,7 @@ import HomeFeed from '../screens/Main/HomeFeed';
 import MapScreen from '../screens/Main/MapScreen';
 import NotificationsScreen from '../screens/Main/NotificationsScreen';
 import ProfileScreen from '../screens/Main/ProfileScreen';
+import LeaderboardScreen from '../screens/Main/LeaderboardScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,10 +22,10 @@ export default function CitizenTabs() {
                 tabBarStyle: {
                     position: 'absolute',
                     bottom: 0, left: 0, right: 0,
-                    backgroundColor: 'rgba(10, 10, 15, 0.96)',
+                    backgroundColor: 'rgba(10, 10, 15, 0.97)',
                     borderTopWidth: 0.5,
                     borderTopColor: colors.border,
-                    height: 62,
+                    height: 64,
                     paddingBottom: 8,
                     paddingTop: 6,
                     elevation: 0,
@@ -40,12 +41,12 @@ export default function CitizenTabs() {
         >
             <Tab.Screen name="Feed" component={HomeFeed}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="newspaper-outline" size={22} color={color} />,
+                    tabBarIcon: ({ color }) => <Ionicons name="newspaper-outline" size={22} color={color} />,
                 }}
             />
             <Tab.Screen name="Map" component={MapScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" size={22} color={color} />,
+                    tabBarIcon: ({ color }) => <Ionicons name="map-outline" size={22} color={color} />,
                 }}
             />
             <Tab.Screen name="Report" component={View}
@@ -65,14 +66,14 @@ export default function CitizenTabs() {
             />
             <Tab.Screen name="Alerts" component={NotificationsScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="notifications-outline" size={22} color={color} />,
+                    tabBarIcon: ({ color }) => <Ionicons name="notifications-outline" size={22} color={color} />,
                     tabBarBadge: 3,
                     tabBarBadgeStyle: { backgroundColor: colors.error, fontFamily: 'Inter_700Bold', fontSize: 10 },
                 }}
             />
             <Tab.Screen name="Profile" component={ProfileScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={22} color={color} />,
+                    tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={22} color={color} />,
                 }}
             />
         </Tab.Navigator>

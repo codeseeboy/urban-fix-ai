@@ -1,11 +1,12 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "UrbanFix AI Backend — Supabase PostgreSQL",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "seed": "node data/seed.js",
     "build": "echo \"No build step required\" && exit 0",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -14,11 +15,14 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "firebase-admin": "^13.6.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.1",
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "pg": "^8.18.0"
   }
 }

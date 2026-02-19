@@ -4,27 +4,56 @@ const { protect } = require('../middleware/authMiddleware');
 const store = require('../data/store');
 
 // GET /api/notifications — Get user's notifications
-router.get('/', protect, (req, res) => {
-    const notifs = store.notifications
-        .filter(n => n.userId === req.user._id)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const unreadCount = notifs.filter(n => !n.read).length;
-    res.json({ notifications: notifs, unreadCount });
+router.get('/', protect, async (req, res) => {
+    try {
+        const notifs = await store.getNotifications(req.user._id);
+        const unreadCount = notifs.filter(n => !n.read).length;
+        // Map to frontend-expected shape
+        const mapped = notifs.map(n => ({
+            _id: n.id,
+            userId: n.user_id,
+            type: n.type,
+            title: n.title,
+            desc: n.description,
+            read: n.read,
+            actionUrl: n.action_url,
+            createdAt: n.created_at,
+        }));
+        res.json({ notifications: mapped, unreadCount });
+    } catch (error) {
+        console.error('Get notifications error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
 });
 
 // PUT /api/notifications/read-all — Mark all as read
-router.put('/read-all', protect, (req, res) => {
-    store.notifications.forEach(n => {
-        if (n.userId === req.user._id) n.read = true;
-    });
-    res.json({ message: 'All notifications marked as read' });
+router.put('/read-all', protect, async (req, res) => {
+    try {
+        await store.markNotificationsRead(req.user._id);
+        res.json({ message: 'All notifications marked as read' });
+    } catch (error) {
+        console.error('Mark all read error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
 });
 
 // PUT /api/notifications/:id/read — Mark single as read
-router.put('/:id/read', protect, (req, res) => {
-    const notif = store.notifications.find(n => n._id === req.params.id && n.userId === req.user._id);
-    if (notif) { notif.read = true; res.json(notif); }
-    else res.status(404).json({ message: 'Notification not found' });
+router.put('/:id/read', protect, async (req, res) => {
+    try {
+        const notif = await store.markNotificationRead(req.params.id, req.user._id);
+        if (notif) {
+            res.json({
+                _id: notif.id, userId: notif.user_id, type: notif.type,
+                title: notif.title, desc: notif.description, read: notif.read,
+                createdAt: notif.created_at,
+            });
+        } else {
+            res.status(404).json({ message: 'Notification not found' });
+        }
+    } catch (error) {
+        console.error('Mark read error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
 });
 
 module.exports = router;

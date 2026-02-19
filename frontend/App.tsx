@@ -9,6 +9,10 @@ import RootNavigator from './src/navigation/RootNavigator';
 import SplashScreen from './src/screens/Auth/SplashScreen';
 import { colors } from './src/theme/colors';
 
+import { registerForPushNotificationsAsync } from './src/services/notificationService';
+import * as Notifications from 'expo-notifications';
+import { useNavigation } from '@react-navigation/native';
+
 export default function App() {
     const [fontsLoaded] = useFonts({
         Inter_400Regular,
@@ -19,6 +23,33 @@ export default function App() {
     });
 
     const [showSplash, setShowSplash] = React.useState(true);
+    const notificationListener = React.useRef<any>(null);
+    const responseListener = React.useRef<any>(null);
+
+    React.useEffect(() => {
+        // Register for push notifications
+        registerForPushNotificationsAsync();
+
+        // Listen for incoming notifications (foreground)
+        notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+            console.log('🔔 Notification received:', notification);
+        });
+
+        // Listen for interaction (tap)
+        responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+            console.log('🖱️ Notification tapped:', response);
+            const data = response.notification.request.content.data;
+            // Handle navigation based on data
+            // Note: Navigation ref is needed for deep linking here, 
+            // but for now we just log it. 
+            // In a real app, we'd use a navigation service or pass the ref.
+        });
+
+        return () => {
+            if (notificationListener.current) notificationListener.current.remove();
+            if (responseListener.current) responseListener.current.remove();
+        };
+    }, []);
 
     React.useEffect(() => {
         if (fontsLoaded) {
