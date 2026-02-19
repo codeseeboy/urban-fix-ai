@@ -34,12 +34,16 @@ const STATUS_FILTERS = [
     { id: 'Resolved', label: 'Resolved' },
 ];
 
-const DEFAULT_REGION: Region = {
-    latitude: 28.6139,
-    longitude: 77.209,
-    latitudeDelta: 0.04,
-    longitudeDelta: 0.04,
-};
+// Helper: calculate distance between two coordinates in km (Haversine)
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+const NEARBY_RADIUS_KM = 50; // Only show issues within 50km of user
 
 export default function MapScreen({ navigation }: any) {
     const insets = useSafeAreaInsets();
@@ -52,7 +56,6 @@ export default function MapScreen({ navigation }: any) {
     const [selectedIssue, setSelectedIssue] = useState<any>(null);
     const [showHeatmap, setShowHeatmap] = useState(false);
     const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-    const [mapRegion, setMapRegion] = useState<Region>(DEFAULT_REGION);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -63,7 +66,7 @@ export default function MapScreen({ navigation }: any) {
         setLoading(true);
         setError(null);
 
-        // Step 1: Try to get user location (non-blocking — if it fails, use default)
+        // Step 1: Get user's LIVE GPS location
         let coords: { latitude: number; longitude: number } | null = null;
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
@@ -73,24 +76,21 @@ export default function MapScreen({ navigation }: any) {
                 });
                 coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
                 setUserLocation(coords);
-                const region = { ...coords, latitudeDelta: 0.02, longitudeDelta: 0.02 };
-                setMapRegion(region);
             }
         } catch (e) {
             console.log('Location detection failed (non-critical):', e);
         }
 
-        // Step 2: Seed nearby issues (non-blocking — skip silently if it fails)
+        // Step 2: Seed nearby issues around USER'S location (not Delhi!)
         if (coords) {
             try {
                 await issuesAPI.seedNearby(coords.latitude, coords.longitude);
             } catch (e) {
-                // This is fine — endpoint may not exist on production
                 console.log('Seed nearby skipped (endpoint may not exist):', e);
             }
         }
 
-        // Step 3: Fetch issues (the critical call)
+        // Step 3: Fetch all issues
         try {
             const { data } = await issuesAPI.getFeed();
             setIssues(Array.isArray(data) ? data : []);
@@ -100,14 +100,35 @@ export default function MapScreen({ navigation }: any) {
             setIssues([]);
         }
 
+        // Step 4: Animate map to user's location
+        if (coords && mapRef.current) {
+            setTimeout(() => {
+                mapRef.current?.animateToRegion({
+                    ...coords!,
+                    latitudeDelta: 0.02,
+                    longitudeDelta: 0.02,
+                }, 800);
+            }, 300);
+        }
+
         setLoading(false);
     };
 
+    // Filter issues: only show those NEAR the user's GPS (within 50km)
     const filteredIssues = issues.filter((i) => {
         if (!i?.location?.coordinates) return false;
         const catMatch = activeCategory === 'all' || i.category === activeCategory;
         const statusMatch = activeStatus === 'all' || i.status === activeStatus;
-        return catMatch && statusMatch;
+        if (!catMatch || !statusMatch) return false;
+
+        // If we have user location, only show nearby issues
+        if (userLocation) {
+            const issueLat = i.location.coordinates[1];
+            const issueLon = i.location.coordinates[0];
+            const dist = getDistanceKm(userLocation.latitude, userLocation.longitude, issueLat, issueLon);
+            return dist <= NEARBY_RADIUS_KM;
+        }
+        return true; // No GPS, show all
     });
 
     const handleLocateMe = async () => {
@@ -220,7 +241,7 @@ export default function MapScreen({ navigation }: any) {
                     <MapView
                         ref={mapRef}
                         style={styles.map}
-                        initialRegion={mapRegion}
+                        initialRegion={userLocation ? { ...userLocation, latitudeDelta: 0.02, longitudeDelta: 0.02 } : { latitude: 28.6139, longitude: 77.209, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
                         showsUserLocation={true}
                         showsMyLocationButton={false}
                         showsCompass={false}
