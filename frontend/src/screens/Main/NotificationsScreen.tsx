@@ -35,11 +35,14 @@ function SwipeableNotifCard({ item, onDelete, onTap }: {
     const translateX = useRef(new Animated.Value(0)).current;
     const rowHeight = useRef(new Animated.Value(1)).current;
     const isSwiped = useRef(false);
+    const [isSwiping, setIsSwiping] = useState(false);
 
     const panResponder = useRef(
         PanResponder.create({
             onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 10 && Math.abs(g.dy) < 20,
-            onPanResponderGrant: () => {},
+            onPanResponderGrant: () => {
+                setIsSwiping(true);
+            },
             onPanResponderMove: (_, g) => {
                 if (g.dx < 0) translateX.setValue(g.dx);
             },
@@ -62,7 +65,7 @@ function SwipeableNotifCard({ item, onDelete, onTap }: {
                         toValue: 0,
                         friction: 8,
                         useNativeDriver: true,
-                    }).start();
+                    }).start(() => setIsSwiping(false));
                 }
             },
         })
@@ -76,13 +79,15 @@ function SwipeableNotifCard({ item, onDelete, onTap }: {
 
     return (
         <Animated.View style={{ overflow: 'hidden', maxHeight: rowHeight.interpolate({ inputRange: [0, 1], outputRange: [0, 200] }) }}>
-            {/* Delete background */}
-            <View style={styles.swipeDeleteBg}>
-                <Animated.View style={{ opacity: deleteIconOpacity, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="trash-outline" size={20} color="#FFF" />
-                    <Text style={styles.swipeDeleteText}>Delete</Text>
-                </Animated.View>
-            </View>
+            {/* Delete background — only visible when actively swiping */}
+            {isSwiping && (
+                <View style={styles.swipeDeleteBg}>
+                    <Animated.View style={{ opacity: deleteIconOpacity, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="trash-outline" size={20} color="#FFF" />
+                        <Text style={styles.swipeDeleteText}>Delete</Text>
+                    </Animated.View>
+                </View>
+            )}
 
             {/* Card */}
             <Animated.View

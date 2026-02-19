@@ -80,6 +80,11 @@ router.post('/login', async (req, res) => {
             reportsResolved: user.reports_resolved, impactScore: user.impact_score,
             region: user.region, badges: user.badges || [],
             token: store.generateToken(user.id),
+            username: user.username || null,
+            city: user.city || null,
+            ward: user.ward || null,
+            interests: user.interests || [],
+            avatar: user.avatar || null,
         });
     } catch (error) {
         console.error('Login error:', error.message);
@@ -171,6 +176,11 @@ router.post('/supabase-login', async (req, res) => {
             region: user.region,
             badges: user.badges || [],
             token: store.generateToken(user.id),
+            username: user.username || null,
+            city: user.city || null,
+            ward: user.ward || null,
+            interests: user.interests || [],
+            avatar: user.avatar || null,
         });
 
     } catch (error) {
