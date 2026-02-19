@@ -28,6 +28,7 @@ export interface User {
     username?: string;
     city?: string;
     ward?: string;
+    department?: string;
     interests?: string[];
     avatar?: string;
     followingCount?: number;

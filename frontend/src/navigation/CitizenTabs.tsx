@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../theme/colors';
+import { notificationsAPI } from '../services/api';
 
 import HomeFeed from '../screens/Main/HomeFeed';
 import MapScreen from '../screens/Main/MapScreen';
@@ -14,6 +15,22 @@ import LeaderboardScreen from '../screens/Main/LeaderboardScreen';
 const Tab = createBottomTabNavigator();
 
 export default function CitizenTabs() {
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const fetchUnread = useCallback(async () => {
+        try {
+            const { data } = await notificationsAPI.getAll();
+            setUnreadCount(data.unreadCount || 0);
+        } catch (e) { /* silent */ }
+    }, []);
+
+    // Poll every 15s for badge count
+    useEffect(() => {
+        fetchUnread();
+        const interval = setInterval(fetchUnread, 15000);
+        return () => clearInterval(interval);
+    }, [fetchUnread]);
+
     return (
         <Tab.Navigator
             id="CitizenTabs"
@@ -67,8 +84,11 @@ export default function CitizenTabs() {
             <Tab.Screen name="Alerts" component={NotificationsScreen}
                 options={{
                     tabBarIcon: ({ color }) => <Ionicons name="notifications-outline" size={22} color={color} />,
-                    tabBarBadge: 3,
+                    tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
                     tabBarBadgeStyle: { backgroundColor: colors.error, fontFamily: 'Inter_700Bold', fontSize: 10 },
+                }}
+                listeners={{
+                    focus: () => fetchUnread(),
                 }}
             />
             <Tab.Screen name="Profile" component={ProfileScreen}

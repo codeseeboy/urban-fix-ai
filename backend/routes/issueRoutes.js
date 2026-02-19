@@ -98,8 +98,8 @@ async function enrichIssue(issue, req) {
 // GET /api/issues — Feed with filters
 router.get('/', async (req, res) => {
     try {
-        const { filter, userId } = req.query;
-        const issues = await store.getIssues(filter, userId);
+        const { filter, userId, municipalPageId } = req.query;
+        const issues = await store.getIssues(filter, userId, municipalPageId);
         const enriched = await Promise.all(issues.map(i => enrichIssue(i, req)));
         res.json(enriched);
     } catch (error) {

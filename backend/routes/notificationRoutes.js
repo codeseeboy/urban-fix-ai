@@ -56,4 +56,26 @@ router.put('/:id/read', protect, async (req, res) => {
     }
 });
 
+// DELETE /api/notifications/:id — Delete a single notification
+router.delete('/:id', protect, async (req, res) => {
+    try {
+        await store.deleteNotification(req.params.id, req.user._id);
+        res.json({ message: 'Notification deleted' });
+    } catch (error) {
+        console.error('Delete notification error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// DELETE /api/notifications — Delete all notifications for user
+router.delete('/', protect, async (req, res) => {
+    try {
+        await store.deleteAllNotifications(req.user._id);
+        res.json({ message: 'All notifications cleared' });
+    } catch (error) {
+        console.error('Clear all notifications error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;

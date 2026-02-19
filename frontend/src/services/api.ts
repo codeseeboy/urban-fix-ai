@@ -120,8 +120,8 @@ export const authAPI = {
 
 // ── ISSUES ──
 export const issuesAPI = {
-  getFeed: (filter?: string, userId?: string) =>
-    api.get('/issues', { params: { filter, userId } }),
+  getFeed: (filter?: string, userId?: string, municipalPageId?: string) =>
+    api.get('/issues', { params: { filter, userId, municipalPageId } }),
   getById: (id: string) =>
     api.get(`/issues/${id}`),
   create: (data: { title: string; description?: string; image?: string; video?: string; location?: any; category?: string; anonymous?: boolean; emergency?: boolean }) =>
@@ -157,6 +157,8 @@ export const notificationsAPI = {
   getAll: () => api.get('/notifications'),
   markAllRead: () => api.put('/notifications/read-all'),
   markRead: (id: string) => api.put(`/notifications/${id}/read`),
+  deleteOne: (id: string) => api.delete(`/notifications/${id}`),
+  deleteAll: () => api.delete('/notifications'),
 };
 
 // ── USER PROFILE ──
