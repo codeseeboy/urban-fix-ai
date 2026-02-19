@@ -122,9 +122,13 @@ async function getCitizensLeaderboard() {
 // ISSUE QUERIES
 // ════════════════════════════════════════════════════════════════════════════
 
-async function getIssues(filter, userId) {
+async function getIssues(filter, userId, municipalPageId = null) {
     return withRetry(async () => {
         let query = supabase.from('issues').select('*');
+
+        if (municipalPageId) {
+            query = query.eq('municipal_page_id', municipalPageId);
+        }
 
         if (filter === 'high_priority') {
             query = query.in('ai_severity', ['Critical', 'High']);
@@ -383,6 +387,29 @@ async function markNotificationRead(notifId, userId) {
     });
 }
 
+async function deleteNotification(notifId, userId) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('notifications')
+            .delete()
+            .eq('id', notifId)
+            .eq('user_id', userId);
+        if (result.error) throw new Error(result.error.message);
+        return true;
+    });
+}
+
+async function deleteAllNotifications(userId) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('notifications')
+            .delete()
+            .eq('user_id', userId);
+        if (result.error) throw new Error(result.error.message);
+        return true;
+    });
+}
+
 // ── PUSH TOKENS ─────────────────────────────────────────────────────────────
 
 async function addPushToken(userId, token, deviceType) {
@@ -622,6 +649,7 @@ module.exports = {
 
     // Notifications
     getNotifications, createNotification, markNotificationsRead, markNotificationRead,
+    deleteNotification, deleteAllNotifications,
     addPushToken, getPushTokens, deletePushToken,
 
     // Badges
