@@ -114,6 +114,8 @@ export const authAPI = {
     api.post('/auth/login', { email, password }),
   register: (name: string, email: string, password: string) =>
     api.post('/auth/register', { name, email, password }),
+  supabaseLogin: (token: string) =>
+    api.post('/auth/supabase-login', { token }),
 };
 
 // ── ISSUES ──
@@ -160,8 +162,19 @@ export const notificationsAPI = {
 // ── USER PROFILE ──
 export const userAPI = {
   getProfile: () => api.get('/users/profile'),
-  updateProfile: (data: { name?: string; region?: string; avatar?: string }) =>
-    api.put('/users/profile', data),
+  updateProfile: (data: { 
+    name?: string; 
+    region?: string; 
+    avatar?: string | null;
+    username?: string;
+    city?: string;
+    ward?: string;
+    interests?: string[];
+  }) => api.put('/users/profile', data),
+  checkUsername: (username: string) => 
+    api.get(`/users/check-username/${encodeURIComponent(username)}`),
+  registerPushToken: (token: string, deviceType: string) =>
+    api.post('/users/push-token', { token, deviceType }),
 };
 
 // ── GAMIFICATION ──

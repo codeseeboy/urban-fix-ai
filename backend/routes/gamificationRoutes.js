@@ -4,35 +4,49 @@ const { protect } = require('../middleware/authMiddleware');
 const store = require('../data/store');
 
 // GET /api/gamification/leaderboard
-router.get('/leaderboard', (req, res) => {
-    const citizens = store.users
-        .filter(u => u.role === 'citizen')
-        .sort((a, b) => b.points - a.points)
-        .map((u, i) => ({
-            rank: i + 1, _id: u._id, name: u.name,
-            points: u.points, reportsCount: u.reportsCount || 0,
+router.get('/leaderboard', async (req, res) => {
+    try {
+        const citizens = await store.getCitizensLeaderboard();
+        const ranked = citizens.map((u, i) => ({
+            rank: i + 1,
+            _id: u.id,
+            name: u.name,
+            points: u.points,
+            reportsCount: u.reports_count || 0,
             avatar: u.avatar,
         }));
-    res.json(citizens);
+        res.json(ranked);
+    } catch (error) {
+        console.error('Leaderboard error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
 });
 
 // GET /api/gamification/badges
-router.get('/badges', protect, (req, res) => {
-    const user = store.getUserById(req.user._id);
-    const allBadges = store.badges.map(b => ({
-        ...b,
-        earned: user ? user.badges.includes(b.id) : false,
-    }));
-    res.json(allBadges);
+router.get('/badges', protect, async (req, res) => {
+    try {
+        const user = await store.getUserById(req.user._id);
+        const allBadges = await store.getAllBadges();
+        const result = allBadges.map(b => ({
+            ...b,
+            earned: user ? (user.badges || []).includes(b.id) : false,
+        }));
+        res.json(result);
+    } catch (error) {
+        console.error('Badges error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
 });
 
 // GET /api/gamification/stats — Overall platform stats
-router.get('/stats', (req, res) => {
-    const total = store.issues.length;
-    const resolved = store.issues.filter(i => i.status === 'Resolved').length;
-    const critical = store.issues.filter(i => i.aiSeverity === 'Critical').length;
-    const inProgress = store.issues.filter(i => i.status === 'InProgress').length;
-    res.json({ totalIssues: total, resolved, critical, inProgress, pending: total - resolved });
+router.get('/stats', async (req, res) => {
+    try {
+        const stats = await store.getIssueStats();
+        res.json(stats);
+    } catch (error) {
+        console.error('Stats error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
 });
 
 module.exports = router;

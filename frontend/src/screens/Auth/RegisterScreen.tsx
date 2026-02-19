@@ -4,9 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { colors, fonts, radius } from '../../theme/colors';
+import logger from '../../utils/logger';
 
 export default function RegisterScreen({ navigation }: any) {
-    const { register } = useAuth();
+    const { register, loginWithOTP, loginWithGoogle } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -19,6 +20,7 @@ export default function RegisterScreen({ navigation }: any) {
     }, []);
 
     const handleRegister = async () => {
+        logger.tap('RegisterScreen', 'Sign Up', { email });
         if (!name.trim() || !email.trim() || !password.trim()) {
             Alert.alert('Required', 'All fields are required');
             return;
@@ -32,6 +34,36 @@ export default function RegisterScreen({ navigation }: any) {
         setLoading(false);
         if (!result.success) {
             Alert.alert('Registration Failed', result.error);
+        }
+    };
+
+    const handleOTPSignup = async () => {
+        logger.tap('RegisterScreen', 'OTP Signup', { email });
+        if (!email.trim()) {
+            Alert.alert('Required', 'Please enter your email address');
+            return;
+        }
+        setLoading(true);
+        const result = await loginWithOTP(email.trim());
+        setLoading(false);
+        if (result.success) {
+            Alert.alert(
+                'Check Your Email',
+                'We sent a magic link to your email. Click it to complete signup.',
+                [{ text: 'OK' }]
+            );
+        } else {
+            Alert.alert('Error', result.error);
+        }
+    };
+
+    const handleGoogleSignup = async () => {
+        logger.tap('RegisterScreen', 'Google Signup');
+        setLoading(true);
+        const result = await loginWithGoogle();
+        setLoading(false);
+        if (!result.success) {
+            Alert.alert('Google Signup Failed', result.error);
         }
     };
 
@@ -67,8 +99,30 @@ export default function RegisterScreen({ navigation }: any) {
 
                 <TouchableOpacity onPress={handleRegister} disabled={loading} activeOpacity={0.85} style={styles.btnWrap}>
                     <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.btn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                        <Text style={styles.btnText}>{loading ? 'Creating Account...' : 'Sign Up'}</Text>
+                        <Text style={styles.btnText}>{loading ? 'Creating Account...' : 'Sign Up with Password'}</Text>
                     </LinearGradient>
+                </TouchableOpacity>
+
+                <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>OR</Text>
+                    <View style={styles.dividerLine} />
+                </View>
+
+                {/* Email Magic Link Signup */}
+                <TouchableOpacity onPress={handleOTPSignup} disabled={loading} activeOpacity={0.85} style={[styles.btnWrap, styles.secondaryBtn]}>
+                    <View style={styles.btnContent}>
+                        <Ionicons name="mail-unread-outline" size={20} color={colors.primary} />
+                        <Text style={styles.secondaryBtnText}>Continue with Email Link</Text>
+                    </View>
+                </TouchableOpacity>
+
+                {/* Google Signup */}
+                <TouchableOpacity onPress={handleGoogleSignup} disabled={loading} activeOpacity={0.85} style={[styles.btnWrap, styles.secondaryBtn, { marginTop: 12 }]}>
+                    <View style={styles.btnContent}>
+                        <Ionicons name="logo-google" size={20} color="#DB4437" />
+                        <Text style={styles.secondaryBtnText}>Continue with Google</Text>
+                    </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.loginRow} onPress={() => navigation.goBack()}>
@@ -99,6 +153,12 @@ const styles = StyleSheet.create({
     btnWrap: { borderRadius: radius.md, overflow: 'hidden', marginTop: 8 },
     btn: { paddingVertical: 16, alignItems: 'center', borderRadius: radius.md },
     btnText: { fontFamily: 'Inter_700Bold', color: '#FFF', fontSize: 16 },
+    secondaryBtn: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+    secondaryBtnText: { fontFamily: 'Inter_600SemiBold', color: colors.text, fontSize: 16 },
+    btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
+    divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+    dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+    dividerText: { marginHorizontal: 16, color: colors.textSecondary, fontFamily: 'Inter_600SemiBold', fontSize: 12 },
     loginRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
     loginText: { fontFamily: 'Inter_400Regular', color: colors.textSecondary, fontSize: 14 },
     loginLink: { fontFamily: 'Inter_700Bold', color: colors.primary, fontSize: 14 },

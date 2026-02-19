@@ -19,3 +19,6 @@ Thumbs.db
 # EAS
 .eas/
 prebuild/
+# Firebase
+# google-services.json
+# GoogleService-Info.plist
