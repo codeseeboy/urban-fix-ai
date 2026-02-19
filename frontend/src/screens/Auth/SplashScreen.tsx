@@ -1,75 +1,125 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Image, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, fonts } from '../../theme/colors';
 
+const { width, height } = Dimensions.get('window');
+
 export default function SplashScreen() {
-    const scaleAnim = useRef(new Animated.Value(0.8)).current;
-    const opacityAnim = useRef(new Animated.Value(0)).current;
-    const scanLineAnim = useRef(new Animated.Value(0)).current;
+    // Animation Values
+    const logoScale = useRef(new Animated.Value(0.5)).current;
+    const logoOpacity = useRef(new Animated.Value(0)).current;
+    // Separate opacity for text and slogan
+    const textOpacity = useRef(new Animated.Value(0)).current;
+    const sloganOpacity = useRef(new Animated.Value(0)).current;
+    const scanLine = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
+        // 1. Logo Animation (Scale + Fade)
         Animated.parallel([
-            Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
-            Animated.timing(opacityAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+            Animated.spring(logoScale, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
+            Animated.timing(logoOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
         ]).start();
 
+        // 2. Text Animation (Fade In) - Delayed
+        Animated.sequence([
+            Animated.delay(600),
+            Animated.timing(textOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+        ]).start();
+
+        // 3. Slogan Animation (Fade In) - Delayed more
+        Animated.sequence([
+            Animated.delay(1200),
+            Animated.timing(sloganOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+        ]).start();
+
+        // 4. Background Scan Loop
         Animated.loop(
             Animated.sequence([
-                Animated.timing(scanLineAnim, { toValue: 300, duration: 2500, useNativeDriver: true }),
-                Animated.timing(scanLineAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+                Animated.timing(scanLine, { toValue: height, duration: 3000, useNativeDriver: true }),
+                Animated.timing(scanLine, { toValue: 0, duration: 0, useNativeDriver: true }),
             ])
         ).start();
     }, []);
 
     return (
         <View style={styles.container}>
-            {/* Map Grid Background */}
+            {/* Background Grid */}
             <View style={styles.gridContainer}>
-                {[...Array(20)].map((_, i) => (
-                    <View key={`v-${i}`} style={[styles.gridLineV, { left: `${(i * 100) / 20}%` }]} />
+                {[...Array(10)].map((_, i) => (
+                    <View key={`v-${i}`} style={[styles.gridLineV, { left: `${i * 10}%` }]} />
                 ))}
-                {[...Array(40)].map((_, i) => (
-                    <View key={`h-${i}`} style={[styles.gridLineH, { top: `${(i * 100) / 40}%` }]} />
+                {[...Array(20)].map((_, i) => (
+                    <View key={`h-${i}`} style={[styles.gridLineH, { top: `${i * 5}%` }]} />
                 ))}
             </View>
 
-            <LinearGradient colors={['rgba(0,122,255,0.15)', 'transparent']} style={StyleSheet.absoluteFill} />
-
-            <Animated.View style={{ opacity: opacityAnim, transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
-                <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.logo}>
-                    <Text style={styles.logoText}>U</Text>
-                    {/* Scan Line */}
-                    <Animated.View
-                        style={[
-                            styles.scanLine,
-                            { transform: [{ translateY: Animated.subtract(scanLineAnim, 100) }] }
-                        ]}
-                    />
-                </LinearGradient>
-                <Text style={styles.title}>UrbanFix AI</Text>
-                <Text style={styles.subtitle}>Smart Civic Engagement</Text>
+            {/* Background Scanning Effect (Behind content) */}
+            <Animated.View
+                style={[
+                    styles.scanBeam,
+                    { transform: [{ translateY: scanLine }] }
+                ]}
+            >
+                <LinearGradient
+                    colors={['transparent', 'rgba(0,122,255,0.15)', 'transparent']}
+                    style={{ flex: 1 }}
+                />
             </Animated.View>
+
+            {/* Content */}
+            <View style={styles.content}>
+                <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}>
+                    <Image
+                        source={require('../../../assets/logo.png')}
+                        style={styles.logo}
+                        resizeMode="contain"
+                    />
+                </Animated.View>
+
+                <Animated.View style={{ opacity: textOpacity, marginTop: 20 }}>
+                    <Text style={styles.title}>UrbanFix AI</Text>
+                </Animated.View>
+
+                <Animated.View style={{ opacity: sloganOpacity, marginTop: 8 }}>
+                    <Text style={styles.subtitle}>Detect • Report • Improve</Text>
+                    {/* Pulse Bar */}
+                    <View style={styles.pulseBar}>
+                        <PulseIndicator />
+                    </View>
+                </Animated.View>
+            </View>
         </View>
     );
 }
 
+// Simple pulsing line
+const PulseIndicator = () => {
+    const widthAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(widthAnim, { toValue: 60, duration: 1000, useNativeDriver: false }),
+                Animated.timing(widthAnim, { toValue: 0, duration: 1000, useNativeDriver: false }),
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <Animated.View style={{ height: 3, backgroundColor: colors.primary, width: widthAnim, borderRadius: 2 }} />
+    );
+};
+
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' },
-    gridContainer: { ...StyleSheet.absoluteFillObject, opacity: 0.1 },
-    gridLineV: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: colors.primary },
-    gridLineH: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: colors.primary },
-    logo: {
-        width: 100, height: 100, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 20,
-        overflow: 'hidden',
-        shadowColor: colors.primary, shadowOpacity: 0.5, shadowRadius: 20, elevation: 12,
-    },
-    scanLine: {
-        position: 'absolute', left: 0, right: 0, height: 2, backgroundColor: '#FFF',
-        shadowColor: '#FFF', shadowOpacity: 0.8, shadowRadius: 10, elevation: 10,
-        opacity: 0.6,
-    },
-    logoText: { fontFamily: 'Inter_900Black', fontSize: 50, color: '#FFF' },
-    title: { fontFamily: 'Inter_900Black', fontSize: 34, color: colors.text, letterSpacing: -1 },
-    subtitle: { fontFamily: 'Inter_400Regular', fontSize: 16, color: colors.textSecondary, marginTop: 6 },
+    container: { flex: 1, backgroundColor: colors.background, overflow: 'hidden' },
+    gridContainer: { ...StyleSheet.absoluteFillObject, opacity: 0.1 }, // Low opacity grid
+    gridLineV: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: '#FFF' },
+    gridLineH: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#FFF' },
+    scanBeam: { position: 'absolute', left: 0, right: 0, height: 150, zIndex: 0 },
+    content: { flex: 1, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+    logo: { width: 140, height: 140 }, // Larger logo
+    title: { fontFamily: 'Inter_900Black', fontSize: 38, color: '#FFF', letterSpacing: -0.5, textAlign: 'center' },
+    subtitle: { fontFamily: 'Inter_500Medium', fontSize: 16, color: colors.textSecondary, letterSpacing: 1.2, textAlign: 'center', textTransform: 'uppercase' }, // Slogan style
+    pulseBar: { height: 3, width: 60, marginTop: 24, alignItems: 'center', backgroundColor: colors.surfaceLight, borderRadius: 2, overflow: 'hidden' },
 });

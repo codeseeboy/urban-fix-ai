@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_123';
 // ── USERS ──
 const users = [
     {
-        _id: 'user_001', name: 'Priya Sharma', email: 'priya@test.com', password: 'pass123',
+        _id: 'user_001', name: 'Shashi Rajput', email: 'shashi@test.com', password: 'pass123',
         role: 'citizen', points: 3420, badges: ['first_report', 'civic_hero', 'night_watch'],
         reportsCount: 58, reportsResolved: 42, impactScore: 88, region: 'Central Ward',
         avatar: null, createdAt: '2025-06-01T10:00:00Z',
@@ -31,7 +31,7 @@ const users = [
         avatar: null, createdAt: '2025-01-01T10:00:00Z',
     },
     {
-        _id: 'worker_001', name: 'Suresh Patel', email: 'suresh@urbanfix.com', password: 'worker123',
+        _id: 'worker_001', name: 'Shashikant', email: 'shashikant@urbanfix.com', password: 'worker123',
         role: 'field_worker', points: 0, badges: [],
         reportsCount: 0, reportsResolved: 85, impactScore: 0, region: 'Central Ward',
         avatar: null, department: 'Roads', createdAt: '2025-03-01T10:00:00Z',

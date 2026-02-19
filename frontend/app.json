@@ -17,6 +17,11 @@
     },
     "android": {
       "package": "com.urbanfix.ai",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyApHoIvTWWPC84MhWG6vnE4kfT_J63bprU"
+        }
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#000000"
