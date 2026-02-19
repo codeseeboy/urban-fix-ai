@@ -1,10 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import {
-    View, Text, StyleSheet, Animated, Dimensions, Easing,
+    View, Text, StyleSheet, Animated, Dimensions, Easing, Image,
     ImageBackground, Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFonts } from 'expo-font';
+import {
+    useFonts,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_900Black
+} from '@expo-google-fonts/inter';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
@@ -22,6 +29,37 @@ const PARTICLES = Array.from({ length: PARTICLE_COUNT }).map((_, i) => ({
     delay: Math.random() * 1000,
 }));
 
+// Standalone Particle component (hooks must be in a component, not a loop)
+function Particle({ config }: { config: typeof PARTICLES[0] }) {
+    const anim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(anim, { toValue: 1, duration: config.duration / 2, useNativeDriver: true }),
+                Animated.timing(anim, { toValue: 0, duration: config.duration / 2, useNativeDriver: true }),
+            ])
+        );
+        const timer = setTimeout(() => loop.start(), config.delay);
+        return () => clearTimeout(timer);
+    }, []);
+
+    return (
+        <Animated.View
+            style={{
+                position: 'absolute',
+                left: config.x,
+                top: config.y,
+                width: config.size,
+                height: config.size,
+                backgroundColor: colors.primaryLight,
+                borderRadius: 2,
+                opacity: anim,
+            }}
+        />
+    );
+}
+
 export default function SplashScreen() {
     const insets = useSafeAreaInsets();
 
@@ -37,10 +75,11 @@ export default function SplashScreen() {
 
     // Font loading check (managed in App.tsx but good to have safety here too)
     const [fontsLoaded] = useFonts({
-        'Inter_900Black': require('../../assets/fonts/Inter-Black.ttf'),
-        'Inter_700Bold': require('../../assets/fonts/Inter-Bold.ttf'),
-        'Inter_600SemiBold': require('../../assets/fonts/Inter-SemiBold.ttf'),
-        'Inter_400Regular': require('../../assets/fonts/Inter-Regular.ttf'),
+        Inter_400Regular,
+        Inter_500Medium,
+        Inter_600SemiBold,
+        Inter_700Bold,
+        Inter_900Black,
     });
 
     useEffect(() => {
@@ -123,35 +162,8 @@ export default function SplashScreen() {
         );
     };
 
-    // Particle generator
-    const renderParticles = () => {
-        return PARTICLES.map((p) => {
-            const anim = useRef(new Animated.Value(0)).current;
-
-            useEffect(() => {
-                const loop = Animated.loop(
-                    Animated.sequence([
-                        Animated.timing(anim, { toValue: 1, duration: p.duration / 2, useNativeDriver: true }),
-                        Animated.timing(anim, { toValue: 0, duration: p.duration / 2, useNativeDriver: true }),
-                    ])
-                );
-                setTimeout(() => loop.start(), p.delay);
-            }, []);
-
-            return (
-                <Animated.View
-                    key={p.id}
-                    style={[
-                        styles.particle,
-                        {
-                            left: p.x, top: p.y, width: p.size, height: p.size,
-                            opacity: anim,
-                        }
-                    ]}
-                />
-            );
-        });
-    };
+    // Particles rendered as separate components (hooks can't be in loops)
+    const renderParticles = () => PARTICLES.map((p) => <Particle key={p.id} config={p} />);
 
     if (!fontsLoaded) return null;
 
@@ -195,12 +207,13 @@ export default function SplashScreen() {
                     styles.logoWrapper,
                     { opacity: logoOpacity, transform: [{ scale: logoScale }] }
                 ]}>
-                    <LinearGradient
-                        colors={[colors.primary, '#4facfe']}
-                        style={styles.logoGradient}
-                    >
-                        <Ionicons name="business" size={48} color="#FFF" />
-                    </LinearGradient>
+                    <View style={styles.logoGradient}>
+                        <Image
+                            source={require('../../../assets/logo.png')}
+                            style={{ width: 80, height: 80, borderRadius: 40 }}
+                            resizeMode="contain"
+                        />
+                    </View>
                 </Animated.View>
 
                 {/* Text Group */}

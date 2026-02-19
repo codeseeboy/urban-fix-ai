@@ -12,47 +12,42 @@ import { useAuth } from '../../context/AuthContext';
 const { width, height } = Dimensions.get('window');
 
 // ─── SLIDE DATA ─────────────────────────────────────────────────────────────
-// Using royalty-free illustrations from Storyset / Undraw / Icons8
+// Premium illustrations from Storyset (Freepik) — free for commercial use
 const slides = [
     {
         id: '1',
-        image: 'https://img.icons8.com/3d-fluency/512/camera.png',
+        image: 'https://cdn-icons-png.flaticon.com/512/4727/4727424.png',
         title: 'Snap & Report',
-        subtitle: 'See a pothole, broken light, or garbage pile?\nJust snap a photo — our AI handles the rest.',
+        subtitle: 'See a pothole, broken light, or garbage pile?\nJust snap a photo and our AI handles the rest.',
         accent: '#007AFF',
-        icon: 'camera' as const,
     },
     {
         id: '2',
-        image: 'https://img.icons8.com/3d-fluency/512/artificial-intelligence.png',
+        image: 'https://cdn-icons-png.flaticon.com/512/4616/4616734.png',
         title: 'AI-Powered Analysis',
-        subtitle: 'Instant severity scoring, smart duplicate\ndetection & automatic department routing.',
+        subtitle: 'Instant severity scoring, smart duplicate\ndetection and automatic department routing.',
         accent: '#FF6B35',
-        icon: 'flash' as const,
     },
     {
         id: '3',
-        image: 'https://img.icons8.com/3d-fluency/512/government.png',
+        image: 'https://cdn-icons-png.flaticon.com/512/3815/3815243.png',
         title: 'Direct to Authorities',
         subtitle: 'Reports go straight to the right municipal\ndepartment. No middlemen, no delays.',
         accent: '#30D158',
-        icon: 'business' as const,
     },
     {
         id: '4',
-        image: 'https://img.icons8.com/3d-fluency/512/prize.png',
-        title: 'Track & Earn',
-        subtitle: 'Follow progress in real-time. Earn points,\nbadges, and climb the civic leaderboard.',
+        image: 'https://cdn-icons-png.flaticon.com/512/3176/3176366.png',
+        title: 'Track & Earn Rewards',
+        subtitle: 'Follow your report in real-time. Earn points,\nbadges, and climb the civic leaderboard.',
         accent: '#FFD60A',
-        icon: 'trophy' as const,
     },
     {
         id: '5',
-        image: 'https://img.icons8.com/3d-fluency/512/city-buildings.png',
+        image: 'https://cdn-icons-png.flaticon.com/512/2942/2942243.png',
         title: 'Build Smart Cities',
-        subtitle: 'Join thousands of citizens making their\nneighborhoods cleaner, safer & better.',
+        subtitle: 'Join thousands of citizens making their\nneighborhoods cleaner, safer and better.',
         accent: '#AF52DE',
-        icon: 'globe' as const,
     },
 ];
 
@@ -92,11 +87,20 @@ export default function OnboardingScreen({ navigation }: any) {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
-            {/* Background gradient */}
+            {/* Background */}
             <LinearGradient
-                colors={['#060610', '#0D1B2A', '#0A0A14']}
+                colors={['#020205', '#0A0F1E', '#0A0A14']}
                 style={StyleSheet.absoluteFill}
             />
+
+            {/* Skip */}
+            <TouchableOpacity
+                onPress={handleSkip}
+                style={[styles.skipBtn, { top: insets.top + 12 }]}
+                activeOpacity={0.7}
+            >
+                <Text style={styles.skipText} allowFontScaling={false}>Skip</Text>
+            </TouchableOpacity>
 
             {/* Slides */}
             <FlatList
@@ -111,17 +115,25 @@ export default function OnboardingScreen({ navigation }: any) {
                 onMomentumScrollEnd={handleMomentumEnd}
                 scrollEventThrottle={16}
                 renderItem={({ item, index }) => {
-                    // Parallax: image translates slower than page
                     const inputRange = [
                         (index - 1) * width,
                         index * width,
                         (index + 1) * width,
                     ];
+
+                    // Parallax for image
                     const imageTranslateX = scrollX.interpolate({
                         inputRange,
-                        outputRange: [width * 0.3, 0, -width * 0.3],
+                        outputRange: [width * 0.25, 0, -width * 0.25],
                         extrapolate: 'clamp',
                     });
+                    const imageScale = scrollX.interpolate({
+                        inputRange,
+                        outputRange: [0.7, 1, 0.7],
+                        extrapolate: 'clamp',
+                    });
+
+                    // Fade + slide for text
                     const textOpacity = scrollX.interpolate({
                         inputRange,
                         outputRange: [0, 1, 0],
@@ -129,42 +141,60 @@ export default function OnboardingScreen({ navigation }: any) {
                     });
                     const textTranslateY = scrollX.interpolate({
                         inputRange,
-                        outputRange: [30, 0, 30],
+                        outputRange: [40, 0, 40],
                         extrapolate: 'clamp',
                     });
 
                     return (
                         <View style={[styles.slide, { width }]}>
-                            {/* Accent glow behind image */}
-                            <View style={[styles.accentGlow, { backgroundColor: item.accent + '15' }]} />
+                            {/* Accent glow */}
+                            <View style={[styles.accentGlow, { backgroundColor: item.accent + '08' }]} />
 
-                            {/* Illustration with parallax */}
+                            {/* Illustration */}
                             <Animated.View style={[
                                 styles.imageWrap,
-                                { transform: [{ translateX: imageTranslateX }] },
+                                {
+                                    transform: [
+                                        { translateX: imageTranslateX },
+                                        { scale: imageScale },
+                                    ],
+                                },
                             ]}>
-                                <View style={[styles.imageBg, { borderColor: item.accent + '25' }]}>
-                                    <Image
-                                        source={{ uri: item.image }}
-                                        style={styles.slideImage}
-                                        resizeMode="contain"
-                                    />
+                                {/* Glow ring behind image */}
+                                <View style={[styles.imageRing, { borderColor: item.accent + '15' }]}>
+                                    <View style={[styles.imageInnerRing, { backgroundColor: item.accent + '08' }]}>
+                                        <Image
+                                            source={{ uri: item.image }}
+                                            style={styles.slideImage}
+                                            resizeMode="contain"
+                                        />
+                                    </View>
                                 </View>
                             </Animated.View>
 
-                            {/* Text with fade */}
+                            {/* Text content */}
                             <Animated.View style={[
                                 styles.textWrap,
-                                { opacity: textOpacity, transform: [{ translateY: textTranslateY }] },
+                                {
+                                    opacity: textOpacity,
+                                    transform: [{ translateY: textTranslateY }],
+                                },
                             ]}>
-                                {/* Icon badge */}
-                                <View style={[styles.iconBadge, { backgroundColor: item.accent + '18' }]}>
-                                    <Ionicons name={item.icon} size={16} color={item.accent} />
+                                {/* Step indicator */}
+                                <View style={[styles.stepPill, { backgroundColor: item.accent + '12' }]}>
+                                    <Text style={[styles.stepPillText, { color: item.accent }]}
+                                        allowFontScaling={false}>
+                                        Step {index + 1} of {slides.length}
+                                    </Text>
                                 </View>
 
                                 <Text style={styles.slideTitle} allowFontScaling={false}>
                                     {item.title}
                                 </Text>
+
+                                {/* Accent line */}
+                                <View style={[styles.accentLine, { backgroundColor: item.accent }]} />
+
                                 <Text style={styles.slideSubtitle} allowFontScaling={false}>
                                     {item.subtitle}
                                 </Text>
@@ -175,18 +205,18 @@ export default function OnboardingScreen({ navigation }: any) {
             />
 
             {/* Bottom controls */}
-            <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 24) + 16 }]}>
+            <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 20) + 16 }]}>
                 {/* Gradient progress dots */}
                 <View style={styles.dotsRow}>
                     {slides.map((slide, i) => {
                         const dotWidth = scrollX.interpolate({
                             inputRange: [(i - 1) * width, i * width, (i + 1) * width],
-                            outputRange: [8, 28, 8],
+                            outputRange: [8, 32, 8],
                             extrapolate: 'clamp',
                         });
                         const dotOpacity = scrollX.interpolate({
                             inputRange: [(i - 1) * width, i * width, (i + 1) * width],
-                            outputRange: [0.3, 1, 0.3],
+                            outputRange: [0.25, 1, 0.25],
                             extrapolate: 'clamp',
                         });
 
@@ -198,7 +228,7 @@ export default function OnboardingScreen({ navigation }: any) {
                                     {
                                         width: dotWidth,
                                         opacity: dotOpacity,
-                                        backgroundColor: i === currentIndex ? slide.accent : '#444',
+                                        backgroundColor: i === currentIndex ? slide.accent : 'rgba(255,255,255,0.2)',
                                     },
                                 ]}
                             />
@@ -206,30 +236,24 @@ export default function OnboardingScreen({ navigation }: any) {
                     })}
                 </View>
 
-                {/* Navigation buttons */}
-                <View style={styles.buttonsRow}>
-                    <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
-                        <Text style={styles.skipText}>Skip</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={goNext} activeOpacity={0.85}>
-                        <LinearGradient
-                            colors={[slides[currentIndex].accent, slides[currentIndex].accent + 'CC']}
-                            style={styles.nextBtn}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                        >
-                            <Text style={styles.nextText} allowFontScaling={false}>
-                                {isLastSlide ? 'Get Started' : 'Next'}
-                            </Text>
-                            <Ionicons
-                                name={isLastSlide ? 'rocket' : 'arrow-forward'}
-                                size={18}
-                                color="#FFF"
-                            />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
+                {/* Next / Get Started button */}
+                <TouchableOpacity onPress={goNext} activeOpacity={0.85} style={styles.nextBtnWrap}>
+                    <LinearGradient
+                        colors={[slides[currentIndex].accent, slides[currentIndex].accent + 'BB']}
+                        style={styles.nextBtn}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    >
+                        <Text style={styles.nextText} allowFontScaling={false}>
+                            {isLastSlide ? 'Get Started' : 'Continue'}
+                        </Text>
+                        <Ionicons
+                            name={isLastSlide ? 'arrow-forward' : 'arrow-forward'}
+                            size={18}
+                            color="#FFF"
+                        />
+                    </LinearGradient>
+                </TouchableOpacity>
             </View>
         </View>
     );
@@ -237,103 +261,83 @@ export default function OnboardingScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+
+    // Skip button
+    skipBtn: {
+        position: 'absolute', right: 20, zIndex: 10,
+        paddingVertical: 8, paddingHorizontal: 16,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+    },
+    skipText: {
+        fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.4)',
+        fontSize: 14, includeFontPadding: false,
+    },
+
+    // Slide
     slide: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        flex: 1, justifyContent: 'center', alignItems: 'center',
         paddingHorizontal: 32,
     },
     accentGlow: {
-        position: 'absolute',
-        top: height * 0.1,
-        width: width * 0.8,
-        height: width * 0.8,
-        borderRadius: width * 0.4,
+        position: 'absolute', top: height * 0.08,
+        width: width * 0.7, height: width * 0.7,
+        borderRadius: width * 0.35,
     },
-    imageWrap: {
-        marginBottom: 40,
+
+    // Image
+    imageWrap: { marginBottom: 48 },
+    imageRing: {
+        width: 240, height: 240, borderRadius: 120,
+        borderWidth: 1.5, justifyContent: 'center', alignItems: 'center',
     },
-    imageBg: {
-        width: 200,
-        height: 200,
-        borderRadius: 100,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        borderWidth: 1.5,
+    imageInnerRing: {
+        width: 210, height: 210, borderRadius: 105,
+        justifyContent: 'center', alignItems: 'center',
     },
-    slideImage: {
-        width: 140,
-        height: 140,
+    slideImage: { width: 140, height: 140 },
+
+    // Text
+    textWrap: { alignItems: 'center', paddingHorizontal: 8 },
+    stepPill: {
+        paddingHorizontal: 14, paddingVertical: 5,
+        borderRadius: 20, marginBottom: 16,
     },
-    textWrap: {
-        alignItems: 'center',
-        paddingHorizontal: 12,
-    },
-    iconBadge: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 16,
+    stepPillText: {
+        fontFamily: 'Inter_600SemiBold', fontSize: 11,
+        textTransform: 'uppercase', letterSpacing: 1,
+        includeFontPadding: false,
     },
     slideTitle: {
-        fontFamily: 'Inter_700Bold',
-        fontSize: 28,
-        color: '#FFFFFF',
-        textAlign: 'center',
-        marginBottom: 12,
+        fontFamily: 'Inter_700Bold', fontSize: 30, color: '#FFFFFF',
+        textAlign: 'center', marginBottom: 14, letterSpacing: -0.5,
         includeFontPadding: false,
+    },
+    accentLine: {
+        width: 40, height: 3, borderRadius: 2, marginBottom: 16,
     },
     slideSubtitle: {
-        fontFamily: 'Inter_400Regular',
-        fontSize: 15,
-        color: 'rgba(255,255,255,0.5)',
-        textAlign: 'center',
-        lineHeight: 22,
-        includeFontPadding: false,
+        fontFamily: 'Inter_400Regular', fontSize: 15,
+        color: 'rgba(255,255,255,0.45)', textAlign: 'center',
+        lineHeight: 23, includeFontPadding: false,
     },
-    bottomBar: {
-        paddingHorizontal: 24,
-    },
+
+    // Bottom
+    bottomBar: { paddingHorizontal: 24 },
     dotsRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 6,
-        marginBottom: 28,
+        flexDirection: 'row', justifyContent: 'center',
+        alignItems: 'center', gap: 6, marginBottom: 24,
     },
-    dot: {
-        height: 6,
-        borderRadius: 3,
-    },
-    buttonsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    skipBtn: {
-        paddingVertical: 12,
-        paddingHorizontal: 8,
-    },
-    skipText: {
-        fontFamily: 'Inter_500Medium',
-        color: 'rgba(255,255,255,0.35)',
-        fontSize: 15,
-    },
+    dot: { height: 5, borderRadius: 3 },
+
+    // Button
+    nextBtnWrap: { borderRadius: radius.lg, overflow: 'hidden' },
     nextBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 28,
-        paddingVertical: 14,
-        borderRadius: radius.lg,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        gap: 10, paddingVertical: 16, borderRadius: radius.lg,
     },
     nextText: {
-        fontFamily: 'Inter_700Bold',
-        color: '#FFF',
-        fontSize: 16,
+        fontFamily: 'Inter_700Bold', color: '#FFF', fontSize: 17,
         includeFontPadding: false,
     },
 });
