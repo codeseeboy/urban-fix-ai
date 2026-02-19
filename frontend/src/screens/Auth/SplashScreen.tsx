@@ -1,125 +1,290 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Image, Dimensions } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Animated, Image, Dimensions, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, fonts } from '../../theme/colors';
+import { colors } from '../../theme/colors';
 
 const { width, height } = Dimensions.get('window');
+const TITLE = 'UrbanFix AI';
+const SLOGAN = 'Detect • Report • Improve';
 
 export default function SplashScreen() {
-    // Animation Values
-    const logoScale = useRef(new Animated.Value(0.5)).current;
+    // Logo animations
+    const logoScale = useRef(new Animated.Value(0.3)).current;
     const logoOpacity = useRef(new Animated.Value(0)).current;
-    // Separate opacity for text and slogan
-    const textOpacity = useRef(new Animated.Value(0)).current;
-    const sloganOpacity = useRef(new Animated.Value(0)).current;
-    const scanLine = useRef(new Animated.Value(0)).current;
+    const logoRotateZ = useRef(new Animated.Value(-10)).current;
+
+    // Glow ring animation
+    const glowAnim = useRef(new Animated.Value(0.4)).current;
+    const glowScale = useRef(new Animated.Value(0.8)).current;
+
+    // Title letter animations (each letter fades + slides in)
+    const titleLetterAnims = useRef(
+        TITLE.split('').map(() => ({
+            opacity: new Animated.Value(0),
+            translateY: new Animated.Value(30),
+        }))
+    ).current;
+
+    // Slogan word animations
+    const sloganWordAnims = useRef(
+        SLOGAN.split(' ').map(() => ({
+            opacity: new Animated.Value(0),
+            scale: new Animated.Value(0.5),
+        }))
+    ).current;
+
+    // Bottom line animation
+    const lineWidth = useRef(new Animated.Value(0)).current;
+    const lineOpacity = useRef(new Animated.Value(0)).current;
+
+    // Version fade
+    const versionOpacity = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // 1. Logo Animation (Scale + Fade)
+        // Phase 1: Logo entrance (0ms - 800ms)
         Animated.parallel([
-            Animated.spring(logoScale, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }),
-            Animated.timing(logoOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+            Animated.spring(logoScale, {
+                toValue: 1,
+                friction: 5,
+                tension: 60,
+                useNativeDriver: true,
+            }),
+            Animated.timing(logoOpacity, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: true,
+            }),
+            Animated.timing(logoRotateZ, {
+                toValue: 0,
+                duration: 800,
+                easing: Easing.out(Easing.back(1.5)),
+                useNativeDriver: true,
+            }),
         ]).start();
 
-        // 2. Text Animation (Fade In) - Delayed
-        Animated.sequence([
-            Animated.delay(600),
-            Animated.timing(textOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
-        ]).start();
-
-        // 3. Slogan Animation (Fade In) - Delayed more
-        Animated.sequence([
-            Animated.delay(1200),
-            Animated.timing(sloganOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
-        ]).start();
-
-        // 4. Background Scan Loop
+        // Phase 1b: Glow pulse loop (starts with logo)
         Animated.loop(
-            Animated.sequence([
-                Animated.timing(scanLine, { toValue: height, duration: 3000, useNativeDriver: true }),
-                Animated.timing(scanLine, { toValue: 0, duration: 0, useNativeDriver: true }),
+            Animated.parallel([
+                Animated.sequence([
+                    Animated.timing(glowAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(glowAnim, { toValue: 0.3, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                ]),
+                Animated.sequence([
+                    Animated.timing(glowScale, { toValue: 1.2, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(glowScale, { toValue: 0.8, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                ]),
             ])
         ).start();
+
+        // Phase 2: Title letters cascade (600ms start, 50ms per letter)
+        const titleAnimations = titleLetterAnims.map((anim, i) =>
+            Animated.parallel([
+                Animated.timing(anim.opacity, {
+                    toValue: 1,
+                    duration: 300,
+                    delay: 700 + i * 80,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(anim.translateY, {
+                    toValue: 0,
+                    duration: 400,
+                    delay: 700 + i * 80,
+                    easing: Easing.out(Easing.back(1.2)),
+                    useNativeDriver: true,
+                }),
+            ])
+        );
+        Animated.parallel(titleAnimations).start();
+
+        // Phase 3: Slogan words pop in (after title)
+        const sloganDelay = 700 + TITLE.length * 80 + 300;
+        const sloganAnimations = sloganWordAnims.map((anim, i) =>
+            Animated.parallel([
+                Animated.timing(anim.opacity, {
+                    toValue: 1,
+                    duration: 400,
+                    delay: sloganDelay + i * 200,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(anim.scale, {
+                    toValue: 1,
+                    friction: 6,
+                    tension: 80,
+                    delay: sloganDelay + i * 200,
+                    useNativeDriver: true,
+                }),
+            ])
+        );
+        Animated.parallel(sloganAnimations).start();
+
+        // Phase 4: Bottom accent line sweeps in
+        const lineDelay = sloganDelay + SLOGAN.split(' ').length * 200 + 200;
+        Animated.sequence([
+            Animated.delay(lineDelay),
+            Animated.parallel([
+                Animated.timing(lineOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
+                Animated.timing(lineWidth, { toValue: 80, duration: 600, easing: Easing.out(Easing.exp), useNativeDriver: false }),
+            ]),
+        ]).start();
+
+        // Phase 5: Version text
+        Animated.sequence([
+            Animated.delay(lineDelay + 400),
+            Animated.timing(versionOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+        ]).start();
     }, []);
+
+    const logoSpin = logoRotateZ.interpolate({
+        inputRange: [-10, 0],
+        outputRange: ['-10deg', '0deg'],
+    });
 
     return (
         <View style={styles.container}>
-            {/* Background Grid */}
-            <View style={styles.gridContainer}>
-                {[...Array(10)].map((_, i) => (
-                    <View key={`v-${i}`} style={[styles.gridLineV, { left: `${i * 10}%` }]} />
-                ))}
-                {[...Array(20)].map((_, i) => (
-                    <View key={`h-${i}`} style={[styles.gridLineH, { top: `${i * 5}%` }]} />
-                ))}
-            </View>
+            {/* Gradient background */}
+            <LinearGradient
+                colors={['#0A0A14', '#0D1B2A', '#0A0A14']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            />
 
-            {/* Background Scanning Effect (Behind content) */}
-            <Animated.View
-                style={[
-                    styles.scanBeam,
-                    { transform: [{ translateY: scanLine }] }
-                ]}
-            >
+            {/* Subtle radial glow behind logo */}
+            <Animated.View style={[styles.glowRing, { opacity: glowAnim, transform: [{ scale: glowScale }] }]}>
                 <LinearGradient
-                    colors={['transparent', 'rgba(0,122,255,0.15)', 'transparent']}
-                    style={{ flex: 1 }}
+                    colors={['rgba(0,122,255,0.25)', 'rgba(0,122,255,0.05)', 'transparent']}
+                    style={styles.glowGradient}
+                    start={{ x: 0.5, y: 0.5 }}
+                    end={{ x: 1, y: 1 }}
                 />
             </Animated.View>
 
             {/* Content */}
             <View style={styles.content}>
-                <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}>
-                    <Image
-                        source={require('../../../assets/logo.png')}
-                        style={styles.logo}
-                        resizeMode="contain"
+                {/* Logo with spring + rotation entrance */}
+                <Animated.View style={{
+                    opacity: logoOpacity,
+                    transform: [
+                        { scale: logoScale },
+                        { rotate: logoSpin },
+                    ],
+                }}>
+                    <View style={styles.logoShadow}>
+                        <Image
+                            source={require('../../../assets/logo.png')}
+                            style={styles.logo}
+                            resizeMode="contain"
+                        />
+                    </View>
+                </Animated.View>
+
+                {/* Title: Letter by letter cascade */}
+                <View style={styles.titleRow}>
+                    {TITLE.split('').map((letter, i) => (
+                        <Animated.Text
+                            key={i}
+                            style={[
+                                styles.titleLetter,
+                                letter === ' ' && { width: 10 },
+                                {
+                                    opacity: titleLetterAnims[i].opacity,
+                                    transform: [{ translateY: titleLetterAnims[i].translateY }],
+                                },
+                            ]}
+                        >
+                            {letter}
+                        </Animated.Text>
+                    ))}
+                </View>
+
+                {/* Slogan: Word by word pop */}
+                <View style={styles.sloganRow}>
+                    {SLOGAN.split(' ').map((word, i) => (
+                        <Animated.Text
+                            key={i}
+                            style={[
+                                styles.sloganWord,
+                                {
+                                    opacity: sloganWordAnims[i].opacity,
+                                    transform: [{ scale: sloganWordAnims[i].scale }],
+                                },
+                            ]}
+                        >
+                            {word}{' '}
+                        </Animated.Text>
+                    ))}
+                </View>
+
+                {/* Accent line */}
+                <Animated.View style={[styles.accentLine, { width: lineWidth, opacity: lineOpacity }]}>
+                    <LinearGradient
+                        colors={[colors.primary, '#00D4FF']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={{ flex: 1, borderRadius: 2 }}
                     />
                 </Animated.View>
 
-                <Animated.View style={{ opacity: textOpacity, marginTop: 20 }}>
-                    <Text style={styles.title}>UrbanFix AI</Text>
-                </Animated.View>
-
-                <Animated.View style={{ opacity: sloganOpacity, marginTop: 8 }}>
-                    <Text style={styles.subtitle}>Detect • Report • Improve</Text>
-                    {/* Pulse Bar */}
-                    <View style={styles.pulseBar}>
-                        <PulseIndicator />
-                    </View>
-                </Animated.View>
+                {/* Version badge */}
+                <Animated.Text style={[styles.versionText, { opacity: versionOpacity }]}>
+                    v1.1.0
+                </Animated.Text>
             </View>
         </View>
     );
 }
 
-// Simple pulsing line
-const PulseIndicator = () => {
-    const widthAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(widthAnim, { toValue: 60, duration: 1000, useNativeDriver: false }),
-                Animated.timing(widthAnim, { toValue: 0, duration: 1000, useNativeDriver: false }),
-            ])
-        ).start();
-    }, []);
-
-    return (
-        <Animated.View style={{ height: 3, backgroundColor: colors.primary, width: widthAnim, borderRadius: 2 }} />
-    );
-};
-
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, overflow: 'hidden' },
-    gridContainer: { ...StyleSheet.absoluteFillObject, opacity: 0.1 }, // Low opacity grid
-    gridLineV: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: '#FFF' },
-    gridLineH: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#FFF' },
-    scanBeam: { position: 'absolute', left: 0, right: 0, height: 150, zIndex: 0 },
-    content: { flex: 1, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
-    logo: { width: 140, height: 140 }, // Larger logo
-    title: { fontFamily: 'Inter_900Black', fontSize: 38, color: '#FFF', letterSpacing: -0.5, textAlign: 'center' },
-    subtitle: { fontFamily: 'Inter_500Medium', fontSize: 16, color: colors.textSecondary, letterSpacing: 1.2, textAlign: 'center', textTransform: 'uppercase' }, // Slogan style
-    pulseBar: { height: 3, width: 60, marginTop: 24, alignItems: 'center', backgroundColor: colors.surfaceLight, borderRadius: 2, overflow: 'hidden' },
+    container: { flex: 1, overflow: 'hidden' },
+    glowRing: {
+        position: 'absolute',
+        top: height * 0.25,
+        left: width * 0.1,
+        width: width * 0.8,
+        height: width * 0.8,
+        borderRadius: width * 0.4,
+    },
+    glowGradient: { flex: 1, borderRadius: width * 0.4 },
+    content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 60 },
+    logoShadow: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 30,
+        elevation: 20,
+    },
+    logo: { width: 130, height: 130 },
+    titleRow: {
+        flexDirection: 'row',
+        marginTop: 28,
+        justifyContent: 'center',
+        flexWrap: 'nowrap',
+    },
+    titleLetter: {
+        fontFamily: 'Inter_900Black',
+        fontSize: 40,
+        color: '#FFFFFF',
+        letterSpacing: -0.5,
+    },
+    sloganRow: {
+        flexDirection: 'row',
+        marginTop: 12,
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+    },
+    sloganWord: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 15,
+        color: 'rgba(255,255,255,0.5)',
+        letterSpacing: 2,
+        textTransform: 'uppercase',
+    },
+    accentLine: { height: 3, marginTop: 28, borderRadius: 2, overflow: 'hidden' },
+    versionText: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.2)',
+        marginTop: 16,
+        letterSpacing: 2,
+    },
 });
