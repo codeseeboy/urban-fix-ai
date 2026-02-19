@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "ed512555-5f2a-401a-b199-eb8f6f53e40b"
+      }
+    },
+    "android": {
+      "package": "com.ezzshashiiii.urbanfixroot"
+    }
+  }
+}

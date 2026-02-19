@@ -29,7 +29,21 @@
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "urbanfix",
+              "host": "auth",
+              "pathPrefix": "/callback"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/logo.png"
@@ -41,6 +55,9 @@
           "icon": "./assets/logo.png",
           "color": "#ffffff"
         }
+      ],
+      [
+        "expo-web-browser"
       ]
     ],
     "extra": {

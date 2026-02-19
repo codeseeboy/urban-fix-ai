@@ -4,6 +4,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import { Platform } from 'react-native';
 import { authAPI } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { UserLocation, getStoredLocation, saveLocation, clearStoredLocation } from '../services/locationService';
@@ -331,11 +332,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const loginWithGoogle = async () => {
         logger.action('Auth', 'Initiating Google OAuth...');
         try {
-            // For Expo Go development, don't specify scheme - it will use exp:// automatically
-            // For production builds, it will use the app's scheme (urbanfix://)
+            // Production APK: always use urbanfix:// scheme
+            // This generates: urbanfix://auth/callback
             const redirectUrl = makeRedirectUri({
-                // In Expo Go: generates exp://192.168.x.x:8081/--/auth/callback
-                // In standalone: generates urbanfix://auth/callback
+                scheme: 'urbanfix',
                 path: 'auth/callback',
             });
             logger.info('Auth', `OAuth redirect URL: ${redirectUrl}`);
@@ -350,22 +350,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (error) throw error;
 
             if (data.url) {
+                // Warm up browser for Android (improves redirect handling)
+                if (Platform.OS === 'android') {
+                    await WebBrowser.warmUpAsync();
+                }
+
                 // Open auth session and wait for redirect
+                // showInRecents: false prevents the browser from appearing in Android recents
+                // createTask: false ensures the browser activity stays in the app's task stack
                 const result = await WebBrowser.openAuthSessionAsync(
                     data.url,
-                    redirectUrl
+                    redirectUrl,
+                    {
+                        showInRecents: false,
+                        preferEphemeralSession: true, // Don't share cookies with Safari/Chrome
+                        createTask: false, // Keep in same Android task (prevents Expo Go redirect)
+                    }
                 );
+
+                // Cool down browser after auth session on Android
+                if (Platform.OS === 'android') {
+                    await WebBrowser.coolDownAsync();
+                }
 
                 logger.info('Auth', `WebBrowser result type: ${result.type}`);
 
                 if (result.type === 'success' && result.url) {
                     logger.info('Auth', `OAuth callback received: ${result.url}`);
 
-                    // Extract tokens from the URL fragment
+                    // Extract tokens from the URL — they can be in hash fragment or query params
                     const url = new URL(result.url);
-                    const params = new URLSearchParams(url.hash.substring(1)); // Remove '#' from hash
-                    const accessToken = params.get('access_token');
-                    const refreshToken = params.get('refresh_token');
+                    const hashParams = new URLSearchParams(url.hash.substring(1)); // Remove '#' from hash
+                    const queryParams = new URLSearchParams(url.search);
+
+                    const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
+                    const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
 
                     if (accessToken && refreshToken) {
                         // Set session manually
@@ -380,7 +399,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             return await handleSupabaseSession(sessionData.session.access_token);
                         }
                     } else {
-                        // Try getting session from Supabase (might have been set via deep link)
+                        // Tokens might not be in URL (handled via deep link / onAuthStateChange)
+                        // Wait briefly for the auth state change to fire
+                        logger.info('Auth', 'No tokens in callback URL, waiting for auth state change...');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+
+                        // Try getting session from Supabase
                         const { data: { session } } = await supabase.auth.getSession();
                         if (session) {
                             return await handleSupabaseSession(session.access_token);
@@ -390,6 +414,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 } else if (result.type === 'cancel') {
                     return { success: false, error: 'Google login was cancelled' };
                 } else if (result.type === 'dismiss') {
+                    // On Android, 'dismiss' can happen when the browser redirects back
+                    // Check if auth actually succeeded via deep link
+                    logger.info('Auth', 'Auth session dismissed, checking for session...');
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        return await handleSupabaseSession(session.access_token);
+                    }
                     return { success: false, error: 'Google login was dismissed' };
                 }
             }
