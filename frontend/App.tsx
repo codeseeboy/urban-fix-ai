@@ -31,7 +31,11 @@ export default function App() {
     }, [fontsLoaded]);
 
     if (!fontsLoaded || showSplash) {
-        return <SplashScreen />;
+        return (
+            <SafeAreaProvider>
+                <SplashScreen />
+            </SafeAreaProvider>
+        );
     }
 
     return (

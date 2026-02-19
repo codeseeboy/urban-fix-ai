@@ -23,7 +23,7 @@ import logger from '../utils/logger';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ← CHANGE THIS to your PC's LAN IP if using a physical device
-const LAN_IP = '192.168.0.105'; // ← Your PC's LAN IP (auto-detected)
+const LAN_IP = '192.168.0.102'; // ← Your PC's LAN IP (auto-detected)
 const PROD_URL = 'https://urban-fix-ai.onrender.com';
 
 const BASE = __DEV__
