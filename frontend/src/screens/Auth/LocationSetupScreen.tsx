@@ -1,130 +1,264 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Platform } from 'react-native';
+import {
+    View, Text, StyleSheet, TouchableOpacity, Animated,
+    Easing, ActivityIndicator, Dimensions,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MapView, { Marker } from 'react-native-maps';
 import { colors, fonts, radius } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
-import { LinearGradient } from 'expo-linear-gradient';
+import { getCurrentLocation, UserLocation, checkLocationPermission } from '../../services/locationService';
+import logger from '../../utils/logger';
+
+const { width } = Dimensions.get('window');
+
+type DetectionState = 'idle' | 'detecting' | 'success' | 'error';
 
 export default function LocationSetupScreen() {
     const { completeLocationSetup, user } = useAuth();
-    const [loading, setLoading] = useState(false);
-    const [address, setAddress] = useState<string | null>(null);
-    const [granted, setGranted] = useState(false);
+    const insets = useSafeAreaInsets();
+    const [state, setState] = useState<DetectionState>('idle');
+    const [location, setLocation] = useState<UserLocation | null>(null);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+    // Animations
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(40)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
+    const pinBounce = useRef(new Animated.Value(0)).current;
+    const mapFade = useRef(new Animated.Value(0)).current;
+    const radarSpin = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
+        // Entrance animation
         Animated.parallel([
             Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
             Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
         ]).start();
 
-        // Pulse animation for the icon
+        // Pulse loop
         Animated.loop(
             Animated.sequence([
-                Animated.timing(pulseAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
-                Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1.12, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
             ])
         ).start();
     }, []);
 
+    const startRadarSpin = () => {
+        radarSpin.setValue(0);
+        Animated.loop(
+            Animated.timing(radarSpin, {
+                toValue: 1,
+                duration: 1500,
+                easing: Easing.linear,
+                useNativeDriver: true,
+            })
+        ).start();
+    };
+
     const requestLocation = async () => {
-        setLoading(true);
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Permission Required', 'Location access helps us show nearby issues and route your reports to the right municipal department.');
-                setLoading(false);
-                return;
-            }
-            setGranted(true);
-            const location = await Location.getCurrentPositionAsync({});
-            const reverseGeocode = await Location.reverseGeocodeAsync({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-            });
-            if (reverseGeocode.length > 0) {
-                const geo = reverseGeocode[0];
-                setAddress(`${geo.name || ''}, ${geo.city || geo.subregion || ''}, ${geo.region || ''}`);
-            } else {
-                setAddress('Location detected');
-            }
-        } catch (err) {
-            setAddress('Location detected');
+        setState('detecting');
+        setErrorMsg(null);
+        startRadarSpin();
+        logger.action('LocationSetup', 'Detecting location...');
+
+        const loc = await getCurrentLocation();
+
+        if (loc) {
+            setState('success');
+            setLocation(loc);
+            // Animate map appearance
+            Animated.parallel([
+                Animated.timing(mapFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+                Animated.sequence([
+                    Animated.timing(pinBounce, { toValue: -20, duration: 300, useNativeDriver: true }),
+                    Animated.spring(pinBounce, { toValue: 0, friction: 4, useNativeDriver: true }),
+                ]),
+            ]).start();
+            logger.success('LocationSetup', `Got location: ${loc.address} (±${loc.accuracy?.toFixed(0)}m)`);
+        } else {
+            setState('error');
+            setErrorMsg('Could not detect your location. Please ensure GPS is enabled and try again.');
+            logger.error('LocationSetup', 'Failed to get location after retries');
         }
-        setLoading(false);
     };
 
     const handleConfirm = async () => {
-        await completeLocationSetup();
+        if (location) {
+            await completeLocationSetup(location);
+        } else {
+            await completeLocationSetup();
+        }
     };
 
+    const spinInterpolate = radarSpin.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg'],
+    });
+
+    const firstName = user?.name?.split(' ')[0] || 'there';
+
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
             <LinearGradient
-                colors={['rgba(0,122,255,0.08)', 'transparent']}
-                style={styles.gradientBg}
+                colors={['#060610', '#0D1B2A', '#0A0A14']}
+                style={StyleSheet.absoluteFill}
             />
 
+            {/* Subtle glow */}
+            <View style={styles.bgGlow} />
+
             <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-                {/* Pulsing Location Icon */}
-                <Animated.View style={[styles.iconContainer, { transform: [{ scale: pulseAnim }] }]}>
+                {/* Animated Location Icon */}
+                <Animated.View style={[styles.iconOuter, { transform: [{ scale: pulseAnim }] }]}>
+                    {state === 'detecting' ? (
+                        <Animated.View style={[styles.radarRing, { transform: [{ rotate: spinInterpolate }] }]}>
+                            <LinearGradient
+                                colors={[colors.primary, 'transparent']}
+                                style={styles.radarGradient}
+                                start={{ x: 0.5, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            />
+                        </Animated.View>
+                    ) : null}
                     <View style={styles.iconRing}>
                         <View style={styles.iconInner}>
-                            <Ionicons name="location" size={48} color={colors.primary} />
+                            <Ionicons
+                                name={state === 'success' ? 'checkmark-circle' : state === 'error' ? 'alert-circle' : 'locate'}
+                                size={44}
+                                color={state === 'success' ? colors.success : state === 'error' ? colors.error : colors.primary}
+                            />
                         </View>
                     </View>
                 </Animated.View>
 
-                <Text style={styles.greeting}>Hey {user?.name?.split(' ')[0]}! 👋</Text>
-                <Text style={styles.title}>Where are you located?</Text>
-                <Text style={styles.subtitle}>
-                    We use your location to show nearby issues{'\n'}and route reports to the correct ward.
+                {/* Greeting */}
+                <Text style={styles.greeting} allowFontScaling={false}>Hey {firstName}! 👋</Text>
+                <Text style={styles.title} allowFontScaling={false}>
+                    {state === 'success' ? 'Location Detected!' :
+                        state === 'detecting' ? 'Detecting Location...' :
+                            state === 'error' ? 'Detection Failed' :
+                                'Enable Location'}
+                </Text>
+                <Text style={styles.subtitle} allowFontScaling={false}>
+                    {state === 'success'
+                        ? 'Great! We\'ll use this to show nearby issues and route your reports accurately.'
+                        : state === 'detecting'
+                            ? 'Connecting to GPS satellites...\nThis may take a few seconds.'
+                            : state === 'error'
+                                ? errorMsg || 'Please check your GPS settings and try again.'
+                                : 'We use your precise location to show nearby\ncivic issues and route reports to the right ward.'}
                 </Text>
 
-                {/* Location Result */}
-                {address && (
-                    <View style={styles.locationResult}>
-                        <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                        <Text style={styles.locationText}>{address}</Text>
+                {/* GPS Accuracy Badge */}
+                {state === 'success' && location && (
+                    <View style={styles.accuracyBadge}>
+                        <Ionicons name="speedometer" size={14} color={colors.primary} />
+                        <Text style={styles.accuracyText}>
+                            ±{location.accuracy?.toFixed(0) || '?'}m accuracy
+                        </Text>
                     </View>
                 )}
 
-                {/* Detect Button */}
-                {!address ? (
-                    <TouchableOpacity style={styles.detectButton} onPress={requestLocation} disabled={loading} activeOpacity={0.8}>
-                        <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.detectGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                            <Ionicons name={loading ? 'sync' : 'navigate'} size={22} color="#FFF" />
-                            <Text style={styles.detectText}>{loading ? 'Detecting...' : 'Detect My Location'}</Text>
+                {/* Mini Map Preview */}
+                {state === 'success' && location && (
+                    <Animated.View style={[styles.mapContainer, { opacity: mapFade }]}>
+                        <MapView
+                            style={styles.miniMap}
+                            initialRegion={{
+                                latitude: location.latitude,
+                                longitude: location.longitude,
+                                latitudeDelta: 0.008,
+                                longitudeDelta: 0.008,
+                            }}
+                            scrollEnabled={false}
+                            zoomEnabled={false}
+                            pitchEnabled={false}
+                            rotateEnabled={false}
+                        >
+                            <Marker coordinate={{ latitude: location.latitude, longitude: location.longitude }}>
+                                <View style={styles.mapPin}>
+                                    <Ionicons name="location" size={24} color="#FFF" />
+                                </View>
+                            </Marker>
+                        </MapView>
+
+                        {/* Location info below map */}
+                        <View style={styles.locationInfo}>
+                            <Ionicons name="location" size={16} color={colors.success} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.locationAddr} numberOfLines={1} allowFontScaling={false}>
+                                    {location.address}
+                                </Text>
+                                {(location.city || location.ward) && (
+                                    <Text style={styles.locationSub} numberOfLines={1} allowFontScaling={false}>
+                                        {[location.ward, location.city].filter(Boolean).join(', ')}
+                                    </Text>
+                                )}
+                            </View>
+                        </View>
+                    </Animated.View>
+                )}
+
+                {/* Detecting spinner */}
+                {state === 'detecting' && (
+                    <View style={styles.detectingRow}>
+                        <ActivityIndicator color={colors.primary} size="small" />
+                        <Text style={styles.detectingText}>Trying GPS (High → Balanced → Low)...</Text>
+                    </View>
+                )}
+
+                {/* Action Buttons */}
+                {state === 'idle' || state === 'error' ? (
+                    <TouchableOpacity style={styles.actionBtnWrap} onPress={requestLocation} activeOpacity={0.8}>
+                        <LinearGradient
+                            colors={[colors.primary, '#0055CC']}
+                            style={styles.actionBtn}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                        >
+                            <Ionicons name="navigate" size={20} color="#FFF" />
+                            <Text style={styles.actionText} allowFontScaling={false}>
+                                {state === 'error' ? 'Retry Detection' : 'Detect My Location'}
+                            </Text>
                         </LinearGradient>
                     </TouchableOpacity>
-                ) : (
-                    <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm} activeOpacity={0.8}>
-                        <LinearGradient colors={[colors.success, '#28A745']} style={styles.detectGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                            <Ionicons name="checkmark" size={22} color="#FFF" />
-                            <Text style={styles.detectText}>Confirm & Continue</Text>
+                ) : state === 'success' ? (
+                    <TouchableOpacity style={styles.actionBtnWrap} onPress={handleConfirm} activeOpacity={0.8}>
+                        <LinearGradient
+                            colors={[colors.success, '#28A745']}
+                            style={styles.actionBtn}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                        >
+                            <Ionicons name="checkmark" size={20} color="#FFF" />
+                            <Text style={styles.actionText} allowFontScaling={false}>Confirm & Continue</Text>
                         </LinearGradient>
+                    </TouchableOpacity>
+                ) : null}
+
+                {/* Skip */}
+                {state !== 'detecting' && (
+                    <TouchableOpacity onPress={handleConfirm} style={styles.skipBtn}>
+                        <Text style={styles.skipText}>Skip for now</Text>
                     </TouchableOpacity>
                 )}
 
-                {/* Skip */}
-                <TouchableOpacity onPress={handleConfirm} style={styles.skip}>
-                    <Text style={styles.skipText}>Skip for now</Text>
-                </TouchableOpacity>
-
-                {/* Features List */}
+                {/* Features */}
                 <View style={styles.features}>
                     {[
-                        { icon: 'shield-checkmark', text: 'Your data is kept private & secure' },
-                        { icon: 'map', text: 'See civic issues near you' },
-                        { icon: 'flash', text: 'Faster reports with auto-location' },
+                        { icon: 'shield-checkmark', text: 'Your data stays private & secure', color: colors.success },
+                        { icon: 'map', text: 'See civic issues in your neighborhood', color: colors.primary },
+                        { icon: 'flash', text: 'Auto-attach GPS to every report', color: colors.warning },
                     ].map((f, i) => (
                         <View key={i} style={styles.featureItem}>
-                            <Ionicons name={f.icon as any} size={18} color={colors.primaryLight} />
-                            <Text style={styles.featureText}>{f.text}</Text>
+                            <View style={[styles.featureIcon, { backgroundColor: f.color + '15' }]}>
+                                <Ionicons name={f.icon as any} size={14} color={f.color} />
+                            </View>
+                            <Text style={styles.featureText} allowFontScaling={false}>{f.text}</Text>
                         </View>
                     ))}
                 </View>
@@ -134,38 +268,113 @@ export default function LocationSetupScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, justifyContent: 'center' },
-    gradientBg: { ...StyleSheet.absoluteFillObject },
-    content: { paddingHorizontal: 28, alignItems: 'center' },
-    iconContainer: { marginBottom: 28 },
+    container: { flex: 1 },
+    bgGlow: {
+        position: 'absolute',
+        top: '10%', left: '10%',
+        width: width * 0.8, height: width * 0.8,
+        borderRadius: width * 0.4,
+        backgroundColor: 'rgba(0,122,255,0.04)',
+    },
+    content: { flex: 1, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' },
+    iconOuter: { marginBottom: 24, alignItems: 'center', justifyContent: 'center' },
+    radarRing: {
+        position: 'absolute',
+        width: 140, height: 140, borderRadius: 70,
+        overflow: 'hidden',
+    },
+    radarGradient: {
+        width: 70, height: 70,
+        borderTopLeftRadius: 70,
+    },
     iconRing: {
-        width: 120, height: 120, borderRadius: 60,
-        backgroundColor: colors.primary + '10', justifyContent: 'center', alignItems: 'center',
-        borderWidth: 2, borderColor: colors.primary + '30',
+        width: 110, height: 110, borderRadius: 55,
+        backgroundColor: 'rgba(0,122,255,0.08)',
+        borderWidth: 1.5, borderColor: 'rgba(0,122,255,0.2)',
+        justifyContent: 'center', alignItems: 'center',
     },
     iconInner: {
-        width: 80, height: 80, borderRadius: 40,
-        backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center',
+        width: 72, height: 72, borderRadius: 36,
+        backgroundColor: 'rgba(0,122,255,0.12)',
+        justifyContent: 'center', alignItems: 'center',
     },
-    greeting: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.primary, marginBottom: 8 },
-    title: { fontFamily: 'Inter_700Bold', fontSize: 28, color: colors.text, textAlign: 'center', marginBottom: 12 },
-    subtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
-    locationResult: {
-        flexDirection: 'row', alignItems: 'center', gap: 8,
-        backgroundColor: colors.success + '15', borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 12,
-        marginBottom: 20, borderWidth: 1, borderColor: colors.success + '30',
+    greeting: {
+        fontFamily: 'Inter_600SemiBold', fontSize: 17, color: colors.primary,
+        marginBottom: 6, includeFontPadding: false,
     },
-    locationText: { fontFamily: 'Inter_500Medium', color: colors.success, fontSize: 14 },
-    detectButton: { width: '100%', marginBottom: 16, borderRadius: radius.lg, overflow: 'hidden' },
-    confirmButton: { width: '100%', marginBottom: 16, borderRadius: radius.lg, overflow: 'hidden' },
-    detectGradient: {
+    title: {
+        fontFamily: 'Inter_700Bold', fontSize: 26, color: '#FFF',
+        textAlign: 'center', marginBottom: 10, includeFontPadding: false,
+    },
+    subtitle: {
+        fontFamily: 'Inter_400Regular', fontSize: 14, color: 'rgba(255,255,255,0.45)',
+        textAlign: 'center', lineHeight: 20, marginBottom: 20, includeFontPadding: false,
+    },
+    accuracyBadge: {
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        backgroundColor: 'rgba(0,122,255,0.1)', paddingHorizontal: 12, paddingVertical: 6,
+        borderRadius: 20, marginBottom: 16,
+    },
+    accuracyText: {
+        fontFamily: 'Inter_500Medium', fontSize: 12, color: colors.primaryLight,
+        includeFontPadding: false,
+    },
+    mapContainer: {
+        width: '100%', borderRadius: radius.lg, overflow: 'hidden',
+        marginBottom: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    },
+    miniMap: {
+        width: '100%', height: 180,
+    },
+    mapPin: {
+        width: 36, height: 36, borderRadius: 18,
+        backgroundColor: colors.primary,
+        justifyContent: 'center', alignItems: 'center',
+        shadowColor: colors.primary, shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5, shadowRadius: 8, elevation: 6,
+    },
+    locationInfo: {
+        flexDirection: 'row', alignItems: 'center', gap: 10,
+        paddingHorizontal: 14, paddingVertical: 10,
+        backgroundColor: 'rgba(48,209,88,0.06)',
+    },
+    locationAddr: {
+        fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#FFF',
+        includeFontPadding: false,
+    },
+    locationSub: {
+        fontFamily: 'Inter_400Regular', fontSize: 11, color: 'rgba(255,255,255,0.4)',
+        marginTop: 2, includeFontPadding: false,
+    },
+    detectingRow: {
+        flexDirection: 'row', alignItems: 'center', gap: 10,
+        marginBottom: 20,
+    },
+    detectingText: {
+        fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.4)',
+        includeFontPadding: false,
+    },
+    actionBtnWrap: { width: '100%', borderRadius: radius.lg, overflow: 'hidden', marginBottom: 12 },
+    actionBtn: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
         paddingVertical: 16, borderRadius: radius.lg,
     },
-    detectText: { fontFamily: 'Inter_700Bold', color: '#FFF', fontSize: 16 },
-    skip: { marginBottom: 40 },
-    skipText: { fontFamily: 'Inter_500Medium', color: colors.textSecondary, fontSize: 14 },
-    features: { width: '100%', gap: 12 },
-    featureItem: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    featureText: { fontFamily: 'Inter_400Regular', color: colors.textSecondary, fontSize: 13 },
+    actionText: {
+        fontFamily: 'Inter_700Bold', color: '#FFF', fontSize: 16, includeFontPadding: false,
+    },
+    skipBtn: { marginBottom: 32 },
+    skipText: {
+        fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.3)', fontSize: 14,
+        includeFontPadding: false,
+    },
+    features: { width: '100%', gap: 10 },
+    featureItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    featureIcon: {
+        width: 28, height: 28, borderRadius: 14,
+        justifyContent: 'center', alignItems: 'center',
+    },
+    featureText: {
+        fontFamily: 'Inter_400Regular', color: 'rgba(255,255,255,0.4)',
+        fontSize: 13, includeFontPadding: false,
+    },
 });

@@ -1,159 +1,205 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Image, Dimensions, Easing } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import {
+    View, Text, StyleSheet, Animated, Image, Dimensions,
+    Easing, Platform,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 
 const { width, height } = Dimensions.get('window');
 const TITLE = 'UrbanFix AI';
-const SLOGAN = 'Detect • Report • Improve';
+const SLOGAN_WORDS = ['Detect', '•', 'Report', '•', 'Improve'];
 
 export default function SplashScreen() {
-    // Logo animations
+    const insets = useSafeAreaInsets();
+
+    // Logo
     const logoScale = useRef(new Animated.Value(0.3)).current;
     const logoOpacity = useRef(new Animated.Value(0)).current;
-    const logoRotateZ = useRef(new Animated.Value(-10)).current;
 
-    // Glow ring animation
-    const glowAnim = useRef(new Animated.Value(0.4)).current;
+    // Glow ring
+    const glowAnim = useRef(new Animated.Value(0.3)).current;
     const glowScale = useRef(new Animated.Value(0.8)).current;
 
-    // Title letter animations (each letter fades + slides in)
+    // Title letters
     const titleLetterAnims = useRef(
         TITLE.split('').map(() => ({
             opacity: new Animated.Value(0),
-            translateY: new Animated.Value(30),
+            translateY: new Animated.Value(24),
         }))
     ).current;
 
-    // Slogan word animations
+    // Slogan words
     const sloganWordAnims = useRef(
-        SLOGAN.split(' ').map(() => ({
+        SLOGAN_WORDS.map(() => ({
             opacity: new Animated.Value(0),
-            scale: new Animated.Value(0.5),
+            scale: new Animated.Value(0.6),
         }))
     ).current;
 
-    // Bottom line animation
-    const lineWidth = useRef(new Animated.Value(0)).current;
-    const lineOpacity = useRef(new Animated.Value(0)).current;
+    // Scan line
+    const scanY = useRef(new Animated.Value(-2)).current;
+    const scanOpacity = useRef(new Animated.Value(0)).current;
 
-    // Version fade
+    // Grid fade
+    const gridOpacity = useRef(new Animated.Value(0)).current;
+
+    // Bottom line + version
+    const lineWidth = useRef(new Animated.Value(0)).current;
     const versionOpacity = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        // Phase 1: Logo entrance (0ms - 800ms)
+        // Phase 0: Grid background fades in
+        Animated.timing(gridOpacity, {
+            toValue: 0.06,
+            duration: 1200,
+            useNativeDriver: true,
+        }).start();
+
+        // Phase 0b: Scan line starts
+        Animated.sequence([
+            Animated.timing(scanOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(scanY, {
+                        toValue: height,
+                        duration: 3500,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(scanY, { toValue: -2, duration: 0, useNativeDriver: true }),
+                ])
+            ),
+        ]).start();
+
+        // Phase 1: Logo entrance (0ms)
         Animated.parallel([
             Animated.spring(logoScale, {
                 toValue: 1,
                 friction: 5,
-                tension: 60,
+                tension: 50,
                 useNativeDriver: true,
             }),
             Animated.timing(logoOpacity, {
                 toValue: 1,
-                duration: 600,
-                useNativeDriver: true,
-            }),
-            Animated.timing(logoRotateZ, {
-                toValue: 0,
-                duration: 800,
-                easing: Easing.out(Easing.back(1.5)),
+                duration: 700,
                 useNativeDriver: true,
             }),
         ]).start();
 
-        // Phase 1b: Glow pulse loop (starts with logo)
+        // Phase 1b: Glow pulse loop
         Animated.loop(
             Animated.parallel([
                 Animated.sequence([
-                    Animated.timing(glowAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(glowAnim, { toValue: 0.3, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(glowAnim, { toValue: 0.8, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(glowAnim, { toValue: 0.2, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
                 ]),
                 Animated.sequence([
-                    Animated.timing(glowScale, { toValue: 1.2, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                    Animated.timing(glowScale, { toValue: 0.8, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(glowScale, { toValue: 1.15, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                    Animated.timing(glowScale, { toValue: 0.85, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
                 ]),
             ])
         ).start();
 
-        // Phase 2: Title letters cascade (600ms start, 50ms per letter)
-        const titleAnimations = titleLetterAnims.map((anim, i) =>
+        // Phase 2: Title letter cascade (after 600ms)
+        const titleAnims = titleLetterAnims.map((anim, i) =>
             Animated.parallel([
                 Animated.timing(anim.opacity, {
                     toValue: 1,
-                    duration: 300,
-                    delay: 700 + i * 80,
+                    duration: 250,
+                    delay: 600 + i * 70,
                     useNativeDriver: true,
                 }),
                 Animated.timing(anim.translateY, {
                     toValue: 0,
-                    duration: 400,
-                    delay: 700 + i * 80,
-                    easing: Easing.out(Easing.back(1.2)),
+                    duration: 350,
+                    delay: 600 + i * 70,
+                    easing: Easing.out(Easing.back(1.3)),
                     useNativeDriver: true,
                 }),
             ])
         );
-        Animated.parallel(titleAnimations).start();
+        Animated.parallel(titleAnims).start();
 
-        // Phase 3: Slogan words pop in (after title)
-        const sloganDelay = 700 + TITLE.length * 80 + 300;
-        const sloganAnimations = sloganWordAnims.map((anim, i) =>
+        // Phase 3: Slogan words pop in
+        const sloganStart = 600 + TITLE.length * 70 + 250;
+        const sloganAnims = sloganWordAnims.map((anim, i) =>
             Animated.parallel([
                 Animated.timing(anim.opacity, {
                     toValue: 1,
-                    duration: 400,
-                    delay: sloganDelay + i * 200,
+                    duration: 300,
+                    delay: sloganStart + i * 150,
                     useNativeDriver: true,
                 }),
                 Animated.spring(anim.scale, {
                     toValue: 1,
-                    friction: 6,
+                    friction: 7,
                     tension: 80,
-                    delay: sloganDelay + i * 200,
+                    delay: sloganStart + i * 150,
                     useNativeDriver: true,
                 }),
             ])
         );
-        Animated.parallel(sloganAnimations).start();
+        Animated.parallel(sloganAnims).start();
 
-        // Phase 4: Bottom accent line sweeps in
-        const lineDelay = sloganDelay + SLOGAN.split(' ').length * 200 + 200;
+        // Phase 4: Accent line
+        const lineStart = sloganStart + SLOGAN_WORDS.length * 150 + 200;
         Animated.sequence([
-            Animated.delay(lineDelay),
-            Animated.parallel([
-                Animated.timing(lineOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
-                Animated.timing(lineWidth, { toValue: 80, duration: 600, easing: Easing.out(Easing.exp), useNativeDriver: false }),
-            ]),
+            Animated.delay(lineStart),
+            Animated.timing(lineWidth, {
+                toValue: 80,
+                duration: 600,
+                easing: Easing.out(Easing.exp),
+                useNativeDriver: false,
+            }),
         ]).start();
 
-        // Phase 5: Version text
+        // Phase 5: Version
         Animated.sequence([
-            Animated.delay(lineDelay + 400),
+            Animated.delay(lineStart + 300),
             Animated.timing(versionOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
         ]).start();
     }, []);
 
-    const logoSpin = logoRotateZ.interpolate({
-        inputRange: [-10, 0],
-        outputRange: ['-10deg', '0deg'],
-    });
-
     return (
-        <View style={styles.container}>
-            {/* Gradient background */}
+        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+            {/* Deep gradient background */}
             <LinearGradient
-                colors={['#0A0A14', '#0D1B2A', '#0A0A14']}
+                colors={['#060610', '#0D1B2A', '#0A0A14']}
                 style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                start={{ x: 0.2, y: 0 }}
+                end={{ x: 0.8, y: 1 }}
             />
 
-            {/* Subtle radial glow behind logo */}
+            {/* Grid overlay */}
+            <Animated.View style={[styles.gridContainer, { opacity: gridOpacity }]}>
+                {[...Array(12)].map((_, i) => (
+                    <View key={`v-${i}`} style={[styles.gridV, { left: `${(i + 1) * 8}%` }]} />
+                ))}
+                {[...Array(20)].map((_, i) => (
+                    <View key={`h-${i}`} style={[styles.gridH, { top: `${(i + 1) * 5}%` }]} />
+                ))}
+            </Animated.View>
+
+            {/* Scan line beam */}
+            <Animated.View
+                style={[
+                    styles.scanBeam,
+                    { opacity: scanOpacity, transform: [{ translateY: scanY }] },
+                ]}
+            >
+                <LinearGradient
+                    colors={['transparent', 'rgba(0,122,255,0.12)', 'transparent']}
+                    style={{ flex: 1 }}
+                />
+            </Animated.View>
+
+            {/* Glow ring behind logo */}
             <Animated.View style={[styles.glowRing, { opacity: glowAnim, transform: [{ scale: glowScale }] }]}>
                 <LinearGradient
-                    colors={['rgba(0,122,255,0.25)', 'rgba(0,122,255,0.05)', 'transparent']}
-                    style={styles.glowGradient}
+                    colors={['rgba(0,122,255,0.20)', 'rgba(0,122,255,0.04)', 'transparent']}
+                    style={styles.glowGrad}
                     start={{ x: 0.5, y: 0.5 }}
                     end={{ x: 1, y: 1 }}
                 />
@@ -161,15 +207,9 @@ export default function SplashScreen() {
 
             {/* Content */}
             <View style={styles.content}>
-                {/* Logo with spring + rotation entrance */}
-                <Animated.View style={{
-                    opacity: logoOpacity,
-                    transform: [
-                        { scale: logoScale },
-                        { rotate: logoSpin },
-                    ],
-                }}>
-                    <View style={styles.logoShadow}>
+                {/* Logo */}
+                <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}>
+                    <View style={styles.logoWrap}>
                         <Image
                             source={require('../../../assets/logo.png')}
                             style={styles.logo}
@@ -178,45 +218,48 @@ export default function SplashScreen() {
                     </View>
                 </Animated.View>
 
-                {/* Title: Letter by letter cascade */}
+                {/* Title: letter cascade */}
                 <View style={styles.titleRow}>
                     {TITLE.split('').map((letter, i) => (
                         <Animated.Text
                             key={i}
                             style={[
                                 styles.titleLetter,
-                                letter === ' ' && { width: 10 },
+                                letter === ' ' && { width: 8 },
                                 {
                                     opacity: titleLetterAnims[i].opacity,
                                     transform: [{ translateY: titleLetterAnims[i].translateY }],
                                 },
                             ]}
+                            allowFontScaling={false}
                         >
                             {letter}
                         </Animated.Text>
                     ))}
                 </View>
 
-                {/* Slogan: Word by word pop */}
+                {/* Slogan: word pop */}
                 <View style={styles.sloganRow}>
-                    {SLOGAN.split(' ').map((word, i) => (
+                    {SLOGAN_WORDS.map((word, i) => (
                         <Animated.Text
                             key={i}
                             style={[
                                 styles.sloganWord,
+                                word === '•' && styles.sloganDot,
                                 {
                                     opacity: sloganWordAnims[i].opacity,
                                     transform: [{ scale: sloganWordAnims[i].scale }],
                                 },
                             ]}
+                            allowFontScaling={false}
                         >
-                            {word}{' '}
+                            {word}
                         </Animated.Text>
                     ))}
                 </View>
 
-                {/* Accent line */}
-                <Animated.View style={[styles.accentLine, { width: lineWidth, opacity: lineOpacity }]}>
+                {/* Accent gradient line */}
+                <Animated.View style={[styles.accentLine, { width: lineWidth }]}>
                     <LinearGradient
                         colors={[colors.primary, '#00D4FF']}
                         start={{ x: 0, y: 0 }}
@@ -225,8 +268,9 @@ export default function SplashScreen() {
                     />
                 </Animated.View>
 
-                {/* Version badge */}
-                <Animated.Text style={[styles.versionText, { opacity: versionOpacity }]}>
+                {/* Version */}
+                <Animated.Text style={[styles.versionText, { opacity: versionOpacity }]}
+                    allowFontScaling={false}>
                     v1.1.0
                 </Animated.Text>
             </View>
@@ -236,55 +280,82 @@ export default function SplashScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, overflow: 'hidden' },
+    gridContainer: { ...StyleSheet.absoluteFillObject },
+    gridV: {
+        position: 'absolute', top: 0, bottom: 0, width: StyleSheet.hairlineWidth,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+    },
+    gridH: {
+        position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+    },
+    scanBeam: {
+        position: 'absolute', left: 0, right: 0, height: 120, zIndex: 1,
+    },
     glowRing: {
         position: 'absolute',
-        top: height * 0.25,
-        left: width * 0.1,
-        width: width * 0.8,
-        height: width * 0.8,
-        borderRadius: width * 0.4,
+        top: height * 0.22,
+        left: width * 0.08,
+        width: width * 0.84,
+        height: width * 0.84,
+        borderRadius: width * 0.42,
     },
-    glowGradient: { flex: 1, borderRadius: width * 0.4 },
-    content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 60 },
-    logoShadow: {
+    glowGrad: { flex: 1, borderRadius: width * 0.42 },
+    content: {
+        flex: 1, justifyContent: 'center', alignItems: 'center',
+        paddingBottom: 80, zIndex: 10,
+    },
+    logoWrap: {
         shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.6,
-        shadowRadius: 30,
-        elevation: 20,
+        shadowOpacity: 0.5,
+        shadowRadius: 25,
+        elevation: 15,
     },
-    logo: { width: 130, height: 130 },
+    logo: { width: 120, height: 120 },
     titleRow: {
         flexDirection: 'row',
-        marginTop: 28,
+        marginTop: 24,
         justifyContent: 'center',
-        flexWrap: 'nowrap',
+        alignItems: 'center',
     },
     titleLetter: {
         fontFamily: 'Inter_900Black',
-        fontSize: 40,
+        fontSize: 34,
         color: '#FFFFFF',
-        letterSpacing: -0.5,
+        includeFontPadding: false,
     },
     sloganRow: {
         flexDirection: 'row',
-        marginTop: 12,
+        marginTop: 10,
         justifyContent: 'center',
-        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: 6,
     },
     sloganWord: {
         fontFamily: 'Inter_500Medium',
-        fontSize: 15,
-        color: 'rgba(255,255,255,0.5)',
-        letterSpacing: 2,
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.45)',
+        letterSpacing: 1.5,
         textTransform: 'uppercase',
+        includeFontPadding: false,
     },
-    accentLine: { height: 3, marginTop: 28, borderRadius: 2, overflow: 'hidden' },
+    sloganDot: {
+        color: colors.primary,
+        fontSize: 16,
+    },
+    accentLine: {
+        height: 3,
+        marginTop: 28,
+        borderRadius: 2,
+        overflow: 'hidden',
+    },
     versionText: {
         fontFamily: 'Inter_400Regular',
         fontSize: 11,
-        color: 'rgba(255,255,255,0.2)',
+        color: 'rgba(255,255,255,0.15)',
         marginTop: 16,
         letterSpacing: 2,
+        includeFontPadding: false,
     },
 });
