@@ -9,7 +9,10 @@ function resolveImageUrl(path, req) {
     if (!path) return null;
     if (path.startsWith('http')) return path; // already absolute
     // Build full URL from request host or fallback
-    const host = req ? `${req.protocol}://${req.get('host')}` : `http://localhost:${PORT}`;
+    let protocol = req ? req.protocol : 'http';
+    // Render/Heroku/etc terminate SSL at load balancer — force HTTPS in production
+    if (req && req.get('x-forwarded-proto') === 'https') protocol = 'https';
+    const host = req ? `${protocol}://${req.get('host')}` : `http://localhost:${PORT}`;
     return `${host}${path}`;
 }
 
