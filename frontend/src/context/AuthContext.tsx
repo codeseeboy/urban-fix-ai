@@ -166,6 +166,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
     }, []);
 
+    // Helper: determine if user has completed profile setup based on DB data
+    const isProfileComplete = (userData: any): boolean => {
+        return !!(userData.username && userData.city && userData.ward);
+    };
+
+    // Helper: determine if user has location data from DB
+    const hasLocationData = (userData: any): boolean => {
+        return !!(userData.city || userData.ward || (userData.region && userData.region !== 'General'));
+    };
+
+    // Helper: apply setup flags based on real user data from the server
+    // Location detection is ALWAYS shown on fresh login (new & old users)
+    // Profile setup (username, city, ward, interests) is only for NEW users
+    const applySetupFlags = async (userData: any) => {
+        // Always detect location on fresh login for all users
+        await AsyncStorage.removeItem('locationSetupDone');
+        setNeedsLocationSetup(true);
+        logger.info('Auth', 'Requesting location detection (fresh login)');
+
+        if (isProfileComplete(userData)) {
+            // Existing user with complete profile — skip profile setup only
+            await AsyncStorage.setItem('profileSetupDone', 'true');
+            setNeedsProfileSetup(false);
+            logger.info('Auth', 'Profile is complete — skipping profile setup');
+        } else {
+            // New user or incomplete profile — ask for profile setup after location
+            setNeedsProfileSetup(true);
+            logger.info('Auth', 'Profile incomplete — will show profile setup after location');
+        }
+    };
+
     const loadUser = async () => {
         logger.info('Auth', 'Loading persisted user from AsyncStorage...');
         try {
@@ -174,6 +205,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const parsed = JSON.parse(stored);
                 setUser(parsed);
                 logger.success('Auth', `Restored session for: ${parsed.email} (role: ${parsed.role})`);
+
+                // Always show location detection on every app open
+                const locationDone = await AsyncStorage.getItem('locationSetupDone');
+                if (!locationDone) {
+                    setNeedsLocationSetup(true);
+                }
+
+                // Profile setup only for users who haven't completed it
+                if (isProfileComplete(parsed)) {
+                    setNeedsProfileSetup(false);
+                } else {
+                    const profileDone = await AsyncStorage.getItem('profileSetupDone');
+                    if (!profileDone) setNeedsProfileSetup(true);
+                }
             } else {
                 logger.info('Auth', 'No persisted session found — showing Onboarding/Login');
             }
@@ -201,22 +246,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             logger.success('Auth', `Supabase Login successful: ${data.name}`);
 
-            // Check setup flow
-            // Check setup flow based on user data, not just local storage
-            // If user has a username/city/ward, they have completed profile setup
-            if (data.username && data.city && data.ward) {
-                await AsyncStorage.setItem('profileSetupDone', 'true');
-                setNeedsProfileSetup(false);
-            } else {
-                setNeedsProfileSetup(true);
-            }
-
-            // Location setup check
-            // If user has 'region' set to something other than 'General', likely they did location too?
-            // Or stick to local storage for location as it's device-specific usually?
-            // Actually, let's keep location check as is or improve it.
-            const locationDone = await AsyncStorage.getItem('locationSetupDone');
-            if (!locationDone) setNeedsLocationSetup(true);
+            // Check setup flow based on REAL data from the server
+            await applySetupFlags(data);
 
             return { success: true };
         } catch (e: any) {
@@ -237,16 +268,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(data);
             logger.success('Auth', `Login successful: ${data.name}`);
 
-            // Check setup flow based on user data
-            if (data.username && data.city && data.ward) {
-                await AsyncStorage.setItem('profileSetupDone', 'true');
-                setNeedsProfileSetup(false);
-            } else {
-                setNeedsProfileSetup(true);
-            }
+            // Check setup flow based on REAL data from the server
+            await applySetupFlags(data);
 
-            const locationDone = await AsyncStorage.getItem('locationSetupDone');
-            if (!locationDone) setNeedsLocationSetup(true);
             return { success: true };
         } catch (e: any) {
             const msg = e.response?.data?.message || 'Login failed.';
@@ -408,9 +432,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (location) await updateUserLocation(location);
         await AsyncStorage.setItem('locationSetupDone', 'true');
         setNeedsLocationSetup(false);
-        // Check profile next
+        // Only show profile setup for new users (old users already have complete profile)
         const profileDone = await AsyncStorage.getItem('profileSetupDone');
-        if (!profileDone) setNeedsProfileSetup(true);
+        if (!profileDone && !isProfileComplete(user || {})) {
+            setNeedsProfileSetup(true);
+        }
     };
 
     const completeProfileSetup = async (data: any) => {

@@ -119,19 +119,7 @@ export default function LoginScreen({ navigation }: any) {
                     </View>
                 </TouchableOpacity>
 
-                {/* Test Accounts */}
-                <View style={styles.testBox}>
-                    <Text style={styles.testTitle}>Quick Test Logins:</Text>
-                    <TouchableOpacity onPress={() => { logger.tap('LoginScreen', 'Quick Login - Citizen'); setEmail('shashi@test.com'); setPassword('pass123'); }}>
-                        <Text style={styles.testItem}>👩 Citizen: shashi@test.com / pass123</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { logger.tap('LoginScreen', 'Quick Login - Admin'); setEmail('admin@urbanfix.com'); setPassword('admin123'); }}>
-                        <Text style={styles.testItem}>🏛️ Admin: admin@urbanfix.com / admin123</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { logger.tap('LoginScreen', 'Quick Login - Worker'); setEmail('shashikant@urbanfix.com'); setPassword('worker123'); }}>
-                        <Text style={styles.testItem}>👷 Worker: shashikant@urbanfix.com / worker123</Text>
-                    </TouchableOpacity>
-                </View>
+
 
                 {/* Register link */}
                 <TouchableOpacity style={styles.registerRow} onPress={() => { logger.tap('LoginScreen', 'Sign Up link'); navigation.navigate('Register'); }}>
@@ -169,12 +157,6 @@ const styles = StyleSheet.create({
     divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
     dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
     dividerText: { marginHorizontal: 16, color: colors.textSecondary, fontFamily: 'Inter_600SemiBold', fontSize: 12 },
-    testBox: {
-        marginTop: 24, backgroundColor: colors.surface, borderRadius: radius.md,
-        padding: 14, borderWidth: 1, borderColor: colors.border,
-    },
-    testTitle: { fontFamily: 'Inter_600SemiBold', color: colors.textSecondary, fontSize: 12, marginBottom: 8 },
-    testItem: { fontFamily: 'Inter_400Regular', color: colors.primary, fontSize: 12, paddingVertical: 4 },
     registerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
     registerText: { fontFamily: 'Inter_400Regular', color: colors.textSecondary, fontSize: 14 },
     registerLink: { fontFamily: 'Inter_700Bold', color: colors.primary, fontSize: 14 },
