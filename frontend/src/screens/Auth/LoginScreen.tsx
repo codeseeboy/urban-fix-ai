@@ -7,7 +7,7 @@ import logger from '../../utils/logger';
 import { colors, fonts, radius } from '../../theme/colors';
 
 export default function LoginScreen({ navigation }: any) {
-    const { login } = useAuth();
+    const { login, loginWithOTP, loginWithGoogle } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPass, setShowPass] = useState(false);
@@ -31,6 +31,37 @@ export default function LoginScreen({ navigation }: any) {
             Alert.alert('Login Failed', result.error);
         }
         // Success auto-navigates via AuthContext
+    };
+
+    const handleOTPLogin = async () => {
+        logger.tap('LoginScreen', 'Magic Link Login', { email });
+        if (!email.trim()) {
+            Alert.alert('Required', 'Please enter your email address');
+            return;
+        }
+        setLoading(true);
+        const result = await loginWithOTP(email.trim());
+        setLoading(false);
+        if (result.success) {
+            Alert.alert(
+                'Check Your Email',
+                'We sent a magic link to your email. Click it to sign in instantly.',
+                [{ text: 'OK' }]
+            );
+        } else {
+            Alert.alert('Error', result.error);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        logger.tap('LoginScreen', 'Google Login');
+        setLoading(true);
+        const result = await loginWithGoogle();
+        // If success, deep link listener in AuthContext handles navigation
+        if (!result.success) {
+            setLoading(false);
+            Alert.alert('Google Login Failed', result.error);
+        }
     };
 
     return (
@@ -62,8 +93,30 @@ export default function LoginScreen({ navigation }: any) {
                 {/* Login Button */}
                 <TouchableOpacity onPress={handleLogin} disabled={loading} activeOpacity={0.85} style={styles.btnWrap}>
                     <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.btn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                        <Text style={styles.btnText}>{loading ? 'Logging in...' : 'Sign In'}</Text>
+                        <Text style={styles.btnText}>{loading ? 'Logging in...' : 'Sign In with Password'}</Text>
                     </LinearGradient>
+                </TouchableOpacity>
+
+                <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>OR</Text>
+                    <View style={styles.dividerLine} />
+                </View>
+
+                {/* Email Magic Link Login */}
+                <TouchableOpacity onPress={handleOTPLogin} disabled={loading} activeOpacity={0.85} style={[styles.btnWrap, styles.secondaryBtn]}>
+                    <View style={styles.btnContent}>
+                        <Ionicons name="mail-unread-outline" size={20} color={colors.primary} />
+                        <Text style={styles.secondaryBtnText}>Continue with Email Link</Text>
+                    </View>
+                </TouchableOpacity>
+
+                {/* Google Login */}
+                <TouchableOpacity onPress={handleGoogleLogin} disabled={loading} activeOpacity={0.85} style={[styles.btnWrap, styles.secondaryBtn, { marginTop: 12 }]}>
+                    <View style={styles.btnContent}>
+                        <Ionicons name="logo-google" size={20} color="#DB4437" />
+                        <Text style={styles.secondaryBtnText}>Continue with Google</Text>
+                    </View>
                 </TouchableOpacity>
 
                 {/* Test Accounts */}
@@ -110,6 +163,12 @@ const styles = StyleSheet.create({
     btnWrap: { borderRadius: radius.md, overflow: 'hidden', marginTop: 8 },
     btn: { paddingVertical: 16, alignItems: 'center', borderRadius: radius.md },
     btnText: { fontFamily: 'Inter_700Bold', color: '#FFF', fontSize: 16 },
+    secondaryBtn: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+    secondaryBtnText: { fontFamily: 'Inter_600SemiBold', color: colors.text, fontSize: 16 },
+    btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
+    divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
+    dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+    dividerText: { marginHorizontal: 16, color: colors.textSecondary, fontFamily: 'Inter_600SemiBold', fontSize: 12 },
     testBox: {
         marginTop: 24, backgroundColor: colors.surface, borderRadius: radius.md,
         padding: 14, borderWidth: 1, borderColor: colors.border,

@@ -3,3 +3,5 @@ node_modules/
 logs/
 *.log
 package-lock.json
+serviceAccountKey.json
+config/serviceAccountKey.json

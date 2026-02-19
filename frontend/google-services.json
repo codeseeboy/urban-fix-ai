@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "88606519613",
+    "project_id": "firstproject-8962e",
+    "storage_bucket": "firstproject-8962e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:88606519613:android:2f5b79a8e4456336675554",
+        "android_client_info": {
+          "package_name": "com.urbanfix.ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8btt47rqjVbrgARLg9tzEJ4uXg48U4eY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

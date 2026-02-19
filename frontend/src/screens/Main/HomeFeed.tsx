@@ -1,5 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Text, TouchableOpacity, Animated, Image, RefreshControl, ActivityIndicator, Share } from 'react-native';
+/**
+ * HomeFeed — Premium redesigned feed with Community/Municipal toggle,
+ * Stories, Reels section, side filter drawer, and social-media-grade cards
+ */
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import {
+    View, StyleSheet, FlatList, Text, TouchableOpacity, Animated,
+    RefreshControl, ActivityIndicator, Share, Dimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,36 +14,229 @@ import { useAuth } from '../../context/AuthContext';
 import { issuesAPI, gamificationAPI } from '../../services/api';
 import logger from '../../utils/logger';
 import { colors, fonts, radius } from '../../theme/colors';
-import SuggestedFollows from '../../components/Municipal/SuggestedFollows'; // New Import
 
-const FILTERS = [
-    { id: 'all', icon: 'grid-outline', label: 'All' },
-    { id: 'trending', icon: 'trending-up-outline', label: 'Trending' },
-    { id: 'following', icon: 'people-outline', label: 'Following' },
-    { id: 'high_priority', icon: 'alert-circle-outline', label: 'Critical' },
-    { id: 'resolved', icon: 'checkmark-circle-outline', label: 'Resolved' },
-    { id: 'my_posts', icon: 'person-outline', label: 'My Posts' },
+// New premium feed components
+import FeedToggle from '../../components/feed/FeedToggle';
+import StoriesRow from '../../components/feed/StoriesRow';
+import ReelsTab from '../../components/feed/ReelsTab';
+import FilterDrawer from '../../components/feed/FilterDrawer';
+import FeedPost from '../../components/feed/FeedPost';
+import SuggestedFollows from '../../components/Municipal/SuggestedFollows';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+/* ─── Greeting based on device time ─── */
+const getGreeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return { text: 'Good Morning', icon: 'sunny-outline' as const, emoji: '☀️' };
+    if (h < 17) return { text: 'Good Afternoon', icon: 'partly-sunny-outline' as const, emoji: '🌤️' };
+    if (h < 21) return { text: 'Good Evening', icon: 'moon-outline' as const, emoji: '🌙' };
+    return { text: 'Good Night', icon: 'cloudy-night-outline' as const, emoji: '✨' };
+};
+
+/* ─── Filter categories for the side drawer ─── */
+const FILTER_CATEGORIES = [
+    { id: 'all', label: 'All Issues', icon: 'grid-outline' },
+    { id: 'trending', label: 'Trending', icon: 'trending-up-outline' },
+    { id: 'following', label: 'Following', icon: 'people-outline' },
+    { id: 'high_priority', label: 'Critical', icon: 'alert-circle-outline' },
+    { id: 'resolved', label: 'Resolved', icon: 'checkmark-circle-outline' },
+    { id: 'my_posts', label: 'My Posts', icon: 'person-outline' },
+    { id: 'nearby', label: 'Nearby', icon: 'location-outline' },
+];
+
+/* ─── Section tabs within feed ─── */
+const SECTION_TABS = [
+    { id: 'posts', label: 'Posts', icon: 'grid-outline' },
+    { id: 'reels', label: 'Reels', icon: 'play-circle-outline' },
+];
+
+/* ─── Dummy municipal posts for Boisar & Palghar ─── */
+const DUMMY_MUNICIPAL_POSTS: any[] = [
+    {
+        _id: 'muni-boisar-notice-1',
+        title: 'Water supply disruption — Maintenance scheduled',
+        description: 'Due to pipeline maintenance, water supply in Ward 5 & 6 will be disrupted on 20th Feb from 10:00 AM to 4:00 PM. Please store water in advance.',
+        authorType: 'MunicipalPage',
+        user: { name: 'Boisar Municipal Council', avatar: null, _id: 'muni-boisar' },
+        municipalPage: 'muni-boisar',
+        officialUpdateType: 'NOTICE',
+        timeAgo: '3h ago',
+        image: null,
+        upvotes: ['u1', 'u2', 'u3', 'u4', 'u5'],
+        downvotes: [],
+        commentCount: 12,
+        status: 'Active',
+        location: { address: 'Boisar, Palghar District' },
+        aiSeverity: null,
+        departmentTag: 'Water Dept',
+        emergency: false,
+    },
+    {
+        _id: 'muni-palghar-resolved-1',
+        title: 'Pothole repair completed — Palghar-Boisar Road',
+        description: 'The potholes reported by citizens on Palghar-Boisar main road have been repaired. Thank you for your patience and reports!',
+        authorType: 'MunicipalPage',
+        user: { name: 'Palghar Zilla Parishad', avatar: null, _id: 'muni-palghar' },
+        municipalPage: 'muni-palghar',
+        officialUpdateType: 'RESOLVED',
+        timeAgo: '5h ago',
+        image: 'http://192.168.0.102:5000/public/images/pothole.jpg',
+        upvotes: ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8'],
+        downvotes: [],
+        commentCount: 24,
+        status: 'Resolved',
+        location: { address: 'Palghar-Boisar Road, NH-8' },
+        aiSeverity: null,
+        departmentTag: 'Roads Dept',
+        emergency: false,
+    },
+    {
+        _id: 'muni-boisar-notice-2',
+        title: 'New garbage collection schedule — Starting Monday',
+        description: 'Door-to-door garbage collection timings changed: 7:00 AM – 10:00 AM for wet waste, 10:00 AM – 12:00 PM for dry waste. Please segregate.',
+        authorType: 'MunicipalPage',
+        user: { name: 'Boisar Municipal Council', avatar: null, _id: 'muni-boisar' },
+        municipalPage: 'muni-boisar',
+        officialUpdateType: 'NOTICE',
+        timeAgo: '8h ago',
+        image: null,
+        upvotes: ['u1', 'u2'],
+        downvotes: [],
+        commentCount: 6,
+        status: 'Active',
+        location: { address: 'All Wards, Boisar' },
+        aiSeverity: null,
+        departmentTag: 'Sanitation',
+        emergency: false,
+    },
+    {
+        _id: 'muni-palghar-notice-1',
+        title: 'Street light installation — 45 new lights in Palghar East',
+        description: 'As part of the Smart City initiative, 45 new LED street lights have been installed in Palghar East zone. Report any non-functional lights via this app.',
+        authorType: 'MunicipalPage',
+        user: { name: 'Palghar Zilla Parishad', avatar: null, _id: 'muni-palghar' },
+        municipalPage: 'muni-palghar',
+        officialUpdateType: 'UPDATE',
+        timeAgo: '1d ago',
+        image: 'http://192.168.0.102:5000/public/images/streetlight.webp',
+        upvotes: ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8', 'u9', 'u10', 'u11'],
+        downvotes: [],
+        commentCount: 18,
+        status: 'Active',
+        location: { address: 'Palghar East Zone' },
+        aiSeverity: null,
+        departmentTag: 'Electricity Dept',
+        emergency: false,
+    },
+    {
+        _id: 'muni-boisar-resolved-1',
+        title: 'Drainage blockage cleared — Katkarpada Road',
+        description: 'The blocked drainage near Katkarpada junction has been cleared by our team. Waterlogging issue is now resolved.',
+        authorType: 'MunicipalPage',
+        user: { name: 'Boisar Municipal Council', avatar: null, _id: 'muni-boisar' },
+        municipalPage: 'muni-boisar',
+        officialUpdateType: 'RESOLVED',
+        timeAgo: '1d ago',
+        image: null,
+        upvotes: ['u1', 'u2', 'u3'],
+        downvotes: [],
+        commentCount: 9,
+        status: 'Resolved',
+        location: { address: 'Katkarpada, Boisar' },
+        aiSeverity: null,
+        departmentTag: 'Drainage Dept',
+        emergency: false,
+    },
+];
+
+/* ─── Dummy stories for municipal pages ─── */
+const MUNICIPAL_STORIES = [
+    { id: 'story-boisar', name: 'Boisar MC', hasUpdate: true, verified: true },
+    { id: 'story-palghar', name: 'Palghar ZP', hasUpdate: true, verified: true },
+    { id: 'story-roads', name: 'Roads Dept', hasUpdate: false, verified: true },
+    { id: 'story-water', name: 'Water Dept', hasUpdate: true, verified: false },
 ];
 
 export default function HomeFeed({ navigation }: any) {
     const insets = useSafeAreaInsets();
     const { user } = useAuth();
+    const greeting = getGreeting();
+    const firstName = user?.name?.split(' ')[0] || 'Citizen';
+
+    // Core state
+    const [feedMode, setFeedMode] = useState<'community' | 'municipal'>('community');
+    const [activeSection, setActiveSection] = useState<'posts' | 'reels'>('posts');
     const [activeFilter, setActiveFilter] = useState('all');
+    const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [issues, setIssues] = useState<any[]>([]);
-    const [stats, setStats] = useState({ totalIssues: 0, resolved: 0, critical: 0 });
+    const [stats, setStats] = useState({ totalIssues: 0, resolved: 0, critical: 0, inProgress: 0, pending: 0 });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
+    // Scroll animation for header collapse
+    const scrollY = useRef(new Animated.Value(0)).current;
+
+    /* ─── Scroll-driven collapsing header animations ─── */
+    const SCROLL_COLLAPSE = 140;
+    const stickyBgOpacity = scrollY.interpolate({
+        inputRange: [0, 80],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+    });
+    const stickyBrandOpacity = scrollY.interpolate({
+        inputRange: [60, SCROLL_COLLAPSE],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+    });
+    const stickyBrandSlideX = scrollY.interpolate({
+        inputRange: [60, SCROLL_COLLAPSE],
+        outputRange: [30, 0],
+        extrapolate: 'clamp',
+    });
+    const stickyBrandSlideY = scrollY.interpolate({
+        inputRange: [60, SCROLL_COLLAPSE],
+        outputRange: [8, 0],
+        extrapolate: 'clamp',
+    });
+    const feedBrandOpacity = scrollY.interpolate({
+        inputRange: [30, 100],
+        outputRange: [1, 0],
+        extrapolate: 'clamp',
+    });
+    const feedBrandSlideY = scrollY.interpolate({
+        inputRange: [30, 100],
+        outputRange: [0, -8],
+        extrapolate: 'clamp',
+    });
+    const stickyBorderOpacity = scrollY.interpolate({
+        inputRange: [0, SCROLL_COLLAPSE],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+    });
+
+    // Reset scroll position when switching sections
+    useEffect(() => { scrollY.setValue(0); }, [activeSection]);
+
+    /* ─── Data fetching ─── */
     const fetchIssues = useCallback(async () => {
-        logger.info('HomeFeed', `Fetching issues with filter: ${activeFilter}`);
+        logger.info('HomeFeed', `Fetching ${feedMode} feed, filter: ${activeFilter}`);
         try {
             const filter = activeFilter === 'all' ? undefined : activeFilter;
             const { data } = await issuesAPI.getFeed(filter, user?._id);
-            setIssues(data);
+            if (feedMode === 'municipal') {
+                // Use real municipal posts if any, otherwise fall back to dummy
+                const realMunicipal = data.filter((i: any) => i.authorType === 'MunicipalPage');
+                setIssues(realMunicipal.length > 0 ? realMunicipal : DUMMY_MUNICIPAL_POSTS);
+            } else {
+                setIssues(data.filter((i: any) => i.authorType !== 'MunicipalPage'));
+            }
         } catch (e) {
             console.log('Feed error:', e);
+            // Show dummy municipal posts even on error
+            if (feedMode === 'municipal') setIssues(DUMMY_MUNICIPAL_POSTS);
         }
-    }, [activeFilter, user?._id]);
+    }, [activeFilter, feedMode, user?._id]);
 
     const fetchStats = async () => {
         try {
@@ -48,7 +248,7 @@ export default function HomeFeed({ navigation }: any) {
     useEffect(() => {
         setLoading(true);
         Promise.all([fetchIssues(), fetchStats()]).finally(() => setLoading(false));
-    }, [activeFilter]);
+    }, [activeFilter, feedMode]);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -56,22 +256,30 @@ export default function HomeFeed({ navigation }: any) {
         setRefreshing(false);
     };
 
+    /* ─── Actions ─── */
     const handleUpvote = async (issueId: string) => {
+        // Skip for dummy municipal posts
+        if (issueId.startsWith('muni-')) return;
         logger.tap('HomeFeed', 'Upvote', { issueId });
         try {
             const { data } = await issuesAPI.upvote(issueId);
             setIssues(prev => prev.map(i => i._id === issueId ? {
-                ...i, upvotes: data.upvoted ? [...i.upvotes, user?._id] : i.upvotes.filter((u: string) => u !== user?._id),
+                ...i, upvotes: data.upvoted
+                    ? [...i.upvotes, user?._id]
+                    : i.upvotes.filter((u: string) => u !== user?._id),
             } : i));
         } catch (e) { console.log('Upvote error:', e); }
     };
 
     const handleDownvote = async (issueId: string) => {
+        if (issueId.startsWith('muni-')) return;
         logger.tap('HomeFeed', 'Downvote', { issueId });
         try {
             const { data } = await issuesAPI.downvote(issueId);
             setIssues(prev => prev.map(i => i._id === issueId ? {
-                ...i, downvotes: data.downvoted ? [...(i.downvotes || []), user?._id] : (i.downvotes || []).filter((u: string) => u !== user?._id),
+                ...i, downvotes: data.downvoted
+                    ? [...(i.downvotes || []), user?._id]
+                    : (i.downvotes || []).filter((u: string) => u !== user?._id),
             } : i));
         } catch (e) { console.log('Downvote error:', e); }
     };
@@ -81,269 +289,595 @@ export default function HomeFeed({ navigation }: any) {
         try {
             await Share.share({
                 title: item.title,
-                message: `🚨 ${item.title}\n📍 ${item.location?.address || 'Unknown'}\n🔴 Severity: ${item.aiSeverity}\n\nReported on UrbanFix AI — Help make our city better!\n#UrbanFixAI #CivicEngagement`,
+                message: `🚨 ${item.title}\n📍 ${item.location?.address || 'Unknown'}\n\nReported on UrbanFix AI\n#UrbanFixAI #CivicEngagement`,
             });
         } catch (e) { console.log('Share error:', e); }
     };
 
-    const getSeverityColor = (s: string) => s === 'Critical' ? '#FF003C' : s === 'High' ? '#FF453A' : s === 'Medium' ? '#FFD60A' : '#30D158';
-
-    const renderIssueCard = ({ item }: any) => {
-        const isMunicipal = item.authorType === 'MunicipalPage';
-
-        return (
-            <TouchableOpacity style={[styles.card, isMunicipal && styles.municipalCard]} activeOpacity={0.9}
-                onPress={() => isMunicipal ? navigation.navigate('MunicipalProfile', { pageId: item.municipalPage }) : navigation.navigate('IssueDetail', { issueId: item._id })}>
-
-                {/* Severity glow line - Only for user issues */}
-                {!isMunicipal && <View style={[styles.glowLine, { backgroundColor: getSeverityColor(item.aiSeverity) }]} />}
-                {isMunicipal && <View style={[styles.glowLine, { backgroundColor: '#0055CC' }]} />}
-
-                {/* Header */}
-                <View style={styles.cardHeader}>
-                    <View style={styles.cardUser}>
-                        {isMunicipal ? (
-                            <Image source={{ uri: item.user?.avatar || 'https://via.placeholder.com/40' }} style={styles.avatar} />
-                        ) : (
-                            <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.avatar}>
-                                <Text style={styles.avatarText}>{(item.user?.name || 'A')[0]}</Text>
-                            </LinearGradient>
-                        )}
-
-                        <View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <Text style={styles.userName}>{item.user?.name || 'Anonymous'}</Text>
-                                {isMunicipal && <Ionicons name="checkmark-circle" size={14} color={colors.primary} />}
-                            </View>
-                            <Text style={styles.timeText}>
-                                {isMunicipal ? 'Official Update' : item.timeAgo} • {item.location?.address || 'Unknown'}
-                            </Text>
-                        </View>
-                    </View>
-
-                    {!isMunicipal ? (
-                        <View style={[styles.sevBadge, { backgroundColor: getSeverityColor(item.aiSeverity) + '20' }]}>
-                            <Text style={[styles.sevText, { color: getSeverityColor(item.aiSeverity) }]}>{item.aiSeverity}</Text>
-                        </View>
-                    ) : (
-                        <View style={[styles.sevBadge, { backgroundColor: '#0055CC20' }]}>
-                            <Text style={[styles.sevText, { color: '#0055CC' }]}>{item.officialUpdateType || 'UPDATE'}</Text>
-                        </View>
-                    )}
-                </View>
-
-                {/* Title */}
-                <Text style={styles.cardTitle}>{item.title}</Text>
-                {/* Description for Official Updates */}
-                {isMunicipal && item.description && (
-                    <Text style={styles.cardDesc} numberOfLines={3}>{item.description}</Text>
-                )}
-
-                {/* Image */}
-                {item.image && (
-                    <View style={styles.imageWrap}>
-                        <Image source={{ uri: item.image }} style={styles.cardImage} />
-                        {!isMunicipal && (
-                            <View style={styles.imgOverlay}>
-                                <View style={styles.deptTag}>
-                                    <Text style={styles.deptText}>{item.departmentTag}</Text>
-                                </View>
-                            </View>
-                        )}
-                    </View>
-                )}
-
-                {/* Status + Emergency (User Only) */}
-                {!isMunicipal && (
-                    <View style={styles.statusRow}>
-                        <View style={[styles.statusBadge, { backgroundColor: item.status === 'Resolved' ? colors.success + '15' : item.status === 'InProgress' ? colors.primary + '15' : colors.warning + '15' }]}>
-                            <Ionicons name={item.status === 'Resolved' ? 'checkmark-circle' : item.status === 'InProgress' ? 'sync' : 'time'} size={12}
-                                color={item.status === 'Resolved' ? colors.success : item.status === 'InProgress' ? colors.primary : colors.warning} />
-                            <Text style={[styles.statusText, { color: item.status === 'Resolved' ? colors.success : item.status === 'InProgress' ? colors.primary : colors.warning }]}>
-                                {item.status === 'InProgress' ? 'In Progress' : item.status}
-                            </Text>
-                        </View>
-                        {item.emergency && (
-                            <View style={styles.emergencyBadge}>
-                                <Ionicons name="warning" size={11} color="#FF003C" />
-                                <Text style={styles.emergencyText}>EMERGENCY</Text>
-                            </View>
-                        )}
-                    </View>
-                )}
-
-                {/* Actions */}
-                <View style={styles.actionsRow}>
-                    {!isMunicipal ? (
-                        <>
-                            <TouchableOpacity style={styles.actionBtn} onPress={() => handleUpvote(item._id)}>
-                                <Ionicons name={item.upvotes?.includes(user?._id) ? 'arrow-up-circle' : 'arrow-up-circle-outline'}
-                                    size={20} color={item.upvotes?.includes(user?._id) ? colors.primary : colors.textSecondary} />
-                                <Text style={[styles.actionText, item.upvotes?.includes(user?._id) && { color: colors.primary }]}>{item.upvotes?.length || 0}</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionBtn} onPress={() => handleDownvote(item._id)}>
-                                <Ionicons name={(item.downvotes || []).includes(user?._id) ? 'arrow-down-circle' : 'arrow-down-circle-outline'}
-                                    size={20} color={(item.downvotes || []).includes(user?._id) ? '#FF453A' : colors.textSecondary} />
-                                <Text style={[styles.actionText, (item.downvotes || []).includes(user?._id) && { color: '#FF453A' }]}>{(item.downvotes || []).length}</Text>
-                            </TouchableOpacity>
-                        </>
-                    ) : (
-                        <View style={styles.actionBtn}>
-                            <Ionicons name="eye-outline" size={18} color={colors.textSecondary} />
-                            <Text style={styles.actionText}>Official Post</Text>
-                        </View>
-                    )}
-
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => !isMunicipal && navigation.navigate('IssueDetail', { issueId: item._id })}>
-                        <Ionicons name="chatbubble-outline" size={18} color={colors.textSecondary} />
-                        <Text style={styles.actionText}>{item.commentCount || 0}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleShare(item)}>
-                        <Ionicons name="share-social-outline" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                </View>
-            </TouchableOpacity>
-        );
+    const handleFilterSelect = (filterId: string) => {
+        setActiveFilter(filterId);
+        setFilterDrawerOpen(false);
     };
 
-    const dataWithSuggestions = React.useMemo(() => {
+    /* ─── Feed data with injections ─── */
+    const feedData = useMemo(() => {
         if (loading || issues.length === 0) return issues;
-        // Inject suggestions after the 2nd item
-        const insertionIndex = Math.min(2, issues.length);
-        const newDetails = [...issues];
-        newDetails.splice(insertionIndex, 0, { _id: 'suggestion_injection', type: 'suggestion' });
-        return newDetails;
-    }, [issues, loading]);
-
-    const renderItem = ({ item }: any) => {
-        if (item.type === 'suggestion') {
-            return <SuggestedFollows navigation={navigation} />;
+        const items = [...issues];
+        if (feedMode === 'municipal' && items.length >= 2) {
+            items.splice(2, 0, { _id: 'suggestion_injection', type: 'suggestion' });
         }
-        return renderIssueCard({ item });
-    };
+        if (feedMode === 'community' && items.length >= 3) {
+            items.splice(3, 0, { _id: 'suggestion_injection', type: 'suggestion' });
+        }
+        return items;
+    }, [issues, loading, feedMode]);
 
-    return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
-            {/* Header */}
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.headerTitle}>UrbanFix AI</Text>
-                    <Text style={styles.headerSub}>Welcome, {user?.name?.split(' ')[0] || 'Citizen'}</Text>
+    /* ─── Get active filter label ─── */
+    const activeFilterLabel = FILTER_CATEGORIES.find(f => f.id === activeFilter)?.label || 'All Issues';
+
+    /* ─── Stylish UrbanFix AI branding ─── */
+    const BrandTag = () => (
+        <View style={styles.brandRow}>
+            <LinearGradient
+                colors={['transparent', colors.textMuted + '40', 'transparent']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.brandLine}
+            />
+            <View style={styles.brandTextWrap}>
+                <Text style={styles.brandTextUrban}>Urban</Text>
+                <Text style={styles.brandTextFix}>Fix</Text>
+                <Text style={styles.brandTextAI}> AI</Text>
+                <View style={styles.brandShineDot} />
+            </View>
+            <LinearGradient
+                colors={['transparent', colors.textMuted + '40', 'transparent']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.brandLine}
+            />
+        </View>
+    );
+
+    /* ─── Section Tabs (always visible — shared between Posts & Reels) ─── */
+    const SectionTabsBar = () => (
+        <View style={styles.sectionTabsContainer}>
+            <View style={styles.sectionTabs}>
+                {SECTION_TABS.map(tab => (
+                    <TouchableOpacity
+                        key={tab.id}
+                        style={[styles.sectionTab, activeSection === tab.id && styles.sectionTabActive]}
+                        onPress={() => setActiveSection(tab.id as any)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons
+                            name={tab.icon as any}
+                            size={18}
+                            color={activeSection === tab.id ? colors.text : colors.textMuted}
+                        />
+                        <Text style={[
+                            styles.sectionTabText,
+                            activeSection === tab.id && styles.sectionTabTextActive,
+                        ]}>
+                            {tab.label}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            {/* Filter indicator */}
+            {activeFilter !== 'all' && (
+                <View style={styles.activeFilterIndicator}>
+                    <View style={styles.filterDot} />
+                    <Text style={styles.activeFilterText}>{activeFilterLabel}</Text>
+                    <TouchableOpacity onPress={() => setActiveFilter('all')}>
+                        <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.navigate('Settings')}>
-                    <Ionicons name="search-outline" size={22} color={colors.text} />
-                </TouchableOpacity>
+            )}
+        </View>
+    );
+
+    /* ─── Header (scrollable — greeting, toggle, tabs, brand, stories) ─── */
+    const renderHeader = () => (
+        <View style={{ marginHorizontal: -16 }}>
+            {/* Greeting Row — scrolls with content */}
+            <View style={styles.greetingRow}>
+                <View>
+                    <Text style={styles.greetingText}>
+                        {greeting.text} {greeting.emoji}
+                    </Text>
+                    <Text style={styles.userName}>{firstName}</Text>
+                </View>
+                <View style={{ width: 90 }} />
             </View>
 
-            {/* Filters */}
-            <View style={styles.filterRow}>
-                <FlatList
-                    horizontal data={FILTERS} showsHorizontalScrollIndicator={false}
-                    keyExtractor={i => i.id} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity
-                            style={[styles.filterChip, activeFilter === item.id && styles.filterActive]}
-                            onPress={() => setActiveFilter(item.id)} activeOpacity={0.7}>
-                            <Ionicons name={item.icon as any} size={14} color={activeFilter === item.id ? '#FFF' : colors.textSecondary} />
-                            <Text style={[styles.filterText, activeFilter === item.id && styles.filterTextActive]}>{item.label}</Text>
-                        </TouchableOpacity>
-                    )}
-                />
-            </View>
+            {/* Feed Mode Toggle */}
+            <FeedToggle activeTab={feedMode} onToggle={setFeedMode} />
 
-            {/* Stats */}
-            <View style={styles.statsRow}>
-                <View style={styles.statItem}><Text style={styles.statNum}>{stats.totalIssues}</Text><Text style={styles.statLabel}>Issues</Text></View>
-                <View style={[styles.statItem, styles.statBorder]}><Text style={styles.statNum}>{stats.resolved}</Text><Text style={styles.statLabel}>Resolved</Text></View>
-                <View style={styles.statItem}><Text style={[styles.statNum, { color: colors.error }]}>{stats.critical}</Text><Text style={styles.statLabel}>Critical</Text></View>
-            </View>
+            {/* Section Tabs */}
+            <SectionTabsBar />
 
-            {/* Feed */}
-            {loading ? (
-                <View style={styles.loadWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
-            ) : (
-                <FlatList
-                    data={dataWithSuggestions}
-                    renderItem={renderItem}
-                    keyExtractor={i => i._id}
-                    contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
-                    showsVerticalScrollIndicator={false}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-                    ListEmptyComponent={
-                        <View style={styles.emptyWrap}>
-                            <Ionicons name="document-text-outline" size={48} color={colors.textMuted} />
-                            <Text style={styles.emptyText}>No issues found</Text>
-                        </View>
-                    }
+            {/* UrbanFix AI branding — fades/lifts out as sticky version appears */}
+            <Animated.View style={{ opacity: feedBrandOpacity, transform: [{ translateY: feedBrandSlideY }] }}>
+                <BrandTag />
+            </Animated.View>
+
+            {/* Stories Row (shows in municipal mode) */}
+            {feedMode === 'municipal' && (
+                <StoriesRow
+                    stories={MUNICIPAL_STORIES}
+                    onStoryPress={() => {}}
+                    onAddStory={() => navigation.navigate('ReportIssue')}
                 />
             )}
         </View>
     );
+
+    /* ─── Render feed item ─── */
+    const renderItem = ({ item, index }: { item: any; index: number }) => {
+        if (item.type === 'suggestion') {
+            return <SuggestedFollows navigation={navigation} />;
+        }
+        return (
+            <FeedPost
+                item={item}
+                userId={user?._id}
+                index={index}
+                onPress={() =>
+                    item.authorType === 'MunicipalPage'
+                        ? navigation.navigate('MunicipalProfile', { pageId: item.municipalPage })
+                        : navigation.navigate('IssueDetail', { issueId: item._id })
+                }
+                onUpvote={handleUpvote}
+                onDownvote={handleDownvote}
+                onComment={(id) => navigation.navigate('IssueDetail', { issueId: id })}
+                onShare={handleShare}
+                onUserPress={(it) => {
+                    if (it.authorType === 'MunicipalPage') {
+                        navigation.navigate('MunicipalProfile', { pageId: it.municipalPage });
+                    }
+                }}
+            />
+        );
+    };
+
+    return (
+        <View style={styles.container}>
+            {/* ─── Main Content Area ─── */}
+            <View style={{ flex: 1, paddingTop: insets.top }}>
+                {activeSection === 'reels' ? (
+                    <View style={{ flex: 1 }}>
+                        {/* Greeting + buttons for reels (no scroll = shows normally) */}
+                        <View style={styles.greetingRow}>
+                            <View>
+                                <Text style={styles.greetingText}>
+                                    {greeting.text} {greeting.emoji}
+                                </Text>
+                                <Text style={styles.userName}>{firstName}</Text>
+                            </View>
+                            <View style={styles.topBarRight}>
+                                <TouchableOpacity
+                                    style={styles.topBarBtn}
+                                    onPress={() => setFilterDrawerOpen(true)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons name="options-outline" size={20} color={colors.text} />
+                                    {activeFilter !== 'all' && <View style={styles.filterActiveDot} />}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.topBarBtn}
+                                    onPress={() => navigation.navigate('Settings')}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons name="search-outline" size={20} color={colors.text} />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                        <FeedToggle activeTab={feedMode} onToggle={setFeedMode} />
+                        <SectionTabsBar />
+                        <ReelsTab
+                            reels={[]}
+                            loading={false}
+                            userId={user?._id}
+                            onLike={handleUpvote}
+                            onComment={(id) => navigation.navigate('IssueDetail', { issueId: id })}
+                            onShare={handleShare}
+                            onUserPress={() => {}}
+                            activeToggle={feedMode}
+                        />
+                    </View>
+                ) : (
+                    <FlatList
+                        data={loading ? [] : feedData}
+                        renderItem={renderItem}
+                        keyExtractor={i => i._id}
+                        ListHeaderComponent={renderHeader}
+                        contentContainerStyle={styles.feedContent}
+                        showsVerticalScrollIndicator={false}
+                        onScroll={Animated.event(
+                            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                            { useNativeDriver: false },
+                        )}
+                        scrollEventThrottle={16}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                tintColor={colors.primary}
+                                colors={[colors.primary]}
+                                progressBackgroundColor={colors.surface}
+                            />
+                        }
+                        ListEmptyComponent={
+                            loading ? (
+                                <View style={styles.loadWrap}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                    <Text style={styles.loadText}>Loading feed...</Text>
+                                </View>
+                            ) : (
+                                <View style={styles.emptyWrap}>
+                                    <View style={styles.emptyIcon}>
+                                        <Ionicons name="telescope-outline" size={48} color={colors.textMuted} />
+                                    </View>
+                                    <Text style={styles.emptyTitle}>
+                                        {feedMode === 'municipal' ? 'No municipal updates' : 'No issues found'}
+                                    </Text>
+                                    <Text style={styles.emptySubtitle}>
+                                        {feedMode === 'municipal'
+                                            ? 'Follow municipal pages to see updates here'
+                                            : 'Pull down to refresh or try a different filter'}
+                                    </Text>
+                                </View>
+                            )
+                        }
+                    />
+                )}
+            </View>
+
+            {/* ─── STICKY OVERLAY — brand + buttons floating on top (Posts mode only) ─── */}
+            {activeSection === 'posts' && (
+                <View
+                    style={[styles.stickyOverlay, { paddingTop: insets.top }]}
+                    pointerEvents="box-none"
+                >
+                    {/* Background fades in on scroll to cover content */}
+                    <Animated.View
+                        style={[styles.stickyOverlayBg, { opacity: stickyBgOpacity }]}
+                        pointerEvents="none"
+                    />
+                    {/* Row: brand slides in left + buttons always visible right */}
+                    <View style={styles.stickyOverlayRow} pointerEvents="box-none">
+                        <Animated.View
+                            style={[styles.stickyBrandBlock, {
+                                opacity: stickyBrandOpacity,
+                                transform: [
+                                    { translateX: stickyBrandSlideX },
+                                    { translateY: stickyBrandSlideY },
+                                ],
+                            }]}
+                            pointerEvents="none"
+                        >
+                            <Text style={styles.stickyBrandUrban}>Urban</Text>
+                            <Text style={styles.stickyBrandFix}>Fix</Text>
+                            <Text style={styles.stickyBrandAI}> AI</Text>
+                            <View style={styles.stickyBrandShine} />
+                        </Animated.View>
+
+                        <View style={styles.topBarRight}>
+                            <TouchableOpacity
+                                style={styles.topBarBtn}
+                                onPress={() => setFilterDrawerOpen(true)}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name="options-outline" size={20} color={colors.text} />
+                                {activeFilter !== 'all' && <View style={styles.filterActiveDot} />}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.topBarBtn}
+                                onPress={() => navigation.navigate('Settings')}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name="search-outline" size={20} color={colors.text} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    {/* Subtle border appears on scroll */}
+                    <Animated.View style={[styles.stickyBorderLine, { opacity: stickyBorderOpacity }]} />
+                </View>
+            )}
+
+            {/* ─── Filter Side Drawer ─── */}
+            <FilterDrawer
+                visible={filterDrawerOpen}
+                onClose={() => setFilterDrawerOpen(false)}
+                activeFilter={activeFilter}
+                onSelectFilter={handleFilterSelect}
+                filters={FILTER_CATEGORIES}
+            />
+        </View>
+    );
 }
 
+/* ═══════════════════════ STYLES ═══════════════════════ */
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    header: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        paddingHorizontal: 20, paddingVertical: 12,
+    container: {
+        flex: 1,
+        backgroundColor: colors.background,
     },
-    headerTitle: { fontFamily: 'Inter_900Black', fontSize: 22, color: colors.text, letterSpacing: -0.5 },
-    headerSub: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.textSecondary, marginTop: 2 },
-    headerBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceLight, justifyContent: 'center', alignItems: 'center' },
-    filterRow: { marginBottom: 8 },
-    filterChip: {
-        flexDirection: 'row', alignItems: 'center', gap: 5,
-        paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-        backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+
+    /* ─── Sticky Overlay (floating brand + buttons) ─── */
+    stickyOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
     },
-    filterActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-    filterText: { fontFamily: 'Inter_600SemiBold', color: colors.textSecondary, fontSize: 12 },
-    filterTextActive: { color: '#FFF' },
-    statsRow: {
-        flexDirection: 'row', marginHorizontal: 16, marginBottom: 12,
-        backgroundColor: colors.surface, borderRadius: radius.lg, padding: 12,
-        borderWidth: 1, borderColor: colors.border,
+    stickyOverlayBg: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: colors.background,
     },
-    statItem: { flex: 1, alignItems: 'center' },
-    statBorder: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border },
-    statNum: { fontFamily: 'Inter_700Bold', color: colors.text, fontSize: 18 },
-    statLabel: { fontFamily: 'Inter_400Regular', color: colors.textMuted, fontSize: 10, marginTop: 2 },
-    loadWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    emptyWrap: { alignItems: 'center', paddingTop: 60 },
-    emptyText: { fontFamily: 'Inter_500Medium', color: colors.textMuted, fontSize: 14, marginTop: 12 },
-    card: {
-        backgroundColor: colors.surface, borderRadius: radius.xl, marginBottom: 14,
-        borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    stickyOverlayRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 8,
+        paddingBottom: 6,
+        minHeight: 48,
     },
-    glowLine: { height: 3, width: '100%' },
-    cardHeader: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        padding: 14, paddingBottom: 6,
+    stickyBrandBlock: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    cardUser: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    avatar: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-    avatarText: { fontFamily: 'Inter_700Bold', color: '#FFF', fontSize: 15 },
-    userName: { fontFamily: 'Inter_600SemiBold', color: colors.text, fontSize: 14 },
-    timeText: { fontFamily: 'Inter_400Regular', color: colors.textMuted, fontSize: 11, marginTop: 1 },
-    sevBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
-    sevText: { fontFamily: 'Inter_700Bold', fontSize: 10, textTransform: 'uppercase' },
-    cardTitle: { fontFamily: 'Inter_600SemiBold', color: colors.text, fontSize: 15, paddingHorizontal: 14, paddingBottom: 10 },
-    imageWrap: { position: 'relative' },
-    cardImage: { width: '100%', height: 200 },
-    imgOverlay: { position: 'absolute', bottom: 10, left: 10 },
-    deptTag: { backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    deptText: { fontFamily: 'Inter_600SemiBold', color: '#FFF', fontSize: 11 },
-    statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingTop: 10 },
-    statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-    statusText: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
-    emergencyBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: '#FF003C15' },
-    emergencyText: { fontFamily: 'Inter_700Bold', fontSize: 9, color: '#FF003C', letterSpacing: 0.5 },
-    actionsRow: {
-        flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 12, gap: 20,
-        borderTopWidth: 1, borderTopColor: colors.border, marginTop: 10,
+    stickyBrandUrban: {
+        fontFamily: fonts.bold,
+        fontSize: 16,
+        color: '#FFFFFF',
+        letterSpacing: 2,
+        textTransform: 'uppercase',
     },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    actionText: { fontFamily: 'Inter_500Medium', color: colors.textSecondary, fontSize: 13 },
-    municipalCard: { backgroundColor: colors.surface, borderColor: colors.primary + '40', borderWidth: 1 },
-    cardDesc: { fontFamily: 'Inter_400Regular', color: colors.textSecondary, fontSize: 13, paddingHorizontal: 14, paddingBottom: 10, lineHeight: 18 },
+    stickyBrandFix: {
+        fontFamily: fonts.black,
+        fontSize: 16,
+        color: colors.primary,
+        letterSpacing: 2,
+        textTransform: 'uppercase',
+    },
+    stickyBrandAI: {
+        fontFamily: fonts.semibold,
+        fontSize: 11,
+        color: colors.primary,
+        letterSpacing: 0.5,
+        opacity: 0.85,
+    },
+    stickyBrandShine: {
+        width: 5,
+        height: 5,
+        borderRadius: 2.5,
+        backgroundColor: '#FFFFFF',
+        marginLeft: 5,
+        shadowColor: '#FFFFFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 6,
+        elevation: 8,
+    },
+    stickyBorderLine: {
+        height: 1,
+        backgroundColor: colors.border,
+    },
+
+    /* ─── Greeting Row (scrollable in FlatList header) ─── */
+    greetingRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 8,
+        paddingBottom: 6,
+    },
+    greetingText: {
+        fontFamily: fonts.medium,
+        fontSize: 13,
+        color: colors.textSecondary,
+        letterSpacing: 0.2,
+    },
+    userName: {
+        fontFamily: fonts.black,
+        fontSize: 22,
+        color: colors.text,
+        letterSpacing: -0.5,
+        marginTop: 1,
+    },
+    topBarRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    topBarBtn: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: colors.surfaceLight,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+    },
+    filterActiveDot: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        width: 7,
+        height: 7,
+        borderRadius: 3.5,
+        backgroundColor: colors.primary,
+        borderWidth: 1.5,
+        borderColor: colors.surfaceLight,
+    },
+
+    /* ─── UrbanFix AI Brand Tag ─── */
+    brandRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginHorizontal: 20,
+        marginTop: 2,
+        marginBottom: 14,
+        gap: 10,
+    },
+    brandLine: {
+        flex: 1,
+        height: 1,
+    },
+    brandTextWrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    brandTextUrban: {
+        fontFamily: fonts.semibold,
+        fontSize: 11,
+        color: '#FFFFFF',
+        letterSpacing: 1.5,
+        textTransform: 'uppercase',
+    },
+    brandTextFix: {
+        fontFamily: fonts.bold,
+        fontSize: 11,
+        color: colors.primary,
+        letterSpacing: 1.5,
+        textTransform: 'uppercase',
+    },
+    brandTextAI: {
+        fontFamily: fonts.medium,
+        fontSize: 9,
+        color: colors.primary,
+        letterSpacing: 0.5,
+        opacity: 0.8,
+    },
+    brandShineDot: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#FFFFFF',
+        marginLeft: 4,
+        shadowColor: '#FFFFFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: 4,
+        elevation: 6,
+    },
+
+    /* ─── Section Tabs (always visible) ─── */
+    sectionTabsContainer: {
+        marginHorizontal: 16,
+        marginBottom: 10,
+    },
+    sectionTabs: {
+        flexDirection: 'row',
+        backgroundColor: colors.surface,
+        borderRadius: radius.md,
+        padding: 3,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    sectionTab: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 10,
+        borderRadius: radius.md - 2,
+    },
+    sectionTabActive: {
+        backgroundColor: colors.surfaceLight,
+    },
+    sectionTabText: {
+        fontFamily: fonts.semibold,
+        fontSize: 13,
+        color: colors.textMuted,
+    },
+    sectionTabTextActive: {
+        color: colors.text,
+    },
+
+    /* ─── Active Filter Indicator ─── */
+    activeFilterIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: colors.primary + '12',
+        borderRadius: 10,
+        alignSelf: 'flex-start',
+        borderWidth: 1,
+        borderColor: colors.primary + '25',
+    },
+    filterDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: colors.primary,
+    },
+    activeFilterText: {
+        fontFamily: fonts.medium,
+        color: colors.primary,
+        fontSize: 12,
+    },
+
+    /* ─── Feed Content ─── */
+    feedContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 100,
+    },
+
+    /* ─── Loading ─── */
+    loadWrap: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 12,
+    },
+    loadText: {
+        fontFamily: fonts.medium,
+        color: colors.textMuted,
+        fontSize: 13,
+    },
+
+    /* ─── Empty State ─── */
+    emptyWrap: {
+        alignItems: 'center',
+        paddingTop: 60,
+        paddingHorizontal: 40,
+    },
+    emptyIcon: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: colors.surfaceLight,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    emptyTitle: {
+        fontFamily: fonts.semibold,
+        color: colors.text,
+        fontSize: 16,
+        marginBottom: 6,
+    },
+    emptySubtitle: {
+        fontFamily: fonts.regular,
+        color: colors.textMuted,
+        fontSize: 13,
+        textAlign: 'center',
+        lineHeight: 19,
+    },
 });

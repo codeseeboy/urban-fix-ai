@@ -112,6 +112,27 @@ export default function ProfileSetupScreen() {
                 Alert.alert('Username Required', 'Please choose a username with at least 3 characters.');
                 return;
             }
+            
+            // Check if username is available
+            setSaving(true);
+            try {
+                const response = await userAPI.checkUsername(username);
+                if (!response.data.available) {
+                    Alert.alert(
+                        'Username Taken', 
+                        response.data.message || `"${username}" is already in use. Please try a different one.`
+                    );
+                    setSaving(false);
+                    return;
+                }
+            } catch (e: any) {
+                const errorMessage = e.response?.data?.message || 'Could not verify username. Please try again.';
+                Alert.alert('Error', errorMessage);
+                setSaving(false);
+                return;
+            }
+            setSaving(false);
+            
             setStep(1);
         } else if (step === 1) {
             if (!city.trim()) {
@@ -144,11 +165,23 @@ export default function ProfileSetupScreen() {
                 name: user?.name || '',
                 region: ward,
                 avatar: null,
+                username: username.toLowerCase().trim(),
+                city: city.trim(),
+                ward: ward,
+                interests: interests,
             });
             await completeProfileSetup({ username, city, ward, interests });
             logger.success('ProfileSetup', 'Profile setup completed');
         } catch (e: any) {
-            Alert.alert('Error', e.response?.data?.message || 'Failed to save profile');
+            const errorMessage = e.response?.data?.message || 'Failed to save profile. Please try again.';
+            const errorField = e.response?.data?.field;
+            
+            if (errorField === 'username') {
+                Alert.alert('Username Issue', errorMessage);
+                setStep(0); // Go back to username step
+            } else {
+                Alert.alert('Error', errorMessage);
+            }
         }
         setSaving(false);
     };

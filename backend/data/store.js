@@ -1,50 +1,41 @@
-// In-memory data store with seed data
-// No database required — everything lives in memory
+// ============================================================================
+// UrbanFix AI — Supabase Data Layer (replaces in-memory store)
+// All functions are async and query Supabase PostgreSQL
+// ============================================================================
 
 const jwt = require('jsonwebtoken');
+const supabase = require('../config/supabase');
+
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_123';
 
-// ── USERS ──
-const users = [
-    {
-        _id: 'user_001', name: 'Shashi Rajput', email: 'shashi@test.com', password: 'pass123',
-        role: 'citizen', points: 3420, badges: ['first_report', 'civic_hero', 'night_watch'],
-        reportsCount: 58, reportsResolved: 42, impactScore: 88, region: 'Central Ward',
-        avatar: null, createdAt: '2025-06-01T10:00:00Z',
-    },
-    {
-        _id: 'user_002', name: 'Raj Kumar', email: 'raj@test.com', password: 'pass123',
-        role: 'citizen', points: 2900, badges: ['first_report', 'civic_hero'],
-        reportsCount: 45, reportsResolved: 33, impactScore: 76, region: 'North Ward',
-        avatar: null, createdAt: '2025-07-15T10:00:00Z',
-    },
-    {
-        _id: 'user_003', name: 'Anita Singh', email: 'anita@test.com', password: 'pass123',
-        role: 'citizen', points: 2650, badges: ['first_report'],
-        reportsCount: 41, reportsResolved: 28, impactScore: 70, region: 'South Ward',
-        avatar: null, createdAt: '2025-08-01T10:00:00Z',
-    },
-    {
-        _id: 'admin_001', name: 'Municipal Admin', email: 'admin@urbanfix.com', password: 'admin123',
-        role: 'admin', points: 0, badges: [],
-        reportsCount: 0, reportsResolved: 120, impactScore: 0, region: 'All',
-        avatar: null, createdAt: '2025-01-01T10:00:00Z',
-    },
-    {
-        _id: 'worker_001', name: 'Shashikant', email: 'shashikant@urbanfix.com', password: 'worker123',
-        role: 'field_worker', points: 0, badges: [],
-        reportsCount: 0, reportsResolved: 85, impactScore: 0, region: 'Central Ward',
-        avatar: null, department: 'Roads', createdAt: '2025-03-01T10:00:00Z',
-    },
-    {
-        _id: 'worker_002', name: 'Meena Devi', email: 'meena@urbanfix.com', password: 'worker123',
-        role: 'field_worker', points: 0, badges: [],
-        reportsCount: 0, reportsResolved: 62, impactScore: 0, region: 'South Ward',
-        avatar: null, department: 'Sanitation', createdAt: '2025-04-01T10:00:00Z',
-    },
-];
+// ── RETRY WRAPPER ───────────────────────────────────────────────────────────
+async function withRetry(fn, retries = 2, delay = 500) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            if (attempt === retries) throw err;
+            console.warn(`⚠️ Retry ${attempt + 1}/${retries}:`, err.message);
+            await new Promise(r => setTimeout(r, delay * (attempt + 1)));
+        }
+    }
+}
 
-// ── LEVELS ──
+// ── ERROR HANDLER ───────────────────────────────────────────────────────────
+function handleError(result, context) {
+    if (result.error) {
+        console.error(`❌ DB Error [${context}]:`, result.error.message);
+        throw new Error(`Database error: ${result.error.message}`);
+    }
+    return result.data;
+}
+
+// ── TOKEN ───────────────────────────────────────────────────────────────────
+function generateToken(userId) {
+    return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '30d' });
+}
+
+// ── LEVELS ──────────────────────────────────────────────────────────────────
 const LEVELS = [
     { level: 1, name: 'New Reporter', xpRequired: 0 },
     { level: 2, name: 'Active Citizen', xpRequired: 500 },
@@ -72,157 +63,581 @@ function getLevelInfo(points) {
     };
 }
 
-// ── ISSUES ──
-const issues = [
-    {
-        _id: 'issue_001', user: 'user_001', title: 'Large Pothole on Main Street — Risk of Accident',
-        description: 'A massive pothole has developed on Main Street near the bus stop. Multiple vehicles have been damaged. This is causing major traffic issues and is a serious safety hazard.',
-        image: '/public/images/pothole.jpg',
-        video: null,
-        location: { type: 'Point', coordinates: [77.209, 28.6139], address: '101 Main St, Downtown' },
-        departmentTag: 'Roads', status: 'Acknowledged', category: 'roads',
-        priorityScore: 56, aiSeverity: 'High', aiTags: ['pothole', 'road-damage', 'safety-hazard'],
-        upvotes: ['user_002', 'user_003', 'user_001'], downvotes: [], followers: ['user_001'], commentCount: 12,
-        statusTimeline: [
-            { status: 'Submitted', timestamp: '2025-12-15T08:00:00Z', comment: 'Issue reported by citizen' },
-            { status: 'Acknowledged', timestamp: '2025-12-15T10:30:00Z', updatedBy: 'admin_001', comment: 'Acknowledged by Municipal Admin. Road safety team notified.', dept: 'Roads Dept' },
-        ],
-        assignedTo: null, resolvedBy: null, resolutionProof: null,
-        anonymous: false, emergency: false, createdAt: '2025-12-15T08:00:00Z',
-    },
-    {
-        _id: 'issue_002', user: 'user_002', title: 'Street Light Out Near Park — Unsafe at Night',
-        description: 'The street light at the corner of Park Avenue and 5th Street has been out for 2 weeks. The area becomes very dark and unsafe after 7pm. Several residents have complained.',
-        image: '/public/images/streetlight.webp',
-        location: { type: 'Point', coordinates: [77.219, 28.6229], address: '45 Park Avenue' },
-        departmentTag: 'Electricity', status: 'Submitted', category: 'lighting',
-        priorityScore: 32, aiSeverity: 'Medium', aiTags: ['street-light', 'safety', 'electrical'],
-        upvotes: ['user_001', 'user_003'], downvotes: [], followers: [], commentCount: 4,
-        statusTimeline: [
-            { status: 'Submitted', timestamp: '2025-12-16T14:00:00Z', comment: 'Issue reported by citizen' },
-        ],
-        assignedTo: null, resolvedBy: null, resolutionProof: null,
-        anonymous: false, emergency: false, createdAt: '2025-12-16T14:00:00Z',
-    },
-    {
-        _id: 'issue_003', user: 'user_003', title: 'Garbage Pileup Near School — Health Hazard',
-        description: 'Garbage has been accumulating for over a week near Central Public School. The stench is unbearable and it poses a health risk to school children. rats and stray dogs are seen regularly.',
-        image: '/public/images/garbage.avif',
-        location: { type: 'Point', coordinates: [77.225, 28.6100], address: 'Central Public School' },
-        departmentTag: 'Sanitation', status: 'InProgress', category: 'trash',
-        priorityScore: 96, aiSeverity: 'Critical', aiTags: ['garbage', 'health-hazard', 'school-zone'],
-        upvotes: ['user_001', 'user_002', 'user_003'], downvotes: [], followers: ['user_001', 'user_003'], commentCount: 28,
-        assignedTo: 'worker_002', resolvedBy: null, resolutionProof: null,
-        statusTimeline: [
-            { status: 'Submitted', timestamp: '2025-12-10T09:00:00Z', comment: 'Issue reported by citizen' },
-            { status: 'Acknowledged', timestamp: '2025-12-10T11:00:00Z', updatedBy: 'admin_001', comment: 'Critical health hazard acknowledged. Emergency sanitation crew assigned.', dept: 'Sanitation Dept' },
-            { status: 'InProgress', timestamp: '2025-12-12T08:00:00Z', updatedBy: 'worker_002', comment: 'Sanitation team arrived on site. Clearing operations started.', dept: 'Sanitation Dept' },
-        ],
-        anonymous: false, emergency: true, createdAt: '2025-12-10T09:00:00Z',
-    },
-    {
-        _id: 'issue_004', user: 'user_001', title: 'Broken Footpath — Senior Citizens Struggling',
-        description: 'The footpath along River Walk has several broken tiles causing difficulty for senior citizens and wheelchair users.',
-        image: '/public/images/brokenfootpath.jpg',
-        location: { type: 'Point', coordinates: [77.200, 28.6180], address: '32 River Walk' },
-        departmentTag: 'Public Works', status: 'Resolved', category: 'roads',
-        priorityScore: 20, aiSeverity: 'Low', aiTags: ['footpath', 'accessibility'],
-        upvotes: ['user_002'], downvotes: [], followers: [], commentCount: 2,
-        assignedTo: 'worker_001', resolvedBy: 'worker_001',
-        resolutionProof: {
-            afterImage: '/public/images/brokenfootpath.jpg',
-            workerRemarks: 'Broken tiles replaced. Footpath leveled and verified for elderly access.',
-            resolvedAt: '2025-12-01T16:00:00Z',
-            resolvedBy: 'worker_001'
-        },
-        statusTimeline: [
-            { status: 'Submitted', timestamp: '2025-11-20T10:00:00Z', comment: 'Broken footpath reported.' },
-            { status: 'Acknowledged', timestamp: '2025-11-21T09:00:00Z', updatedBy: 'admin_001', comment: 'Audit team verified damage.', dept: 'Public Works' },
-            { status: 'InProgress', timestamp: '2025-11-25T08:00:00Z', updatedBy: 'worker_001', comment: 'Materials arrived. Repair work started.', dept: 'Public Works' },
-            { status: 'Resolved', timestamp: '2025-12-01T16:00:00Z', updatedBy: 'worker_001', comment: 'All tiles replaced. Area cleared.', dept: 'Public Works' },
-        ],
-        anonymous: false, emergency: false, createdAt: '2025-11-20T10:00:00Z',
-    },
-    {
-        _id: 'issue_005', user: 'user_002', title: 'Water Pipe Burst on MG Road',
-        description: 'A major water pipe has burst on MG Road causing water logging and traffic disruption. Water is being wasted at an alarming rate.',
-        image: '/public/images/burst-pipe.jpg',
-        location: { type: 'Point', coordinates: [77.215, 28.620], address: 'MG Road, Sector 5' },
-        departmentTag: 'Water', status: 'Submitted', category: 'water',
-        priorityScore: 78, aiSeverity: 'Critical', aiTags: ['water-pipe', 'waterlogging', 'infrastructure'],
-        upvotes: ['user_001', 'user_003'], downvotes: [], followers: ['user_002'], commentCount: 6,
-        statusTimeline: [
-            { status: 'Submitted', timestamp: '2025-12-17T07:00:00Z', comment: 'EMERGENCY issue reported by citizen' },
-        ],
-        assignedTo: null, resolvedBy: null, resolutionProof: null,
-        anonymous: false, emergency: true, createdAt: '2025-12-17T07:00:00Z',
-    },
-];
+// ════════════════════════════════════════════════════════════════════════════
+// USER QUERIES
+// ════════════════════════════════════════════════════════════════════════════
 
-// ── COMMENTS ──
-const comments = [
-    { _id: 'cmt_001', issueId: 'issue_001', user: 'user_002', text: 'This has been like this for 3 months!', likes: 5, createdAt: '2025-12-15T09:00:00Z' },
-    { _id: 'cmt_002', issueId: 'issue_001', user: 'user_003', text: 'I almost had an accident here last week.', likes: 12, createdAt: '2025-12-15T09:30:00Z' },
-    { _id: 'cmt_003', issueId: 'issue_001', user: 'admin_001', text: 'Acknowledged. Team dispatched for inspection.', likes: 24, createdAt: '2025-12-15T10:30:00Z' },
-    { _id: 'cmt_004', issueId: 'issue_003', user: 'user_001', text: 'The smell is terrible. Kids are getting sick.', likes: 18, createdAt: '2025-12-10T12:00:00Z' },
-    { _id: 'cmt_005', issueId: 'issue_003', user: 'admin_001', text: 'Sanitation team dispatched. ETA 2 hours.', likes: 30, createdAt: '2025-12-12T08:30:00Z' },
-];
-
-// ── NOTIFICATIONS ──
-const notifications = [
-    { _id: 'notif_001', userId: 'user_001', type: 'resolved', title: 'Your footpath report was resolved!', desc: 'River Walk footpath fixed by Public Works.', read: false, createdAt: '2025-12-17T16:00:00Z' },
-    { _id: 'notif_002', userId: 'user_001', type: 'upvote', title: '3 people upvoted your report', desc: 'Large Pothole on Main Street is gaining traction.', read: false, createdAt: '2025-12-17T14:00:00Z' },
-    { _id: 'notif_003', userId: 'user_001', type: 'comment', title: 'Municipal Admin replied', desc: '"Acknowledged. Team dispatched..."', read: false, createdAt: '2025-12-15T10:30:00Z' },
-    { _id: 'notif_004', userId: 'user_001', type: 'badge', title: 'New Badge Earned! 🏅', desc: '"Civic Hero" for 10 reports submitted.', read: true, createdAt: '2025-12-14T12:00:00Z' },
-    { _id: 'notif_005', userId: 'user_001', type: 'points', title: '+25 Civic Points', desc: 'Bonus for verified report resolution.', read: true, createdAt: '2025-12-13T08:00:00Z' },
-    { _id: 'notif_006', userId: 'admin_001', type: 'status', title: 'Critical Issue Posted', desc: 'Garbage Pileup Near School — 28 comments', read: false, createdAt: '2025-12-10T09:00:00Z' },
-    { _id: 'notif_007', userId: 'admin_001', type: 'upvote', title: 'High Vote Spike!', desc: 'Water Pipe Burst gaining 50+ upvotes/hr', read: false, createdAt: '2025-12-17T08:00:00Z' },
-];
-
-// ── BADGES ──
-const badges = [
-    { id: 'first_report', name: 'First Report', icon: '🏅', description: 'Submit your first civic report', pointsRequired: 0 },
-    { id: 'civic_hero', name: 'Civic Hero', icon: '🦸', description: 'Submit 10 verified reports', pointsRequired: 500 },
-    { id: 'night_watch', name: 'Night Watch', icon: '🌙', description: 'Report 5 issues after 8pm', pointsRequired: 300 },
-    { id: 'top_10', name: 'Top 10', icon: '🏆', description: 'Reach top 10 in your ward', pointsRequired: 2000 },
-    { id: 'fifty_reports', name: '50 Reports', icon: '📸', description: 'Submit 50 reports', pointsRequired: 1500 },
-    { id: 'leader', name: 'Leader', icon: '⭐', description: 'Highest points in a month', pointsRequired: 3000 },
-    { id: 'road_guardian', name: 'Road Guardian', icon: '🛣️', description: 'Report 20 road issues', pointsRequired: 800 },
-    { id: 'drain_defender', name: 'Drain Defender', icon: '💧', description: 'Report 10 water/drain issues', pointsRequired: 600 },
-];
-
-// ── HELPER: Generate Token ──
-function generateToken(userId) {
-    return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '30d' });
+async function getUserById(id) {
+    return withRetry(async () => {
+        const result = await supabase.from('users').select('*').eq('id', id).single();
+        return result.data; // returns null if not found
+    });
 }
 
-// ── HELPER: Find user by ID ──
-function getUserById(id) {
-    return users.find(u => u._id === id);
+async function getUserByEmail(email) {
+    return withRetry(async () => {
+        const result = await supabase.from('users').select('*').eq('email', email).single();
+        return result.data;
+    });
 }
 
-// ── HELPER: Generate unique ID ──
-let idCounter = 100;
-function generateId(prefix) {
-    idCounter++;
-    return `${prefix}_${Date.now()}_${idCounter}`;
+async function getUserByUsername(username) {
+    return withRetry(async () => {
+        const result = await supabase.from('users').select('*').eq('username', username.toLowerCase()).single();
+        return result.data;
+    });
 }
 
-// ── MUNICIPAL PAGES ──
-const municipalPages = [
-    {
-        _id: 'page_001', name: 'Roads Department', handle: 'RoadsDept', department: 'Roads',
-        region: { city: 'New Delhi', ward: 'Central' }, verified: true, followersCount: 45,
-        avatar: null, coverImage: null, description: 'Official updates from Roads Dept.',
-        createdByAdminId: 'admin_001', contactEmail: 'roads@delhi.gov.in',
-        isActive: true, pageType: 'Department', createdAt: '2025-01-01T10:00:00Z'
+async function isUsernameAvailable(username) {
+    const user = await getUserByUsername(username);
+    return !user;
+}
+
+async function createUser(userData) {
+    return withRetry(async () => {
+        const result = await supabase.from('users').insert(userData).select('*').single();
+        return handleError(result, 'createUser');
+    });
+}
+
+async function updateUser(id, updates) {
+    return withRetry(async () => {
+        const result = await supabase.from('users').update(updates).eq('id', id).select('*').single();
+        return handleError(result, 'updateUser');
+    });
+}
+
+async function getCitizensLeaderboard() {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('users')
+            .select('id, name, points, reports_count, avatar')
+            .eq('role', 'citizen')
+            .order('points', { ascending: false });
+        return handleError(result, 'getCitizensLeaderboard');
+    });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ISSUE QUERIES
+// ════════════════════════════════════════════════════════════════════════════
+
+async function getIssues(filter, userId) {
+    return withRetry(async () => {
+        let query = supabase.from('issues').select('*');
+
+        if (filter === 'high_priority') {
+            query = query.in('ai_severity', ['Critical', 'High']);
+        } else if (filter === 'resolved') {
+            query = query.eq('status', 'Resolved');
+        } else if (filter === 'my_posts' && userId) {
+            query = query.eq('user_id', userId);
+        }
+
+        query = query.order('created_at', { ascending: false });
+        const result = await query;
+        let issues = handleError(result, 'getIssues');
+
+        if (filter === 'following' && userId) {
+            // Get pages user follows
+            const { data: followedPages } = await supabase
+                .from('follows')
+                .select('following_id')
+                .eq('follower_id', userId);
+            const followedPageIds = (followedPages || []).map(f => f.following_id);
+
+            // Get issues user follows
+            const { data: followedIssues } = await supabase
+                .from('issue_followers')
+                .select('issue_id')
+                .eq('user_id', userId);
+            const followedIssueIds = (followedIssues || []).map(f => f.issue_id);
+
+            issues = issues.filter(i =>
+                (i.author_type === 'MunicipalPage' && followedPageIds.includes(i.municipal_page_id)) ||
+                followedIssueIds.includes(i.id)
+            );
+        }
+
+        if (filter === 'trending') {
+            // Sort by upvote count — need counts from junction
+            const issueIds = issues.map(i => i.id);
+            const { data: upvoteCounts } = await supabase
+                .from('issue_upvotes')
+                .select('issue_id')
+                .in('issue_id', issueIds);
+
+            const countMap = {};
+            (upvoteCounts || []).forEach(u => {
+                countMap[u.issue_id] = (countMap[u.issue_id] || 0) + 1;
+            });
+            issues.sort((a, b) => (countMap[b.id] || 0) - (countMap[a.id] || 0));
+        }
+
+        return issues;
+    });
+}
+
+async function getIssueById(id) {
+    return withRetry(async () => {
+        const result = await supabase.from('issues').select('*').eq('id', id).single();
+        return result.data;
+    });
+}
+
+async function createIssue(issueData) {
+    return withRetry(async () => {
+        // Build location_coords for PostGIS
+        if (issueData.location_longitude != null && issueData.location_latitude != null) {
+            issueData.location_coords = `POINT(${issueData.location_longitude} ${issueData.location_latitude})`;
+        }
+        const result = await supabase.from('issues').insert(issueData).select('*').single();
+        return handleError(result, 'createIssue');
+    });
+}
+
+async function updateIssue(id, updates) {
+    return withRetry(async () => {
+        const result = await supabase.from('issues').update(updates).eq('id', id).select('*').single();
+        return handleError(result, 'updateIssue');
+    });
+}
+
+// ── Upvotes / Downvotes / Followers (junction tables) ───────────────────────
+
+async function getIssueUpvotes(issueId) {
+    const result = await supabase.from('issue_upvotes').select('user_id').eq('issue_id', issueId);
+    return (result.data || []).map(u => u.user_id);
+}
+
+async function toggleUpvote(issueId, userId) {
+    // Check if already upvoted
+    const { data: existing } = await supabase
+        .from('issue_upvotes')
+        .select('user_id')
+        .eq('issue_id', issueId)
+        .eq('user_id', userId)
+        .single();
+
+    if (existing) {
+        await supabase.from('issue_upvotes').delete().eq('issue_id', issueId).eq('user_id', userId);
+        return { added: false };
+    } else {
+        // Remove downvote if exists
+        await supabase.from('issue_downvotes').delete().eq('issue_id', issueId).eq('user_id', userId);
+        await supabase.from('issue_upvotes').insert({ issue_id: issueId, user_id: userId });
+        return { added: true };
     }
-];
+}
 
-// ── FOLLOWS ──
-const follows = [];
+async function getIssueDownvotes(issueId) {
+    const result = await supabase.from('issue_downvotes').select('user_id').eq('issue_id', issueId);
+    return (result.data || []).map(u => u.user_id);
+}
+
+async function toggleDownvote(issueId, userId) {
+    const { data: existing } = await supabase
+        .from('issue_downvotes')
+        .select('user_id')
+        .eq('issue_id', issueId)
+        .eq('user_id', userId)
+        .single();
+
+    if (existing) {
+        await supabase.from('issue_downvotes').delete().eq('issue_id', issueId).eq('user_id', userId);
+        return { added: false };
+    } else {
+        await supabase.from('issue_upvotes').delete().eq('issue_id', issueId).eq('user_id', userId);
+        await supabase.from('issue_downvotes').insert({ issue_id: issueId, user_id: userId });
+        return { added: true };
+    }
+}
+
+async function getIssueFollowers(issueId) {
+    const result = await supabase.from('issue_followers').select('user_id').eq('issue_id', issueId);
+    return (result.data || []).map(u => u.user_id);
+}
+
+async function toggleIssueFollow(issueId, userId) {
+    const { data: existing } = await supabase
+        .from('issue_followers')
+        .select('user_id')
+        .eq('issue_id', issueId)
+        .eq('user_id', userId)
+        .single();
+
+    if (existing) {
+        await supabase.from('issue_followers').delete().eq('issue_id', issueId).eq('user_id', userId);
+        return { following: false };
+    } else {
+        await supabase.from('issue_followers').insert({ issue_id: issueId, user_id: userId });
+        return { following: true };
+    }
+}
+
+// ── Status Timeline ─────────────────────────────────────────────────────────
+
+async function addStatusTimeline(entry) {
+    return withRetry(async () => {
+        const result = await supabase.from('status_timeline').insert(entry).select('*').single();
+        return handleError(result, 'addStatusTimeline');
+    });
+}
+
+async function getStatusTimeline(issueId) {
+    const result = await supabase
+        .from('status_timeline')
+        .select('*')
+        .eq('issue_id', issueId)
+        .order('created_at', { ascending: true });
+    return result.data || [];
+}
+
+// ── Resolution Proof ────────────────────────────────────────────────────────
+
+async function setResolutionProof(proofData) {
+    return withRetry(async () => {
+        const result = await supabase.from('resolution_proofs').upsert(proofData, { onConflict: 'issue_id' }).select('*').single();
+        return handleError(result, 'setResolutionProof');
+    });
+}
+
+async function getResolutionProof(issueId) {
+    const result = await supabase.from('resolution_proofs').select('*').eq('issue_id', issueId).single();
+    return result.data;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// COMMENT QUERIES
+// ════════════════════════════════════════════════════════════════════════════
+
+async function getCommentsByIssue(issueId) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('comments')
+            .select('*')
+            .eq('issue_id', issueId)
+            .order('created_at', { ascending: true });
+        return handleError(result, 'getCommentsByIssue');
+    });
+}
+
+async function getCommentCountByIssue(issueId) {
+    const result = await supabase
+        .from('comments')
+        .select('id', { count: 'exact', head: true })
+        .eq('issue_id', issueId);
+    return result.count || 0;
+}
+
+async function createComment(commentData) {
+    return withRetry(async () => {
+        const result = await supabase.from('comments').insert(commentData).select('*').single();
+        return handleError(result, 'createComment');
+    });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// NOTIFICATION QUERIES
+// ════════════════════════════════════════════════════════════════════════════
+
+async function getNotifications(userId) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+        return handleError(result, 'getNotifications');
+    });
+}
+
+async function createNotification(notifData) {
+    return withRetry(async () => {
+        const result = await supabase.from('notifications').insert(notifData).select('*').single();
+        return handleError(result, 'createNotification');
+    });
+}
+
+async function markNotificationsRead(userId) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('notifications')
+            .update({ read: true })
+            .eq('user_id', userId)
+            .eq('read', false);
+        if (result.error) throw new Error(result.error.message);
+    });
+}
+
+async function markNotificationRead(notifId, userId) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('notifications')
+            .update({ read: true })
+            .eq('id', notifId)
+            .eq('user_id', userId)
+            .select('*')
+            .single();
+        return result.data;
+    });
+}
+
+// ── PUSH TOKENS ─────────────────────────────────────────────────────────────
+
+async function addPushToken(userId, token, deviceType) {
+    return withRetry(async () => {
+        // Upsert logic: if token exists, update user_id and timestamp
+        const result = await supabase
+            .from('push_tokens')
+            .upsert(
+                { user_id: userId, token, device_type: deviceType, updated_at: new Date() },
+                { onConflict: 'token' }
+            )
+            .select('*')
+            .single();
+        return handleError(result, 'addPushToken');
+    });
+}
+
+async function getPushTokens(userId) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('push_tokens')
+            .select('token, device_type')
+            .eq('user_id', userId);
+        return handleError(result, 'getPushTokens');
+    });
+}
+
+async function deletePushToken(token) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('push_tokens')
+            .delete()
+            .eq('token', token);
+        return result.error ? false : true;
+    });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// BADGE QUERIES
+// ════════════════════════════════════════════════════════════════════════════
+
+async function getAllBadges() {
+    const result = await supabase.from('badges').select('*');
+    return result.data || [];
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MUNICIPAL PAGE QUERIES
+// ════════════════════════════════════════════════════════════════════════════
+
+async function getMunicipalPageById(id) {
+    const result = await supabase.from('municipal_pages').select('*').eq('id', id).single();
+    return result.data;
+}
+
+async function getMunicipalPageByHandle(handle) {
+    const result = await supabase.from('municipal_pages').select('*').eq('handle', handle).single();
+    return result.data;
+}
+
+async function createMunicipalPage(pageData) {
+    return withRetry(async () => {
+        const result = await supabase.from('municipal_pages').insert(pageData).select('*').single();
+        return handleError(result, 'createMunicipalPage');
+    });
+}
+
+async function updateMunicipalPage(id, updates) {
+    return withRetry(async () => {
+        const result = await supabase.from('municipal_pages').update(updates).eq('id', id).select('*').single();
+        return handleError(result, 'updateMunicipalPage');
+    });
+}
+
+async function searchMunicipalPages(query) {
+    let q = supabase.from('municipal_pages').select('*').eq('is_active', true);
+    if (query) {
+        q = q.or(`name.ilike.%${query}%,handle.ilike.%${query}%,department.ilike.%${query}%`);
+    }
+    const result = await q;
+    return result.data || [];
+}
+
+async function getSuggestedPages(limit = 10) {
+    const result = await supabase
+        .from('municipal_pages')
+        .select('*')
+        .eq('is_active', true)
+        .limit(limit);
+    return result.data || [];
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// FOLLOWS (User → MunicipalPage)
+// ════════════════════════════════════════════════════════════════════════════
+
+async function isFollowing(followerId, followingId) {
+    const result = await supabase
+        .from('follows')
+        .select('id')
+        .eq('follower_id', followerId)
+        .eq('following_id', followingId)
+        .single();
+    return !!result.data;
+}
+
+async function addFollow(followerId, followingId) {
+    return withRetry(async () => {
+        const result = await supabase.from('follows').insert({
+            follower_id: followerId,
+            following_id: followingId,
+        }).select('*').single();
+        return handleError(result, 'addFollow');
+    });
+}
+
+async function removeFollow(followerId, followingId) {
+    const result = await supabase
+        .from('follows')
+        .delete()
+        .eq('follower_id', followerId)
+        .eq('following_id', followingId);
+    return result.error ? false : true;
+}
+
+async function getFollowerIds(pageId) {
+    const result = await supabase.from('follows').select('follower_id').eq('following_id', pageId);
+    return (result.data || []).map(f => f.follower_id);
+}
+
+async function getFollowingCount(userId) {
+    const result = await supabase
+        .from('follows')
+        .select('id', { count: 'exact', head: true })
+        .eq('follower_id', userId);
+    return result.count || 0;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// STATS
+// ════════════════════════════════════════════════════════════════════════════
+
+async function getIssueStats() {
+    return withRetry(async () => {
+        const result = await supabase.from('issues').select('status, ai_severity');
+        const issues = handleError(result, 'getIssueStats');
+        const total = issues.length;
+        const resolved = issues.filter(i => i.status === 'Resolved').length;
+        const critical = issues.filter(i => i.ai_severity === 'Critical').length;
+        const inProgress = issues.filter(i => i.status === 'InProgress').length;
+        return { totalIssues: total, resolved, critical, inProgress, pending: total - resolved };
+    });
+}
+
+async function getUserIssueCount(userId) {
+    const result = await supabase
+        .from('issues')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId);
+    return result.count || 0;
+}
+
+async function getUserResolvedCount(userId) {
+    const result = await supabase
+        .from('issues')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('status', 'Resolved');
+    return result.count || 0;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GEOJSON
+// ════════════════════════════════════════════════════════════════════════════
+
+async function getIssuesGeoJSON() {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('issues')
+            .select('id, title, ai_severity, status, category, emergency, image, location_address, location_longitude, location_latitude');
+        const issues = handleError(result, 'getIssuesGeoJSON');
+
+        // Get upvote counts
+        const issueIds = issues.map(i => i.id);
+        const { data: allUpvotes } = await supabase
+            .from('issue_upvotes')
+            .select('issue_id')
+            .in('issue_id', issueIds);
+        const countMap = {};
+        (allUpvotes || []).forEach(u => {
+            countMap[u.issue_id] = (countMap[u.issue_id] || 0) + 1;
+        });
+
+        const features = issues
+            .filter(i => i.location_longitude != null && i.location_latitude != null)
+            .map(i => ({
+                type: 'Feature',
+                geometry: {
+                    type: 'Point',
+                    coordinates: [i.location_longitude, i.location_latitude],
+                },
+                properties: {
+                    id: i.id, title: i.title, severity: i.ai_severity,
+                    status: i.status, category: i.category,
+                    upvotes: countMap[i.id] || 0, emergency: i.emergency || false,
+                    address: i.location_address, image: i.image,
+                },
+            }));
+
+        return { type: 'FeatureCollection', features };
+    });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// EXPORTS
+// ════════════════════════════════════════════════════════════════════════════
 
 module.exports = {
-    users, issues, comments, notifications, badges, municipalPages, follows,
-    generateToken, getUserById, generateId, getLevelInfo, JWT_SECRET,
+    // Token
+    generateToken, JWT_SECRET, getLevelInfo,
+
+    // Users
+    getUserById, getUserByEmail, getUserByUsername, isUsernameAvailable,
+    createUser, updateUser, getCitizensLeaderboard,
+
+    // Issues
+    getIssues, getIssueById, createIssue, updateIssue,
+    getIssueUpvotes, toggleUpvote,
+    getIssueDownvotes, toggleDownvote,
+    getIssueFollowers, toggleIssueFollow,
+    addStatusTimeline, getStatusTimeline,
+    setResolutionProof, getResolutionProof,
+    getIssuesGeoJSON,
+
+    // Comments
+    getCommentsByIssue, getCommentCountByIssue, createComment,
+
+    // Notifications
+    getNotifications, createNotification, markNotificationsRead, markNotificationRead,
+    addPushToken, getPushTokens, deletePushToken,
+
+    // Badges
+    getAllBadges,
+
+    // Municipal Pages
+    getMunicipalPageById, getMunicipalPageByHandle,
+    createMunicipalPage, updateMunicipalPage,
+    searchMunicipalPages, getSuggestedPages,
+
+    // Follows
+    isFollowing, addFollow, removeFollow, getFollowerIds, getFollowingCount,
+
+    // Stats
+    getIssueStats, getUserIssueCount, getUserResolvedCount,
+
+    // Supabase client (for direct access if needed)
+    supabase,
 };

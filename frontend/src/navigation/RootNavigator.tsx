@@ -9,6 +9,7 @@ import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
 import LocationSetupScreen from '../screens/Auth/LocationSetupScreen';
 import ProfileSetupScreen from '../screens/Auth/ProfileSetupScreen';
+import OTPVerifyScreen from '../screens/Auth/OTPVerifyScreen';
 import CitizenTabs from './CitizenTabs';
 import AdminTabs from './AdminTabs';
 import WorkerTabs from './WorkerTabs';
@@ -41,6 +42,7 @@ export default function RootNavigator() {
                         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
                         <Stack.Screen name="Login" component={LoginScreen} />
                         <Stack.Screen name="Register" component={RegisterScreen} />
+                        <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} />
                     </>
                 ) : needsLocationSetup ? (
                     <Stack.Screen name="LocationSetup" component={LocationSetupScreen} />
