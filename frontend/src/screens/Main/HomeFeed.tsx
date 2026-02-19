@@ -58,8 +58,8 @@ const DUMMY_MUNICIPAL_POSTS: any[] = [
         title: 'Water supply disruption — Maintenance scheduled',
         description: 'Due to pipeline maintenance, water supply in Ward 5 & 6 will be disrupted on 20th Feb from 10:00 AM to 4:00 PM. Please store water in advance.',
         authorType: 'MunicipalPage',
-        user: { name: 'Boisar Municipal Council', avatar: null, _id: 'muni-boisar' },
-        municipalPage: 'muni-boisar',
+        user: { name: 'Boisar Municipal Council', avatar: null, _id: '992a6c0b-1234-5678-90ab-cdef12345678', isPage: true },
+        municipalPage: '992a6c0b-1234-5678-90ab-cdef12345678',
         officialUpdateType: 'NOTICE',
         timeAgo: '3h ago',
         image: null,
@@ -77,8 +77,8 @@ const DUMMY_MUNICIPAL_POSTS: any[] = [
         title: 'Pothole repair completed — Palghar-Boisar Road',
         description: 'The potholes reported by citizens on Palghar-Boisar main road have been repaired. Thank you for your patience and reports!',
         authorType: 'MunicipalPage',
-        user: { name: 'Palghar Zilla Parishad', avatar: null, _id: 'muni-palghar' },
-        municipalPage: 'muni-palghar',
+        user: { name: 'Palghar Zilla Parishad', avatar: null, _id: '881b5d1a-2345-6789-01bc-def012345679', isPage: true },
+        municipalPage: '881b5d1a-2345-6789-01bc-def012345679',
         officialUpdateType: 'RESOLVED',
         timeAgo: '5h ago',
         image: 'http://192.168.0.102:5000/public/images/pothole.jpg',
@@ -96,8 +96,8 @@ const DUMMY_MUNICIPAL_POSTS: any[] = [
         title: 'New garbage collection schedule — Starting Monday',
         description: 'Door-to-door garbage collection timings changed: 7:00 AM – 10:00 AM for wet waste, 10:00 AM – 12:00 PM for dry waste. Please segregate.',
         authorType: 'MunicipalPage',
-        user: { name: 'Boisar Municipal Council', avatar: null, _id: 'muni-boisar' },
-        municipalPage: 'muni-boisar',
+        user: { name: 'Boisar Municipal Council', avatar: null, _id: '992a6c0b-1234-5678-90ab-cdef12345678', isPage: true },
+        municipalPage: '992a6c0b-1234-5678-90ab-cdef12345678',
         officialUpdateType: 'NOTICE',
         timeAgo: '8h ago',
         image: null,
@@ -115,8 +115,8 @@ const DUMMY_MUNICIPAL_POSTS: any[] = [
         title: 'Street light installation — 45 new lights in Palghar East',
         description: 'As part of the Smart City initiative, 45 new LED street lights have been installed in Palghar East zone. Report any non-functional lights via this app.',
         authorType: 'MunicipalPage',
-        user: { name: 'Palghar Zilla Parishad', avatar: null, _id: 'muni-palghar' },
-        municipalPage: 'muni-palghar',
+        user: { name: 'Palghar Zilla Parishad', avatar: null, _id: '881b5d1a-2345-6789-01bc-def012345679', isPage: true },
+        municipalPage: '881b5d1a-2345-6789-01bc-def012345679',
         officialUpdateType: 'UPDATE',
         timeAgo: '1d ago',
         image: 'http://192.168.0.102:5000/public/images/streetlight.webp',
@@ -134,8 +134,8 @@ const DUMMY_MUNICIPAL_POSTS: any[] = [
         title: 'Drainage blockage cleared — Katkarpada Road',
         description: 'The blocked drainage near Katkarpada junction has been cleared by our team. Waterlogging issue is now resolved.',
         authorType: 'MunicipalPage',
-        user: { name: 'Boisar Municipal Council', avatar: null, _id: 'muni-boisar' },
-        municipalPage: 'muni-boisar',
+        user: { name: 'Boisar Municipal Council', avatar: null, _id: '992a6c0b-1234-5678-90ab-cdef12345678', isPage: true },
+        municipalPage: '992a6c0b-1234-5678-90ab-cdef12345678',
         officialUpdateType: 'RESOLVED',
         timeAgo: '1d ago',
         image: null,
@@ -147,15 +147,15 @@ const DUMMY_MUNICIPAL_POSTS: any[] = [
         aiSeverity: null,
         departmentTag: 'Drainage Dept',
         emergency: false,
-    },
+    }
 ];
 
-/* ─── Dummy stories for municipal pages ─── */
+/* ─── Dummy municipal stories (Real IDs) ─── */
 const MUNICIPAL_STORIES = [
-    { id: 'story-boisar', name: 'Boisar MC', hasUpdate: true, verified: true },
-    { id: 'story-palghar', name: 'Palghar ZP', hasUpdate: true, verified: true },
-    { id: 'story-roads', name: 'Roads Dept', hasUpdate: false, verified: true },
-    { id: 'story-water', name: 'Water Dept', hasUpdate: true, verified: false },
+    { id: '992a6c0b-1234-5678-90ab-cdef12345678', name: 'Boisar', hasUpdate: true, verified: true, avatar: null }, // Boisar
+    { id: '881b5d1a-2345-6789-01bc-def012345679', name: 'Palghar', hasUpdate: true, verified: true, avatar: null }, // Palghar
+    { id: '770c4e2b-3456-7890-12cd-ef0123456780', name: 'Roads', hasUpdate: false, verified: true, avatar: null }, // Roads
+    { id: '669d3f3c-4567-8901-23de-f01234567881', name: 'Water', hasUpdate: true, verified: false, avatar: null }, // Water
 ];
 
 export default function HomeFeed({ navigation }: any) {
@@ -407,7 +407,8 @@ export default function HomeFeed({ navigation }: any) {
             {feedMode === 'municipal' && (
                 <StoriesRow
                     stories={MUNICIPAL_STORIES}
-                    onStoryPress={() => {}}
+                    showAddStory={false}
+                    onStoryPress={(story) => navigation.navigate('MunicipalProfile', { pageId: story.id })}
                     onAddStory={() => navigation.navigate('ReportIssue')}
                 />
             )}
@@ -425,9 +426,7 @@ export default function HomeFeed({ navigation }: any) {
                 userId={user?._id}
                 index={index}
                 onPress={() =>
-                    item.authorType === 'MunicipalPage'
-                        ? navigation.navigate('MunicipalProfile', { pageId: item.municipalPage })
-                        : navigation.navigate('IssueDetail', { issueId: item._id })
+                    navigation.navigate('IssueDetail', { issueId: item._id })
                 }
                 onUpvote={handleUpvote}
                 onDownvote={handleDownvote}
@@ -483,7 +482,7 @@ export default function HomeFeed({ navigation }: any) {
                             onLike={handleUpvote}
                             onComment={(id) => navigation.navigate('IssueDetail', { issueId: id })}
                             onShare={handleShare}
-                            onUserPress={() => {}}
+                            onUserPress={() => { }}
                             activeToggle={feedMode}
                         />
                     </View>

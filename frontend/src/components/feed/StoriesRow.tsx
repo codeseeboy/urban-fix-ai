@@ -96,12 +96,11 @@ function StoryBubble({ item, onPress, index }: { item: StoryItem; onPress: () =>
     );
 }
 
-export default function StoriesRow({ stories, onStoryPress, onAddStory }: StoriesRowProps) {
-    // Prepend "You" story
-    const data: StoryItem[] = [
-        { id: 'user-story', name: 'You', isUser: true },
-        ...stories,
-    ];
+export default function StoriesRow({ stories, onStoryPress, onAddStory, showAddStory = true }: StoriesRowProps & { showAddStory?: boolean }) {
+    // Prepend "You" story if enabled
+    const data: StoryItem[] = showAddStory
+        ? [{ id: 'user-story', name: 'You', isUser: true }, ...stories]
+        : stories;
 
     return (
         <View style={styles.container}>

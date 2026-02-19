@@ -18,29 +18,59 @@ export default function MunicipalProfileScreen({ route, navigation }: any) {
     const [following, setFollowing] = useState(false);
     const [activeTab, setActiveTab] = useState('updates'); // updates | about
 
+    const getFollowersCount = (pageData: any) => {
+        if (typeof pageData?.followersCount === 'number') return pageData.followersCount;
+        if (typeof pageData?.followers_count === 'number') return pageData.followers_count;
+        return 0;
+    };
+
+    const normalizePage = (raw: any) => {
+        if (!raw) return raw;
+        return {
+            ...raw,
+            _id: raw._id || raw.id,
+            coverImage: raw.coverImage || raw.cover_image || null,
+            contactEmail: raw.contactEmail || raw.contact_email || '',
+            pageType: raw.pageType || raw.page_type || '',
+            followersCount: getFollowersCount(raw),
+        };
+    };
+
     useEffect(() => {
         fetchPageDetails();
     }, [pageId]);
 
-    const fetchPageDetails = async () => {
+    const fetchPageDetails = async (showLoader = true) => {
+        if (showLoader) setLoading(true);
         try {
             const { data } = await api.get(`/municipal/${pageId}`);
-            setPage(data);
+            const normalizedPage = normalizePage(data);
             setFollowing(data.isFollowing);
 
-            // Fetch posts (filtered by this page)
-            // Ideally backend should have /municipal/:id/posts or use filter=following logic if following
-            // For now, let's assume we can fetch issues authored by this page
-            // We might need to update backend to support fetching posts by specific page ID via /issues endpoint ? 
-            // Or just mock for now until we refine that.
-            // Let's use the search/filter endpoint on issues if available, or just mocking for UI demo.
-            setPosts([]);
+            try {
+                const followersRes = await api.get(`/municipal/${pageId}/followers`);
+                if (Array.isArray(followersRes.data)) {
+                    normalizedPage.followersCount = followersRes.data.length;
+                }
+            } catch (err) {
+                console.log('Error fetching followers count:', err);
+            }
+
+            setPage(normalizedPage);
+
+            // Fetch posts by this municipal page
+            try {
+                const postsRes = await api.get('/issues', { params: { municipalPageId: pageId } });
+                setPosts(Array.isArray(postsRes.data) ? postsRes.data : []);
+            } catch (err) {
+                console.log('Error fetching page posts:', err);
+            }
         } catch (e) {
             console.log(e);
             Alert.alert('Error', 'Failed to load page details');
             navigation.goBack();
         } finally {
-            setLoading(false);
+            if (showLoader) setLoading(false);
         }
     };
 
@@ -49,12 +79,19 @@ export default function MunicipalProfileScreen({ route, navigation }: any) {
             if (following) {
                 await api.post(`/municipal/${pageId}/unfollow`);
                 setFollowing(false);
-                setPage((prev: any) => ({ ...prev, followersCount: prev.followersCount - 1 }));
+                setPage((prev: any) => {
+                    const next = Math.max(0, getFollowersCount(prev) - 1);
+                    return { ...prev, followersCount: next, followers_count: next };
+                });
             } else {
                 await api.post(`/municipal/${pageId}/follow`);
                 setFollowing(true);
-                setPage((prev: any) => ({ ...prev, followersCount: prev.followersCount + 1 }));
+                setPage((prev: any) => {
+                    const next = getFollowersCount(prev) + 1;
+                    return { ...prev, followersCount: next, followers_count: next };
+                });
             }
+            fetchPageDetails(false);
         } catch (e) {
             Alert.alert('Error', 'Failed to update follow status');
         }
@@ -103,12 +140,14 @@ export default function MunicipalProfileScreen({ route, navigation }: any) {
 
                     <View style={styles.headerInfo}>
                         <Text style={styles.name}>{page?.name}</Text>
-                        <Text style={styles.handle}>@{page?.handle}</Text>
+                        {!!page?.handle && <Text style={styles.handle}>@{page?.handle}</Text>}
                         <View style={styles.metaRow}>
-                            <View style={styles.tag}>
-                                <Text style={styles.tagText}>{page?.pageType}</Text>
-                            </View>
-                            <Text style={styles.metaText}>{page?.region?.city || 'City'}</Text>
+                            {!!page?.pageType && (
+                                <View style={styles.tag}>
+                                    <Text style={styles.tagText}>{page.pageType}</Text>
+                                </View>
+                            )}
+                            {!!page?.region?.city && <Text style={styles.metaText}>{page.region.city}</Text>}
                         </View>
                     </View>
                 </View>
@@ -116,7 +155,7 @@ export default function MunicipalProfileScreen({ route, navigation }: any) {
                 {/* Stats & Actions */}
                 <View style={styles.statsBar}>
                     <View>
-                        <Text style={styles.statNum}>{page?.followersCount || 0}</Text>
+                        <Text style={styles.statNum}>{getFollowersCount(page)}</Text>
                         <Text style={styles.statLabel}>Followers</Text>
                     </View>
 
@@ -160,7 +199,28 @@ export default function MunicipalProfileScreen({ route, navigation }: any) {
                                 <Text style={styles.emptyText}>No updates posted yet.</Text>
                             </View>
                         ) : (
-                            <Text>Posts will be mapped here</Text>
+                            <View style={styles.galleryGrid}>
+                                {posts.map((post) => (
+                                    <TouchableOpacity
+                                        key={post._id}
+                                        style={styles.galleryCard}
+                                        activeOpacity={0.85}
+                                        onPress={() => navigation.navigate('IssueDetail', { issueId: post._id })}
+                                    >
+                                        {post.image ? (
+                                            <Image source={{ uri: post.image }} style={styles.galleryImage} />
+                                        ) : (
+                                            <LinearGradient colors={[colors.surfaceLight, colors.surface]} style={styles.galleryImage}>
+                                                <Ionicons name="newspaper-outline" size={24} color={colors.textSecondary} />
+                                            </LinearGradient>
+                                        )}
+                                        <View style={styles.galleryContent}>
+                                            <Text style={styles.galleryTitle} numberOfLines={2}>{post.title}</Text>
+                                            <Text style={styles.galleryMeta} numberOfLines={1}>{post.timeAgo || 'Recent update'}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         )}
                     </View>
                 ) : (
@@ -171,11 +231,11 @@ export default function MunicipalProfileScreen({ route, navigation }: any) {
                         </View>
                         <View style={styles.infoRow}>
                             <Ionicons name="location-outline" size={20} color={colors.textMuted} />
-                            <Text style={styles.infoText}>{page?.region?.ward}, {page?.region?.city}</Text>
+                            <Text style={styles.infoText}>{[page?.region?.ward, page?.region?.city].filter(Boolean).join(', ') || 'Location not specified'}</Text>
                         </View>
                         <View style={styles.infoRow}>
                             <Ionicons name="business-outline" size={20} color={colors.textMuted} />
-                            <Text style={styles.infoText}>Department: {page?.department}</Text>
+                            <Text style={styles.infoText}>Department: {page?.department || 'Not specified'}</Text>
                         </View>
                     </View>
                 )}
@@ -193,17 +253,17 @@ const styles = StyleSheet.create({
     coverPlaceholder: { width: '100%', height: '100%' },
     backBtn: { position: 'absolute', left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
 
-    header: { paddingHorizontal: 20, marginTop: -40, flexDirection: 'row', alignItems: 'flex-end', marginBottom: 16 },
+    header: { paddingHorizontal: 20, marginTop: -36, flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
     avatarContainer: { position: 'relative' },
     avatar: { width: 80, height: 80, borderRadius: 40, borderWidth: 4, borderColor: colors.background },
     avatarPlaceholder: { backgroundColor: colors.surfaceLight, justifyContent: 'center', alignItems: 'center' },
     avatarText: { fontFamily: 'Inter_700Bold', fontSize: 32, color: colors.textMuted },
     verifiedBadge: { position: 'absolute', bottom: 4, right: 0, backgroundColor: colors.primary, width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.background },
 
-    headerInfo: { marginLeft: 16, marginBottom: 8, flex: 1 },
+    headerInfo: { marginLeft: 16, marginTop: 8, flex: 1 },
     name: { fontFamily: 'Inter_700Bold', fontSize: 18, color: colors.text },
-    handle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: colors.textMuted },
-    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+    handle: { fontFamily: 'Inter_500Medium', fontSize: 14, color: colors.textSecondary },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
     tag: { backgroundColor: colors.primary + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
     tagText: { fontSize: 10, fontFamily: 'Inter_600SemiBold', color: colors.primary, textTransform: 'uppercase' },
     metaText: { fontSize: 12, color: colors.textSecondary },
@@ -225,6 +285,23 @@ const styles = StyleSheet.create({
     activeTabText: { color: colors.primary },
 
     contentArea: { padding: 20 },
+    galleryGrid: { gap: 12 },
+    galleryCard: {
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: radius.lg,
+        overflow: 'hidden',
+    },
+    galleryImage: {
+        width: '100%',
+        height: 150,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    galleryContent: { padding: 12 },
+    galleryTitle: { fontFamily: 'Inter_600SemiBold', color: colors.text, fontSize: 14, lineHeight: 20 },
+    galleryMeta: { marginTop: 4, fontFamily: 'Inter_400Regular', color: colors.textSecondary, fontSize: 12 },
     emptyState: { alignItems: 'center', paddingVertical: 40, opacity: 0.6 },
     emptyText: { marginTop: 12, fontFamily: 'Inter_500Medium', color: colors.textMuted },
 
