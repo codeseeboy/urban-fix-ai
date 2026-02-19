@@ -69,14 +69,14 @@ export default function LoginScreen({ navigation }: any) {
                 {/* Test Accounts */}
                 <View style={styles.testBox}>
                     <Text style={styles.testTitle}>Quick Test Logins:</Text>
-                    <TouchableOpacity onPress={() => { logger.tap('LoginScreen', 'Quick Login - Citizen'); setEmail('priya@test.com'); setPassword('pass123'); }}>
-                        <Text style={styles.testItem}>👩 Citizen: priya@test.com / pass123</Text>
+                    <TouchableOpacity onPress={() => { logger.tap('LoginScreen', 'Quick Login - Citizen'); setEmail('shashi@test.com'); setPassword('pass123'); }}>
+                        <Text style={styles.testItem}>👩 Citizen: shashi@test.com / pass123</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => { logger.tap('LoginScreen', 'Quick Login - Admin'); setEmail('admin@urbanfix.com'); setPassword('admin123'); }}>
                         <Text style={styles.testItem}>🏛️ Admin: admin@urbanfix.com / admin123</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => { logger.tap('LoginScreen', 'Quick Login - Worker'); setEmail('suresh@urbanfix.com'); setPassword('worker123'); }}>
-                        <Text style={styles.testItem}>👷 Worker: suresh@urbanfix.com / worker123</Text>
+                    <TouchableOpacity onPress={() => { logger.tap('LoginScreen', 'Quick Login - Worker'); setEmail('shashikant@urbanfix.com'); setPassword('worker123'); }}>
+                        <Text style={styles.testItem}>👷 Worker: shashikant@urbanfix.com / worker123</Text>
                     </TouchableOpacity>
                 </View>
 

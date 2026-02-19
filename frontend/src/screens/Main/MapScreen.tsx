@@ -34,6 +34,13 @@ const STATUS_FILTERS = [
     { id: 'Resolved', label: 'Resolved' },
 ];
 
+const DEFAULT_REGION: Region = {
+    latitude: 28.6139,
+    longitude: 77.209,
+    latitudeDelta: 0.04,
+    longitudeDelta: 0.04,
+};
+
 export default function MapScreen({ navigation }: any) {
     const insets = useSafeAreaInsets();
     const mapRef = useRef<MapView>(null);
@@ -45,56 +52,62 @@ export default function MapScreen({ navigation }: any) {
     const [selectedIssue, setSelectedIssue] = useState<any>(null);
     const [showHeatmap, setShowHeatmap] = useState(false);
     const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-    const [initialRegion, setInitialRegion] = useState<Region>({
-        latitude: 28.6139,
-        longitude: 77.209,
-        latitudeDelta: 0.04,
-        longitudeDelta: 0.04,
-    });
+    const [mapRegion, setMapRegion] = useState<Region>(DEFAULT_REGION);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         initMap();
     }, []);
 
     const initMap = async () => {
-        // Get user location first
+        setLoading(true);
+        setError(null);
+
+        // Step 1: Try to get user location (non-blocking — if it fails, use default)
+        let coords: { latitude: number; longitude: number } | null = null;
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status === 'granted') {
-                const loc = await Location.getCurrentPositionAsync({});
-                const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+                const loc = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Balanced,
+                });
+                coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
                 setUserLocation(coords);
-                setInitialRegion({ ...coords, latitudeDelta: 0.02, longitudeDelta: 0.02 });
-
-                // Seed demo issues near user's location (first time only)
-                try {
-                    await issuesAPI.seedNearby(coords.latitude, coords.longitude);
-                } catch (e) {
-                    console.log('Seed nearby skipped:', e);
-                }
+                const region = { ...coords, latitudeDelta: 0.02, longitudeDelta: 0.02 };
+                setMapRegion(region);
             }
         } catch (e) {
-            console.log('Location error:', e);
+            console.log('Location detection failed (non-critical):', e);
         }
-        // Then fetch issues
-        await fetchIssues();
-    };
 
-    const fetchIssues = async () => {
-        setLoading(true);
+        // Step 2: Seed nearby issues (non-blocking — skip silently if it fails)
+        if (coords) {
+            try {
+                await issuesAPI.seedNearby(coords.latitude, coords.longitude);
+            } catch (e) {
+                // This is fine — endpoint may not exist on production
+                console.log('Seed nearby skipped (endpoint may not exist):', e);
+            }
+        }
+
+        // Step 3: Fetch issues (the critical call)
         try {
             const { data } = await issuesAPI.getFeed();
-            setIssues(data);
+            setIssues(Array.isArray(data) ? data : []);
         } catch (e) {
-            console.log('Map fetch error:', e);
+            console.log('Issue fetch failed:', e);
+            setError('Could not load issues. Please check your connection.');
+            setIssues([]);
         }
+
         setLoading(false);
     };
 
     const filteredIssues = issues.filter((i) => {
+        if (!i?.location?.coordinates) return false;
         const catMatch = activeCategory === 'all' || i.category === activeCategory;
         const statusMatch = activeStatus === 'all' || i.status === activeStatus;
-        return catMatch && statusMatch && i.location?.coordinates;
+        return catMatch && statusMatch;
     });
 
     const handleLocateMe = async () => {
@@ -104,12 +117,12 @@ export default function MapScreen({ navigation }: any) {
                 Alert.alert('Permission Denied', 'Location access is needed.');
                 return;
             }
-            const loc = await Location.getCurrentPositionAsync({});
+            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
             const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
             setUserLocation(coords);
             mapRef.current?.animateToRegion({ ...coords, latitudeDelta: 0.01, longitudeDelta: 0.01 }, 800);
         } catch (e) {
-            console.log('Location error:', e);
+            Alert.alert('Error', 'Could not detect your location.');
         }
     };
 
@@ -137,14 +150,12 @@ export default function MapScreen({ navigation }: any) {
                     </Text>
                 </View>
                 <View style={styles.headerActions}>
-                    {/* Heatmap Toggle */}
                     <TouchableOpacity
                         style={[styles.headerBtn, showHeatmap && styles.headerBtnActive]}
                         onPress={() => setShowHeatmap(!showHeatmap)}
                     >
                         <Ionicons name="flame-outline" size={16} color={showHeatmap ? '#FFF' : colors.textSecondary} />
                     </TouchableOpacity>
-                    {/* Status Filter */}
                     <TouchableOpacity
                         style={[styles.headerBtn, showStatusFilter && styles.headerBtnActive]}
                         onPress={() => setShowStatusFilter(!showStatusFilter)}
@@ -168,14 +179,8 @@ export default function MapScreen({ navigation }: any) {
                             onPress={() => setActiveCategory(item.id)}
                             activeOpacity={0.7}
                         >
-                            <Ionicons
-                                name={item.icon as any}
-                                size={14}
-                                color={activeCategory === item.id ? '#FFF' : colors.textSecondary}
-                            />
-                            <Text style={[styles.filterText, activeCategory === item.id && styles.filterTextActive]}>
-                                {item.label}
-                            </Text>
+                            <Ionicons name={item.icon as any} size={14} color={activeCategory === item.id ? '#FFF' : colors.textSecondary} />
+                            <Text style={[styles.filterText, activeCategory === item.id && styles.filterTextActive]}>{item.label}</Text>
                         </TouchableOpacity>
                     )}
                 />
@@ -203,11 +208,19 @@ export default function MapScreen({ navigation }: any) {
                         <ActivityIndicator size="large" color={colors.primary} />
                         <Text style={styles.loadingText}>Loading civic data...</Text>
                     </View>
+                ) : error ? (
+                    <View style={styles.loadingOverlay}>
+                        <Ionicons name="cloud-offline-outline" size={48} color={colors.textMuted} />
+                        <Text style={styles.errorText}>{error}</Text>
+                        <TouchableOpacity style={styles.retryBtn} onPress={initMap}>
+                            <Text style={styles.retryText}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
                 ) : (
                     <MapView
                         ref={mapRef}
                         style={styles.map}
-                        initialRegion={initialRegion}
+                        initialRegion={mapRegion}
                         showsUserLocation={true}
                         showsMyLocationButton={false}
                         showsCompass={false}
@@ -265,37 +278,45 @@ export default function MapScreen({ navigation }: any) {
                 )}
 
                 {/* GPS Locate Button */}
-                <TouchableOpacity style={styles.locateBtn} onPress={handleLocateMe} activeOpacity={0.8}>
-                    <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.locateBtnGrad}>
-                        <Ionicons name="navigate" size={20} color="#FFF" />
-                    </LinearGradient>
-                </TouchableOpacity>
+                {!loading && !error && (
+                    <TouchableOpacity style={styles.locateBtn} onPress={handleLocateMe} activeOpacity={0.8}>
+                        <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.locateBtnGrad}>
+                            <Ionicons name="navigate" size={20} color="#FFF" />
+                        </LinearGradient>
+                    </TouchableOpacity>
+                )}
 
                 {/* Refresh Button */}
-                <TouchableOpacity style={styles.refreshBtn} onPress={fetchIssues} activeOpacity={0.8}>
-                    <View style={styles.refreshBtnInner}>
-                        <Ionicons name="refresh" size={18} color={colors.text} />
-                    </View>
-                </TouchableOpacity>
+                {!loading && (
+                    <TouchableOpacity style={styles.refreshBtn} onPress={initMap} activeOpacity={0.8}>
+                        <View style={styles.refreshBtnInner}>
+                            <Ionicons name="refresh" size={18} color={colors.text} />
+                        </View>
+                    </TouchableOpacity>
+                )}
 
                 {/* Legend */}
-                <View style={styles.legend}>
-                    {Object.entries(SEVERITY_COLORS).filter(([k]) => k !== 'Resolved').map(([label, color]) => (
-                        <View key={label} style={styles.legendItem}>
-                            <View style={[styles.legendDot, { backgroundColor: color }]} />
-                            <Text style={styles.legendText}>{label}</Text>
-                        </View>
-                    ))}
-                </View>
+                {!loading && !error && (
+                    <View style={styles.legend}>
+                        {Object.entries(SEVERITY_COLORS).filter(([k]) => k !== 'Resolved').map(([label, color]) => (
+                            <View key={label} style={styles.legendItem}>
+                                <View style={[styles.legendDot, { backgroundColor: color }]} />
+                                <Text style={styles.legendText}>{label}</Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
 
                 {/* Issue Count Badge */}
-                <View style={styles.countBadge}>
-                    <Text style={styles.countText}>{filteredIssues.length}</Text>
-                    <Text style={styles.countLabel}>Issues</Text>
-                </View>
+                {!loading && !error && (
+                    <View style={styles.countBadge}>
+                        <Text style={styles.countText}>{filteredIssues.length}</Text>
+                        <Text style={styles.countLabel}>Issues</Text>
+                    </View>
+                )}
             </View>
 
-            {/* Selected Issue Card (Bottom Sheet Preview) */}
+            {/* Selected Issue Card */}
             {selectedIssue && (
                 <View style={styles.issueCardContainer}>
                     <TouchableOpacity
@@ -303,15 +324,15 @@ export default function MapScreen({ navigation }: any) {
                         activeOpacity={0.95}
                         onPress={() => navigation.navigate('IssueDetail', { issueId: selectedIssue._id })}
                     >
-                        {/* Severity Glow Bar */}
                         <View style={[styles.cardGlow, { backgroundColor: getSeverityColor(selectedIssue.aiSeverity) }]} />
-
                         <View style={styles.cardContent}>
-                            {/* Image */}
-                            {selectedIssue.image && (
-                                <Image source={{ uri: selectedIssue.image }} style={styles.cardImage} />
-                            )}
-
+                            {selectedIssue.image ? (
+                                <Image
+                                    source={{ uri: selectedIssue.image }}
+                                    style={styles.cardImage}
+                                    defaultSource={require('../../../assets/logo.png')}
+                                />
+                            ) : null}
                             <View style={styles.cardInfo}>
                                 <View style={styles.cardRow}>
                                     <View style={[styles.sevChip, { backgroundColor: getSeverityColor(selectedIssue.aiSeverity) + '20' }]}>
@@ -328,16 +349,13 @@ export default function MapScreen({ navigation }: any) {
                                         </View>
                                     )}
                                 </View>
-
                                 <Text style={styles.cardTitle} numberOfLines={2}>{selectedIssue.title}</Text>
-
                                 <View style={styles.cardMeta}>
                                     <Ionicons name="location-outline" size={11} color={colors.textMuted} />
                                     <Text style={styles.cardAddr} numberOfLines={1}>
                                         {selectedIssue.location?.address || 'Unknown'}
                                     </Text>
                                 </View>
-
                                 <View style={styles.cardStats}>
                                     <View style={styles.cardStat}>
                                         <Ionicons name="arrow-up-circle" size={13} color={colors.primary} />
@@ -350,8 +368,6 @@ export default function MapScreen({ navigation }: any) {
                                     <Text style={styles.cardCtaArrow}>View Details →</Text>
                                 </View>
                             </View>
-
-                            {/* Close */}
                             <TouchableOpacity style={styles.cardClose} onPress={() => setSelectedIssue(null)}>
                                 <Ionicons name="close" size={16} color={colors.textMuted} />
                             </TouchableOpacity>
@@ -365,8 +381,6 @@ export default function MapScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-
-    // Header
     header: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
         paddingHorizontal: 16, paddingVertical: 8,
@@ -381,8 +395,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     },
     headerBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-
-    // Category Filter
     filterBar: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
     filterChip: {
         flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -392,8 +404,6 @@ const styles = StyleSheet.create({
     filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
     filterText: { fontFamily: 'Inter_500Medium', color: colors.textSecondary, fontSize: 11 },
     filterTextActive: { color: '#FFF' },
-
-    // Status Dropdown
     statusDropdown: {
         position: 'absolute', top: 110, right: 16, zIndex: 100,
         backgroundColor: colors.surface, borderRadius: radius.lg,
@@ -403,14 +413,13 @@ const styles = StyleSheet.create({
     statusItem: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.md },
     statusItemActive: { backgroundColor: colors.primary },
     statusItemText: { fontFamily: 'Inter_500Medium', color: colors.text, fontSize: 13 },
-
-    // Map
     mapContainer: { flex: 1, position: 'relative' },
     map: { flex: 1 },
     loadingOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
     loadingText: { fontFamily: 'Inter_500Medium', color: colors.textMuted, fontSize: 13, marginTop: 12 },
-
-    // Markers
+    errorText: { fontFamily: 'Inter_500Medium', color: colors.textSecondary, fontSize: 14, marginTop: 12, textAlign: 'center', paddingHorizontal: 30 },
+    retryBtn: { marginTop: 16, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: radius.md },
+    retryText: { fontFamily: 'Inter_600SemiBold', color: '#FFF', fontSize: 14 },
     markerOuter: {
         width: 34, height: 34, borderRadius: 17, borderWidth: 2.5,
         justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)',
@@ -424,16 +433,12 @@ const styles = StyleSheet.create({
         width: 10, height: 10, borderRadius: 5,
         backgroundColor: '#FF003C', borderWidth: 2, borderColor: '#000',
     },
-
-    // GPS Locate
     locateBtn: { position: 'absolute', bottom: 80, right: 16 },
     locateBtnGrad: {
         width: 46, height: 46, borderRadius: 23,
         justifyContent: 'center', alignItems: 'center',
         shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
     },
-
-    // Refresh
     refreshBtn: { position: 'absolute', bottom: 80, left: 16 },
     refreshBtnInner: {
         width: 42, height: 42, borderRadius: 21,
@@ -441,8 +446,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center', alignItems: 'center',
         shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
     },
-
-    // Legend
     legend: {
         position: 'absolute', bottom: 12, left: 12, right: 12,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
@@ -453,8 +456,6 @@ const styles = StyleSheet.create({
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     legendDot: { width: 8, height: 8, borderRadius: 4 },
     legendText: { fontFamily: 'Inter_500Medium', color: '#CCC', fontSize: 10 },
-
-    // Count Badge
     countBadge: {
         position: 'absolute', top: 12, right: 12,
         backgroundColor: 'rgba(10,10,15,0.88)', borderRadius: radius.md,
@@ -463,8 +464,6 @@ const styles = StyleSheet.create({
     },
     countText: { fontFamily: 'Inter_800ExtraBold', color: colors.primary, fontSize: 16 },
     countLabel: { fontFamily: 'Inter_400Regular', color: colors.textMuted, fontSize: 9 },
-
-    // Issue Card Container — sits ABOVE tab bar
     issueCardContainer: {
         position: 'absolute', bottom: 70, left: 0, right: 0,
         paddingHorizontal: 12, zIndex: 200,
