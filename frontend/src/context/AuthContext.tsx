@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI, userAPI } from '../services/api';
+import { UserLocation, getStoredLocation, saveLocation, clearStoredLocation } from '../services/locationService';
 import logger from '../utils/logger';
 
 interface User {
@@ -35,10 +36,12 @@ interface AuthContextType {
     loading: boolean;
     needsLocationSetup: boolean;
     needsProfileSetup: boolean;
+    userLocation: UserLocation | null;
     login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
     register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
     logout: () => Promise<void>;
-    completeLocationSetup: () => void;
+    completeLocationSetup: (location?: UserLocation) => void;
+    setUserLocation: (location: UserLocation) => Promise<void>;
     completeProfileSetup: (data: { username: string; city: string; ward: string; interests: string[] }) => Promise<void>;
     completeOnboarding: () => Promise<void>;
     refreshProfile: () => Promise<void>;
@@ -52,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [needsLocationSetup, setNeedsLocationSetup] = useState(false);
     const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+    const [userLocation, setUserLocationState] = useState<UserLocation | null>(null);
 
     useEffect(() => {
         loadUser();
@@ -67,6 +71,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 logger.success('Auth', `Restored session for: ${parsed.email} (role: ${parsed.role})`);
             } else {
                 logger.info('Auth', 'No persisted session found — showing Onboarding/Login');
+            }
+            // Load cached location
+            const cachedLocation = await getStoredLocation();
+            if (cachedLocation) {
+                setUserLocationState(cachedLocation);
+                logger.info('Auth', `Restored location: ${cachedLocation.address}`);
             }
         } catch (e) {
             logger.error('Auth', 'Failed to load user from storage', e);
@@ -122,14 +132,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = async () => {
         logger.action('Auth', `Logout: ${user?.email}`);
         await AsyncStorage.multiRemove(['token', 'user', 'locationSetupDone', 'profileSetupDone', 'onboardingDone']);
+        await clearStoredLocation();
         setUser(null);
+        setUserLocationState(null);
         setNeedsLocationSetup(false);
         setNeedsProfileSetup(false);
         logger.success('Auth', 'Logged out, session cleared');
     };
 
-    const completeLocationSetup = async () => {
+    const updateUserLocation = async (location: UserLocation) => {
+        setUserLocationState(location);
+        await saveLocation(location);
+        logger.success('Auth', `Location updated: ${location.address}`);
+    };
+
+    const completeLocationSetup = async (location?: UserLocation) => {
         logger.success('Auth', 'Location setup completed');
+        if (location) {
+            await updateUserLocation(location);
+        }
         await AsyncStorage.setItem('locationSetupDone', 'true');
         setNeedsLocationSetup(false);
         // After location, show profile setup
@@ -168,8 +189,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <AuthContext.Provider value={{
-            user, loading, needsLocationSetup, needsProfileSetup,
-            login, register, logout, completeLocationSetup, completeProfileSetup, completeOnboarding, refreshProfile,
+            user, loading, needsLocationSetup, needsProfileSetup, userLocation,
+            login, register, logout, completeLocationSetup, setUserLocation: updateUserLocation,
+            completeProfileSetup, completeOnboarding, refreshProfile,
         }}>
             {children}
         </AuthContext.Provider>
