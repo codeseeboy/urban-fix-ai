@@ -57,6 +57,10 @@ router.get('/profile', protect, async (req, res) => {
             levelInfo: store.getLevelInfo(user.points),
             impactScore: user.impact_score || Math.min(100, Math.floor((user.points / 50))),
             region: user.region, avatar: user.avatar,
+            username: user.username || null,
+            city: user.city || null,
+            ward: user.ward || null,
+            interests: user.interests || [],
             followingCount,
             followersCount: 0,
         });
