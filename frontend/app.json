@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "UrbanFix AI",
-    "slug": "urbanfix",
+    "slug": "expo1",
     "version": "1.1.0",
     "scheme": "urbanfix",
     "orientation": "portrait",
@@ -64,7 +64,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "0a294f77-d321-4088-bdbf-712fa4f367bc"
+        "projectId": "a186adfc-c966-4e6e-a193-30430c4fce36"
       }
     }
   }
