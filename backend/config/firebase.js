@@ -7,16 +7,34 @@ let firebaseApp = null;
 const initFirebase = () => {
     if (firebaseApp) return firebaseApp;
 
-    const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+    let serviceAccount = null;
 
-    if (!fs.existsSync(serviceAccountPath)) {
-        console.warn('⚠️  Firebase serviceAccountKey.json not found in config/');
-        console.warn('⚠️  Push notifications will NOT work until this file is added.');
+    // Option 1: Load from FIREBASE_SERVICE_ACCOUNT env var (for production / Render)
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        try {
+            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            console.log('✅ Firebase credentials loaded from environment variable');
+        } catch (e) {
+            console.error('❌ Failed to parse FIREBASE_SERVICE_ACCOUNT env var:', e.message);
+            return null;
+        }
+    } else {
+        // Option 2: Load from local file (for development)
+        const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+        if (fs.existsSync(serviceAccountPath)) {
+            serviceAccount = require(serviceAccountPath);
+            console.log('✅ Firebase credentials loaded from serviceAccountKey.json');
+        }
+    }
+
+    if (!serviceAccount) {
+        console.warn('⚠️  No Firebase credentials found.');
+        console.warn('⚠️  Set FIREBASE_SERVICE_ACCOUNT env var or add serviceAccountKey.json to config/');
+        console.warn('⚠️  Push notifications will NOT work.');
         return null;
     }
 
     try {
-        const serviceAccount = require(serviceAccountPath);
         firebaseApp = admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
         });
