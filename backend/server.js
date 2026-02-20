@@ -1,8 +1,12 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const { initFirebase } = require('./config/firebase');
 
 dotenv.config();
+
+// Eagerly initialise Firebase Admin so push notifications work from the first request
+initFirebase();
 
 const app = express();
 app.use(cors());

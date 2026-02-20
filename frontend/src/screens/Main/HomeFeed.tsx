@@ -3,6 +3,7 @@
  * Stories, Reels section, side filter drawer, and social-media-grade cards
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     View, StyleSheet, FlatList, Text, TouchableOpacity, Animated,
     RefreshControl, ActivityIndicator, Share, Dimensions,
@@ -74,6 +75,9 @@ export default function HomeFeed({ navigation }: any) {
     const [stats, setStats] = useState({ totalIssues: 0, resolved: 0, critical: 0, inProgress: 0, pending: 0 });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const pendingUpvotesRef = useRef<Set<string>>(new Set());
+    const pendingDownvotesRef = useRef<Set<string>>(new Set());
+    const pendingFollowPagesRef = useRef<Set<string>>(new Set());
 
     // Scroll animation for header collapse
     const scrollY = useRef(new Animated.Value(0)).current;
@@ -94,6 +98,34 @@ export default function HomeFeed({ navigation }: any) {
             return tb - ta;
         });
     }, []);
+
+    const sortByNewest = useCallback((items: any[]) => {
+        return [...items].sort((a: any, b: any) => {
+            const ta = new Date(a?.createdAt || 0).getTime();
+            const tb = new Date(b?.createdAt || 0).getTime();
+            return tb - ta;
+        });
+    }, []);
+
+    const getFeedCacheKey = useCallback(() => {
+        return `homefeed:${feedMode}:${activeFilter}:${user?._id || 'anon'}`;
+    }, [feedMode, activeFilter, user?._id]);
+
+    const hydrateIssuesFromCache = useCallback(async () => {
+        try {
+            const cacheKey = getFeedCacheKey();
+            const cached = await AsyncStorage.getItem(cacheKey);
+            if (!cached) return false;
+
+            const parsed = JSON.parse(cached);
+            if (!Array.isArray(parsed)) return false;
+
+            setIssues(feedMode === 'municipal' ? sortMunicipalByPriority(parsed) : sortByNewest(parsed));
+            return true;
+        } catch {
+            return false;
+        }
+    }, [feedMode, getFeedCacheKey, sortMunicipalByPriority, sortByNewest]);
 
     /* ─── Scroll-driven collapsing header animations ─── */
     const SCROLL_COLLAPSE = 140;
@@ -141,23 +173,24 @@ export default function HomeFeed({ navigation }: any) {
         logger.info('HomeFeed', `Fetching ${feedMode} feed, filter: ${activeFilter}`);
         try {
             const filter = activeFilter === 'all' ? undefined : activeFilter;
+            const cacheKey = getFeedCacheKey();
+
             if (feedMode === 'municipal') {
                 const { data } = await issuesAPI.getMunicipalFeed(filter, 100);
-                setIssues(sortMunicipalByPriority(Array.isArray(data) ? data : []));
+                const nextIssues = sortMunicipalByPriority(Array.isArray(data) ? data : []);
+                setIssues(nextIssues);
+                await AsyncStorage.setItem(cacheKey, JSON.stringify(nextIssues));
             } else {
                 const { data } = await issuesAPI.getFeed(filter, user?._id, undefined, 'User');
-                const sorted = [...(Array.isArray(data) ? data : [])].sort((a: any, b: any) => {
-                    const ta = new Date(a?.createdAt || 0).getTime();
-                    const tb = new Date(b?.createdAt || 0).getTime();
-                    return tb - ta;
-                });
+                const sorted = sortByNewest(Array.isArray(data) ? data : []);
                 setIssues(sorted);
+                await AsyncStorage.setItem(cacheKey, JSON.stringify(sorted));
             }
         } catch (e) {
             console.log('Feed error:', e);
             setIssues([]);
         }
-    }, [activeFilter, feedMode, user?._id, sortMunicipalByPriority]);
+    }, [activeFilter, feedMode, user?._id, sortMunicipalByPriority, sortByNewest, getFeedCacheKey]);
 
     const fetchStats = async () => {
         try {
@@ -167,9 +200,28 @@ export default function HomeFeed({ navigation }: any) {
     };
 
     useEffect(() => {
-        setLoading(true);
-        Promise.all([fetchIssues(), fetchStats()]).finally(() => setLoading(false));
-    }, [activeFilter, feedMode]);
+        let isMounted = true;
+
+        const loadFeed = async () => {
+            setLoading(true);
+
+            const hadCachedFeed = await hydrateIssuesFromCache();
+            if (hadCachedFeed && isMounted) {
+                setLoading(false);
+            }
+
+            await Promise.all([fetchIssues(), fetchStats()]);
+            if (isMounted) {
+                setLoading(false);
+            }
+        };
+
+        loadFeed();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [activeFilter, feedMode, fetchIssues, hydrateIssuesFromCache]);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -180,26 +232,62 @@ export default function HomeFeed({ navigation }: any) {
     /* ─── Actions ─── */
     const handleUpvote = async (issueId: string) => {
         logger.tap('HomeFeed', 'Upvote', { issueId });
+        if (!user?._id || pendingUpvotesRef.current.has(issueId)) return;
+
+        pendingUpvotesRef.current.add(issueId);
+        let previousIssue: any = null;
+
+        setIssues(prev => prev.map(i => {
+            if (i._id !== issueId) return i;
+            previousIssue = i;
+            const currentUpvotes = Array.isArray(i.upvotes) ? i.upvotes : [];
+            const isUpvoted = currentUpvotes.includes(user._id);
+            const nextUpvotes = isUpvoted
+                ? currentUpvotes.filter((u: string) => u !== user._id)
+                : [...new Set([...currentUpvotes, user._id])];
+            return { ...i, upvotes: nextUpvotes };
+        }));
+
         try {
-            const { data } = await issuesAPI.upvote(issueId);
-            setIssues(prev => prev.map(i => i._id === issueId ? {
-                ...i, upvotes: data.upvoted
-                    ? [...i.upvotes, user?._id]
-                    : i.upvotes.filter((u: string) => u !== user?._id),
-            } : i));
-        } catch (e) { console.log('Upvote error:', e); }
+            await issuesAPI.upvote(issueId);
+        } catch (e) {
+            if (previousIssue) {
+                setIssues(prev => prev.map(i => i._id === issueId ? previousIssue : i));
+            }
+            console.log('Upvote error:', e);
+        } finally {
+            pendingUpvotesRef.current.delete(issueId);
+        }
     };
 
     const handleDownvote = async (issueId: string) => {
         logger.tap('HomeFeed', 'Downvote', { issueId });
+        if (!user?._id || pendingDownvotesRef.current.has(issueId)) return;
+
+        pendingDownvotesRef.current.add(issueId);
+        let previousIssue: any = null;
+
+        setIssues(prev => prev.map(i => {
+            if (i._id !== issueId) return i;
+            previousIssue = i;
+            const currentDownvotes = Array.isArray(i.downvotes) ? i.downvotes : [];
+            const isDownvoted = currentDownvotes.includes(user._id);
+            const nextDownvotes = isDownvoted
+                ? currentDownvotes.filter((u: string) => u !== user._id)
+                : [...new Set([...currentDownvotes, user._id])];
+            return { ...i, downvotes: nextDownvotes };
+        }));
+
         try {
-            const { data } = await issuesAPI.downvote(issueId);
-            setIssues(prev => prev.map(i => i._id === issueId ? {
-                ...i, downvotes: data.downvoted
-                    ? [...(i.downvotes || []), user?._id]
-                    : (i.downvotes || []).filter((u: string) => u !== user?._id),
-            } : i));
-        } catch (e) { console.log('Downvote error:', e); }
+            await issuesAPI.downvote(issueId);
+        } catch (e) {
+            if (previousIssue) {
+                setIssues(prev => prev.map(i => i._id === issueId ? previousIssue : i));
+            }
+            console.log('Downvote error:', e);
+        } finally {
+            pendingDownvotesRef.current.delete(issueId);
+        }
     };
 
     const handleShare = async (item: any) => {
@@ -228,19 +316,30 @@ export default function HomeFeed({ navigation }: any) {
 
     const handleOpenPost = useCallback(async (item: any) => {
         if (item?.authorType === 'MunicipalPage') {
-            try {
-                await issuesAPI.markMunicipalSeen(item._id);
-                markMunicipalSeenLocal(item._id);
-            } catch (e) {
-                console.log('Mark municipal seen error:', e);
-            }
+            // Optimistic: mark seen locally first, navigate instantly
+            markMunicipalSeenLocal(item._id);
+            issuesAPI.markMunicipalSeen(item._id).catch(e =>
+                console.log('Mark municipal seen error:', e)
+            );
         }
         navigation.navigate('IssueDetail', { issueId: item._id });
     }, [navigation, markMunicipalSeenLocal]);
 
     const handleFollowPress = useCallback(async (item: any) => {
         const pageId = item?.municipalPage;
-        if (!pageId) return;
+        if (!pageId || pendingFollowPagesRef.current.has(pageId)) return;
+
+        pendingFollowPagesRef.current.add(pageId);
+        const nextFollowing = !item.isFollowingPage;
+
+        setIssues(prev => {
+            const updated = prev.map((feedItem) =>
+                feedItem.municipalPage === pageId
+                    ? { ...feedItem, isFollowingPage: nextFollowing }
+                    : feedItem
+            );
+            return sortMunicipalByPriority(updated);
+        });
 
         try {
             if (item.isFollowingPage) {
@@ -248,17 +347,18 @@ export default function HomeFeed({ navigation }: any) {
             } else {
                 await api.post(`/municipal/${pageId}/follow`);
             }
-
+        } catch (e) {
             setIssues(prev => {
-                const updated = prev.map((feedItem) =>
+                const reverted = prev.map((feedItem) =>
                     feedItem.municipalPage === pageId
-                        ? { ...feedItem, isFollowingPage: !item.isFollowingPage }
+                        ? { ...feedItem, isFollowingPage: item.isFollowingPage }
                         : feedItem
                 );
-                return sortMunicipalByPriority(updated);
+                return sortMunicipalByPriority(reverted);
             });
-        } catch (e) {
             console.log('Follow/unfollow page error:', e);
+        } finally {
+            pendingFollowPagesRef.current.delete(pageId);
         }
     }, [sortMunicipalByPriority]);
 

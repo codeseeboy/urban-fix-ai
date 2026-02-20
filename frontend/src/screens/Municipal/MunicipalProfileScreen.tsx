@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,7 @@ export default function MunicipalProfileScreen({ route, navigation }: any) {
     const [posts, setPosts] = useState<any[]>([]);
     const [following, setFollowing] = useState(false);
     const [activeTab, setActiveTab] = useState('updates'); // updates | about
+    const pendingFollowRef = useRef(false);
 
     const getFollowersCount = (pageData: any) => {
         if (typeof pageData?.followersCount === 'number') return pageData.followersCount;
@@ -75,25 +76,33 @@ export default function MunicipalProfileScreen({ route, navigation }: any) {
     };
 
     const handleFollow = async () => {
+        if (pendingFollowRef.current) return;
+        pendingFollowRef.current = true;
+
+        const prevFollowing = following;
+        const prevCount = getFollowersCount(page);
+        const nextFollowing = !following;
+        const nextCount = nextFollowing ? prevCount + 1 : Math.max(0, prevCount - 1);
+
+        // Instant UI update
+        setFollowing(nextFollowing);
+        setPage((prev: any) => ({ ...prev, followersCount: nextCount, followers_count: nextCount }));
+
         try {
-            if (following) {
+            if (prevFollowing) {
                 await api.post(`/municipal/${pageId}/unfollow`);
-                setFollowing(false);
-                setPage((prev: any) => {
-                    const next = Math.max(0, getFollowersCount(prev) - 1);
-                    return { ...prev, followersCount: next, followers_count: next };
-                });
             } else {
                 await api.post(`/municipal/${pageId}/follow`);
-                setFollowing(true);
-                setPage((prev: any) => {
-                    const next = getFollowersCount(prev) + 1;
-                    return { ...prev, followersCount: next, followers_count: next };
-                });
             }
+            // Silently refresh full data in background
             fetchPageDetails(false);
         } catch (e) {
+            // Rollback on failure
+            setFollowing(prevFollowing);
+            setPage((prev: any) => ({ ...prev, followersCount: prevCount, followers_count: prevCount }));
             Alert.alert('Error', 'Failed to update follow status');
+        } finally {
+            pendingFollowRef.current = false;
         }
     };
 
