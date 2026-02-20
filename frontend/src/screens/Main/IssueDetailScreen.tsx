@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Share, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ export default function IssueDetailScreen({ route, navigation }: any) {
     const [posting, setPosting] = useState(false);
     const [following, setFollowing] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const pendingRef = useRef({ upvote: false, downvote: false, follow: false, comment: false });
 
     useEffect(() => { fetchIssue(); }, []);
 
@@ -34,33 +35,71 @@ export default function IssueDetailScreen({ route, navigation }: any) {
 
     const handleUpvote = async () => {
         logger.tap('IssueDetail', 'Upvote');
+        if (!issue || !user?._id || pendingRef.current.upvote) return;
+
+        pendingRef.current.upvote = true;
+        const previousIssue = issue;
+        const currentUpvotes = Array.isArray(issue.upvotes) ? issue.upvotes : [];
+        const isUpvoted = currentUpvotes.includes(user._id);
+        const nextUpvotes = isUpvoted
+            ? currentUpvotes.filter((u: string) => u !== user._id)
+            : [...new Set([...currentUpvotes, user._id])];
+
+        setIssue((prev: any) => ({ ...prev, upvotes: nextUpvotes }));
+
         try {
-            const { data } = await issuesAPI.upvote(issueId);
-            setIssue((prev: any) => ({
-                ...prev,
-                upvotes: data.upvoted ? [...prev.upvotes, user?._id] : prev.upvotes.filter((u: string) => u !== user?._id),
-            }));
-        } catch (e) { console.log('Upvote error'); }
+            await issuesAPI.upvote(issueId);
+        } catch (e) {
+            setIssue(previousIssue);
+            console.log('Upvote error');
+        } finally {
+            pendingRef.current.upvote = false;
+        }
     };
 
     const handleDownvote = async () => {
         logger.tap('IssueDetail', 'Downvote');
+        if (!issue || !user?._id || pendingRef.current.downvote) return;
+
+        pendingRef.current.downvote = true;
+        const previousIssue = issue;
+        const currentDownvotes = Array.isArray(issue.downvotes) ? issue.downvotes : [];
+        const isDownvoted = currentDownvotes.includes(user._id);
+        const nextDownvotes = isDownvoted
+            ? currentDownvotes.filter((u: string) => u !== user._id)
+            : [...new Set([...currentDownvotes, user._id])];
+
+        setIssue((prev: any) => ({ ...prev, downvotes: nextDownvotes }));
+
         try {
-            const { data } = await issuesAPI.downvote(issueId);
-            setIssue((prev: any) => ({
-                ...prev,
-                downvotes: data.downvoted ? [...(prev.downvotes || []), user?._id] : (prev.downvotes || []).filter((u: string) => u !== user?._id),
-            }));
-        } catch (e) { console.log('Downvote error'); }
+            await issuesAPI.downvote(issueId);
+        } catch (e) {
+            setIssue(previousIssue);
+            console.log('Downvote error');
+        } finally {
+            pendingRef.current.downvote = false;
+        }
     };
 
     const handleFollow = async () => {
         logger.tap('IssueDetail', 'Follow Issue');
+        if (pendingRef.current.follow) return;
+
+        pendingRef.current.follow = true;
+        const previousFollowing = following;
+        const nextFollowing = !following;
+        setFollowing(nextFollowing);
+
         try {
             const { data } = await issuesAPI.followIssue(issueId);
             setFollowing(data.following);
             if (data.following) Alert.alert('Following', 'You will receive updates for this issue.');
-        } catch (e) { console.log('Follow error'); }
+        } catch (e) {
+            setFollowing(previousFollowing);
+            console.log('Follow error');
+        } finally {
+            pendingRef.current.follow = false;
+        }
     };
 
     const handleShare = async () => {
@@ -74,14 +113,37 @@ export default function IssueDetailScreen({ route, navigation }: any) {
     };
 
     const handleComment = async () => {
-        if (!newComment.trim()) return;
+        if (!newComment.trim() || !user?._id || !user?.name || pendingRef.current.comment) return;
+
+        pendingRef.current.comment = true;
         setPosting(true);
+        const text = newComment.trim();
+        const tempId = `temp-${Date.now()}`;
+        const optimisticComment = {
+            _id: tempId,
+            text,
+            timeAgo: 'Just now',
+            user: {
+                _id: user._id,
+                name: user.name,
+                role: user.role,
+            },
+        };
+
+        setComments(prev => [...prev, optimisticComment]);
+        setNewComment('');
+
         try {
-            const { data } = await issuesAPI.addComment(issueId, newComment.trim());
-            setComments(prev => [...prev, data]);
-            setNewComment('');
-        } catch (e) { Alert.alert('Error', 'Failed to post comment'); }
-        setPosting(false);
+            const { data } = await issuesAPI.addComment(issueId, text);
+            setComments(prev => prev.map(c => c._id === tempId ? data : c));
+        } catch (e) {
+            setComments(prev => prev.filter(c => c._id !== tempId));
+            setNewComment(text);
+            Alert.alert('Error', 'Failed to post comment');
+        } finally {
+            setPosting(false);
+            pendingRef.current.comment = false;
+        }
     };
 
     const getSevColor = (s: string) => s === 'Critical' ? '#FF003C' : s === 'High' ? '#FF453A' : s === 'Medium' ? '#FFD60A' : '#30D158';

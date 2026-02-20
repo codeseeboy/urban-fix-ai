@@ -25,7 +25,7 @@ const ICONS: Record<string, { name: string; color: string }> = {
     resolved: { name: 'checkmark-circle', color: colors.success },
 };
 
-const POLL_INTERVAL = 15000; // 15s auto-refresh
+const POLL_INTERVAL = 30000; // 30s auto-refresh (only when focused)
 
 /* ── Swipeable notification card ── */
 function SwipeableNotifCard({ item, onDelete, onTap }: {
@@ -126,6 +126,10 @@ export default function NotificationsScreen() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const pendingMarkReadRef = useRef<Set<string>>(new Set());
+    const pendingDeleteRef = useRef<Set<string>>(new Set());
+    const pendingMarkAllRef = useRef(false);
+    const pendingClearAllRef = useRef(false);
 
     const getTimeAgo = (dateStr: string) => {
         const diff = Date.now() - new Date(dateStr).getTime();
@@ -180,34 +184,66 @@ export default function NotificationsScreen() {
     };
 
     const markAllRead = async () => {
+        if (pendingMarkAllRef.current || unreadCount === 0) return;
+
+        pendingMarkAllRef.current = true;
+        const previousNotifications = notifications;
+        const previousUnreadCount = unreadCount;
+
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        setUnreadCount(0);
+
         try {
             await notificationsAPI.markAllRead();
-            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-            setUnreadCount(0);
-        } catch (e) { console.log('Mark read error:', e); }
+        } catch (e) {
+            setNotifications(previousNotifications);
+            setUnreadCount(previousUnreadCount);
+            console.log('Mark read error:', e);
+        } finally {
+            pendingMarkAllRef.current = false;
+        }
     };
 
     const handleTap = async (item: any) => {
-        if (!item.read) {
-            try {
-                await notificationsAPI.markRead(item._id);
-                setNotifications(prev => prev.map(n =>
-                    n._id === item._id ? { ...n, read: true } : n
-                ));
-                setUnreadCount(prev => Math.max(0, prev - 1));
-            } catch (e) { console.log('Mark single read error:', e); }
+        if (item.read || pendingMarkReadRef.current.has(item._id)) return;
+
+        pendingMarkReadRef.current.add(item._id);
+        setNotifications(prev => prev.map(n =>
+            n._id === item._id ? { ...n, read: true } : n
+        ));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+
+        try {
+            await notificationsAPI.markRead(item._id);
+        } catch (e) {
+            setNotifications(prev => prev.map(n =>
+                n._id === item._id ? { ...n, read: false } : n
+            ));
+            setUnreadCount(prev => prev + 1);
+            console.log('Mark single read error:', e);
+        } finally {
+            pendingMarkReadRef.current.delete(item._id);
         }
     };
 
     const handleDelete = async (id: string) => {
+        if (pendingDeleteRef.current.has(id) || pendingClearAllRef.current) return;
+
+        pendingDeleteRef.current.add(id);
+        const previousNotifications = notifications;
+        const previousUnreadCount = unreadCount;
         const wasUnread = notifications.find(n => n._id === id && !n.read);
         setNotifications(prev => prev.filter(n => n._id !== id));
         if (wasUnread) setUnreadCount(prev => Math.max(0, prev - 1));
+
         try {
             await notificationsAPI.deleteOne(id);
         } catch (e) {
             console.log('Delete error:', e);
-            fetchNotifs(); // re-sync on error
+            setNotifications(previousNotifications);
+            setUnreadCount(previousUnreadCount);
+        } finally {
+            pendingDeleteRef.current.delete(id);
         }
     };
 
@@ -221,13 +257,22 @@ export default function NotificationsScreen() {
                 {
                     text: 'Clear All', style: 'destructive',
                     onPress: async () => {
+                        if (pendingClearAllRef.current) return;
+
+                        pendingClearAllRef.current = true;
+                        const previousNotifications = notifications;
+                        const previousUnreadCount = unreadCount;
+
                         setNotifications([]);
                         setUnreadCount(0);
                         try {
                             await notificationsAPI.deleteAll();
                         } catch (e) {
                             console.log('Clear all error:', e);
-                            fetchNotifs();
+                            setNotifications(previousNotifications);
+                            setUnreadCount(previousUnreadCount);
+                        } finally {
+                            pendingClearAllRef.current = false;
                         }
                     },
                 },

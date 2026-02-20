@@ -2,6 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const store = require('../data/store');
+// GET /api/notifications/unread-count — Lightweight count-only endpoint (no payload)
+router.get('/unread-count', protect, async (req, res) => {
+    try {
+        const count = await store.getUnreadNotificationCount(req.user._id);
+        res.json({ unreadCount: count });
+    } catch (error) {
+        console.error('Unread count error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // GET /api/notifications — Get user's notifications
 router.get('/', protect, async (req, res) => {
     try {

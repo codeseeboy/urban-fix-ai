@@ -416,6 +416,18 @@ async function deleteAllNotifications(userId) {
     });
 }
 
+async function getUnreadNotificationCount(userId) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('notifications')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('read', false);
+        if (result.error) throw new Error(result.error.message);
+        return result.count || 0;
+    });
+}
+
 // ── PUSH TOKENS ─────────────────────────────────────────────────────────────
 
 async function addPushToken(userId, token, deviceType) {
@@ -691,7 +703,7 @@ module.exports = {
 
     // Notifications
     getNotifications, createNotification, markNotificationsRead, markNotificationRead,
-    deleteNotification, deleteAllNotifications,
+    deleteNotification, deleteAllNotifications, getUnreadNotificationCount,
     addPushToken, getPushTokens, deletePushToken,
 
     // Badges

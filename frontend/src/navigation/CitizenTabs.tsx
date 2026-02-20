@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { colors } from '../theme/colors';
 import { notificationsAPI } from '../services/api';
 
@@ -14,22 +16,49 @@ import LeaderboardScreen from '../screens/Main/LeaderboardScreen';
 
 const Tab = createBottomTabNavigator();
 
+const BADGE_POLL_INTERVAL = 60_000; // 60s — lightweight count-only endpoint
+
 export default function CitizenTabs() {
     const [unreadCount, setUnreadCount] = useState(0);
+    const listenerRef = useRef<any>(null);
 
-    const fetchUnread = useCallback(async () => {
+    // Hydrate cached badge count for instant render (no flicker)
+    useEffect(() => {
+        (async () => {
+            try {
+                const cached = await AsyncStorage.getItem('notif:unreadCount');
+                if (cached) setUnreadCount(parseInt(cached, 10) || 0);
+            } catch {}
+        })();
+    }, []);
+
+    const fetchUnreadCount = useCallback(async () => {
         try {
-            const { data } = await notificationsAPI.getAll();
-            setUnreadCount(data.unreadCount || 0);
+            const { data } = await notificationsAPI.getUnreadCount();
+            const count = data.unreadCount || 0;
+            setUnreadCount(count);
+            AsyncStorage.setItem('notif:unreadCount', String(count)).catch(() => {});
         } catch (e) { /* silent */ }
     }, []);
 
-    // Poll every 15s for badge count
+    // Poll every 60s using lightweight count-only endpoint (was 15s w/ full payload)
     useEffect(() => {
-        fetchUnread();
-        const interval = setInterval(fetchUnread, 15000);
+        fetchUnreadCount();
+        const interval = setInterval(fetchUnreadCount, BADGE_POLL_INTERVAL);
         return () => clearInterval(interval);
-    }, [fetchUnread]);
+    }, [fetchUnreadCount]);
+
+    // Instantly bump badge when a push notification arrives (no extra API call)
+    useEffect(() => {
+        listenerRef.current = Notifications.addNotificationReceivedListener(() => {
+            setUnreadCount(prev => {
+                const next = prev + 1;
+                AsyncStorage.setItem('notif:unreadCount', String(next)).catch(() => {});
+                return next;
+            });
+        });
+        return () => { if (listenerRef.current) listenerRef.current.remove(); };
+    }, []);
 
     return (
         <Tab.Navigator
@@ -88,7 +117,7 @@ export default function CitizenTabs() {
                     tabBarBadgeStyle: { backgroundColor: colors.error, fontFamily: 'Inter_700Bold', fontSize: 10 },
                 }}
                 listeners={{
-                    focus: () => fetchUnread(),
+                    focus: () => fetchUnreadCount(),
                 }}
             />
             <Tab.Screen name="Profile" component={ProfileScreen}

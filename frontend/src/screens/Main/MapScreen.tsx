@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Dimensions, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Circle, Region } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,16 +58,48 @@ export default function MapScreen({ navigation }: any) {
     const [showHeatmap, setShowHeatmap] = useState(false);
     const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const hasCacheRef = useRef(false);
 
+    // ── Phase 1: Instant render from cache + saved location ──
     useEffect(() => {
-        initMap();
+        (async () => {
+            try {
+                const [cachedIssues, cachedLoc] = await Promise.all([
+                    AsyncStorage.getItem('mapscreen:issues'),
+                    AsyncStorage.getItem('mapscreen:userLocation'),
+                ]);
+
+                if (cachedLoc) {
+                    try {
+                        const loc = JSON.parse(cachedLoc);
+                        if (loc?.latitude && loc?.longitude) setUserLocation(loc);
+                    } catch {}
+                }
+
+                if (cachedIssues) {
+                    const parsed = JSON.parse(cachedIssues);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setIssues(parsed);
+                        hasCacheRef.current = true;
+                        setLoading(false); // map renders NOW with cached pins
+                    }
+                }
+            } catch {}
+
+            // Phase 2 runs in background regardless
+            initMap();
+        })();
     }, []);
 
+    // ── Phase 2: Background refresh (GPS + feed) — doesn't block UI ──
     const initMap = async () => {
-        setLoading(true);
+        // Only show spinner if we have NO cached data
+        if (!hasCacheRef.current) {
+            setLoading(true);
+        }
         setError(null);
 
-        // Step 1: Get user's LIVE GPS location
+        // Step 1 + 2: GPS + seed run in parallel-safe way
         let coords: { latitude: number; longitude: number } | null = null;
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
@@ -76,31 +109,34 @@ export default function MapScreen({ navigation }: any) {
                 });
                 coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
                 setUserLocation(coords);
+                // Cache location for instant next-launch
+                AsyncStorage.setItem('mapscreen:userLocation', JSON.stringify(coords)).catch(() => {});
             }
         } catch (e) {
             console.log('Location detection failed (non-critical):', e);
         }
 
-        // Step 2: Seed nearby issues around USER'S location (not Delhi!)
+        // Seed nearby (fire-and-forget — don't block issue fetch)
         if (coords) {
-            try {
-                await issuesAPI.seedNearby(coords.latitude, coords.longitude);
-            } catch (e) {
-                console.log('Seed nearby skipped (endpoint may not exist):', e);
+            issuesAPI.seedNearby(coords.latitude, coords.longitude).catch(e =>
+                console.log('Seed nearby skipped:', e)
+            );
+        }
+
+        // Step 3: Fetch fresh issues (background refresh if cache was shown)
+        try {
+            const { data } = await issuesAPI.getFeed();
+            const nextIssues = Array.isArray(data) ? data : [];
+            setIssues(nextIssues);
+            AsyncStorage.setItem('mapscreen:issues', JSON.stringify(nextIssues)).catch(() => {});
+        } catch (e) {
+            console.log('Issue fetch failed:', e);
+            if (!hasCacheRef.current && issues.length === 0) {
+                setError('Could not load issues. Please check your connection.');
             }
         }
 
-        // Step 3: Fetch all issues
-        try {
-            const { data } = await issuesAPI.getFeed();
-            setIssues(Array.isArray(data) ? data : []);
-        } catch (e) {
-            console.log('Issue fetch failed:', e);
-            setError('Could not load issues. Please check your connection.');
-            setIssues([]);
-        }
-
-        // Step 4: Animate map to user's location
+        // Step 4: Animate map to user's GPS
         if (coords && mapRef.current) {
             setTimeout(() => {
                 mapRef.current?.animateToRegion({
@@ -224,12 +260,7 @@ export default function MapScreen({ navigation }: any) {
 
             {/* Map */}
             <View style={styles.mapContainer}>
-                {loading ? (
-                    <View style={styles.loadingOverlay}>
-                        <ActivityIndicator size="large" color={colors.primary} />
-                        <Text style={styles.loadingText}>Loading civic data...</Text>
-                    </View>
-                ) : error ? (
+                {error && issues.length === 0 ? (
                     <View style={styles.loadingOverlay}>
                         <Ionicons name="cloud-offline-outline" size={48} color={colors.textMuted} />
                         <Text style={styles.errorText}>{error}</Text>
@@ -237,7 +268,13 @@ export default function MapScreen({ navigation }: any) {
                             <Text style={styles.retryText}>Retry</Text>
                         </TouchableOpacity>
                     </View>
+                ) : loading && issues.length === 0 ? (
+                    <View style={styles.loadingOverlay}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={styles.loadingText}>Loading civic data...</Text>
+                    </View>
                 ) : (
+                    <>
                     <MapView
                         ref={mapRef}
                         style={styles.map}
@@ -299,7 +336,7 @@ export default function MapScreen({ navigation }: any) {
                 )}
 
                 {/* GPS Locate Button */}
-                {!loading && !error && (
+                {!error && (
                     <TouchableOpacity style={styles.locateBtn} onPress={handleLocateMe} activeOpacity={0.8}>
                         <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.locateBtnGrad}>
                             <Ionicons name="navigate" size={20} color="#FFF" />
@@ -308,16 +345,18 @@ export default function MapScreen({ navigation }: any) {
                 )}
 
                 {/* Refresh Button */}
-                {!loading && (
-                    <TouchableOpacity style={styles.refreshBtn} onPress={initMap} activeOpacity={0.8}>
-                        <View style={styles.refreshBtnInner}>
+                <TouchableOpacity style={styles.refreshBtn} onPress={initMap} activeOpacity={0.8}>
+                    <View style={styles.refreshBtnInner}>
+                        {loading ? (
+                            <ActivityIndicator size={16} color={colors.primary} />
+                        ) : (
                             <Ionicons name="refresh" size={18} color={colors.text} />
-                        </View>
-                    </TouchableOpacity>
-                )}
+                        )}
+                    </View>
+                </TouchableOpacity>
 
                 {/* Legend */}
-                {!loading && !error && (
+                {!error && (
                     <View style={styles.legend}>
                         {Object.entries(SEVERITY_COLORS).filter(([k]) => k !== 'Resolved').map(([label, color]) => (
                             <View key={label} style={styles.legendItem}>
@@ -329,11 +368,21 @@ export default function MapScreen({ navigation }: any) {
                 )}
 
                 {/* Issue Count Badge */}
-                {!loading && !error && (
+                {!error && (
                     <View style={styles.countBadge}>
                         <Text style={styles.countText}>{filteredIssues.length}</Text>
                         <Text style={styles.countLabel}>Issues</Text>
                     </View>
+                )}
+
+                {/* Subtle refreshing indicator on top of already-visible map */}
+                {loading && issues.length > 0 && (
+                    <View style={styles.refreshingBanner}>
+                        <ActivityIndicator size={12} color={colors.primary} />
+                        <Text style={styles.refreshingText}>Refreshing...</Text>
+                    </View>
+                )}
+                </>
                 )}
             </View>
 
@@ -485,6 +534,14 @@ const styles = StyleSheet.create({
     },
     countText: { fontFamily: 'Inter_800ExtraBold', color: colors.primary, fontSize: 16 },
     countLabel: { fontFamily: 'Inter_400Regular', color: colors.textMuted, fontSize: 9 },
+    refreshingBanner: {
+        position: 'absolute', top: 10, alignSelf: 'center',
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        backgroundColor: 'rgba(10,10,15,0.85)', borderRadius: 16,
+        paddingHorizontal: 12, paddingVertical: 6,
+        borderWidth: 1, borderColor: colors.border,
+    },
+    refreshingText: { fontFamily: 'Inter_500Medium', color: colors.textSecondary, fontSize: 11 },
     issueCardContainer: {
         position: 'absolute', bottom: 70, left: 0, right: 0,
         paddingHorizontal: 12, zIndex: 200,

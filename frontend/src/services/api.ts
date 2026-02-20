@@ -190,6 +190,7 @@ export const workflowAPI = {
 // ── NOTIFICATIONS ──
 export const notificationsAPI = {
   getAll: () => api.get('/notifications'),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
   markAllRead: () => api.put('/notifications/read-all'),
   markRead: (id: string) => api.put(`/notifications/${id}/read`),
   deleteOne: (id: string) => api.delete(`/notifications/${id}`),
