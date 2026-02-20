@@ -2,7 +2,7 @@
  * HomeFeed — Premium redesigned feed with Community/Municipal toggle,
  * Stories, Reels section, side filter drawer, and social-media-grade cards
  */
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View, StyleSheet, FlatList, Text, TouchableOpacity, Animated,
     RefreshControl, ActivityIndicator, Share, Dimensions,
@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { issuesAPI, gamificationAPI } from '../../services/api';
+import api from '../../services/api';
 import logger from '../../utils/logger';
 import { colors, fonts, radius } from '../../theme/colors';
 
@@ -21,7 +22,6 @@ import StoriesRow from '../../components/feed/StoriesRow';
 import ReelsTab from '../../components/feed/ReelsTab';
 import FilterDrawer from '../../components/feed/FilterDrawer';
 import FeedPost from '../../components/feed/FeedPost';
-import SuggestedFollows from '../../components/Municipal/SuggestedFollows';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -51,105 +51,6 @@ const SECTION_TABS = [
     { id: 'reels', label: 'Reels', icon: 'play-circle-outline' },
 ];
 
-/* ─── Dummy municipal posts for Boisar & Palghar ─── */
-const DUMMY_MUNICIPAL_POSTS: any[] = [
-    {
-        _id: 'muni-boisar-notice-1',
-        title: 'Water supply disruption — Maintenance scheduled',
-        description: 'Due to pipeline maintenance, water supply in Ward 5 & 6 will be disrupted on 20th Feb from 10:00 AM to 4:00 PM. Please store water in advance.',
-        authorType: 'MunicipalPage',
-        user: { name: 'Boisar Municipal Council', avatar: null, _id: '992a6c0b-1234-5678-90ab-cdef12345678', isPage: true },
-        municipalPage: '992a6c0b-1234-5678-90ab-cdef12345678',
-        officialUpdateType: 'NOTICE',
-        timeAgo: '3h ago',
-        image: null,
-        upvotes: ['u1', 'u2', 'u3', 'u4', 'u5'],
-        downvotes: [],
-        commentCount: 12,
-        status: 'Active',
-        location: { address: 'Boisar, Palghar District' },
-        aiSeverity: null,
-        departmentTag: 'Water Dept',
-        emergency: false,
-    },
-    {
-        _id: 'muni-palghar-resolved-1',
-        title: 'Pothole repair completed — Palghar-Boisar Road',
-        description: 'The potholes reported by citizens on Palghar-Boisar main road have been repaired. Thank you for your patience and reports!',
-        authorType: 'MunicipalPage',
-        user: { name: 'Palghar Zilla Parishad', avatar: null, _id: '881b5d1a-2345-6789-01bc-def012345679', isPage: true },
-        municipalPage: '881b5d1a-2345-6789-01bc-def012345679',
-        officialUpdateType: 'RESOLVED',
-        timeAgo: '5h ago',
-        image: 'http://192.168.0.102:5000/public/images/pothole.jpg',
-        upvotes: ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8'],
-        downvotes: [],
-        commentCount: 24,
-        status: 'Resolved',
-        location: { address: 'Palghar-Boisar Road, NH-8' },
-        aiSeverity: null,
-        departmentTag: 'Roads Dept',
-        emergency: false,
-    },
-    {
-        _id: 'muni-boisar-notice-2',
-        title: 'New garbage collection schedule — Starting Monday',
-        description: 'Door-to-door garbage collection timings changed: 7:00 AM – 10:00 AM for wet waste, 10:00 AM – 12:00 PM for dry waste. Please segregate.',
-        authorType: 'MunicipalPage',
-        user: { name: 'Boisar Municipal Council', avatar: null, _id: '992a6c0b-1234-5678-90ab-cdef12345678', isPage: true },
-        municipalPage: '992a6c0b-1234-5678-90ab-cdef12345678',
-        officialUpdateType: 'NOTICE',
-        timeAgo: '8h ago',
-        image: null,
-        upvotes: ['u1', 'u2'],
-        downvotes: [],
-        commentCount: 6,
-        status: 'Active',
-        location: { address: 'All Wards, Boisar' },
-        aiSeverity: null,
-        departmentTag: 'Sanitation',
-        emergency: false,
-    },
-    {
-        _id: 'muni-palghar-notice-1',
-        title: 'Street light installation — 45 new lights in Palghar East',
-        description: 'As part of the Smart City initiative, 45 new LED street lights have been installed in Palghar East zone. Report any non-functional lights via this app.',
-        authorType: 'MunicipalPage',
-        user: { name: 'Palghar Zilla Parishad', avatar: null, _id: '881b5d1a-2345-6789-01bc-def012345679', isPage: true },
-        municipalPage: '881b5d1a-2345-6789-01bc-def012345679',
-        officialUpdateType: 'UPDATE',
-        timeAgo: '1d ago',
-        image: 'http://192.168.0.102:5000/public/images/streetlight.webp',
-        upvotes: ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8', 'u9', 'u10', 'u11'],
-        downvotes: [],
-        commentCount: 18,
-        status: 'Active',
-        location: { address: 'Palghar East Zone' },
-        aiSeverity: null,
-        departmentTag: 'Electricity Dept',
-        emergency: false,
-    },
-    {
-        _id: 'muni-boisar-resolved-1',
-        title: 'Drainage blockage cleared — Katkarpada Road',
-        description: 'The blocked drainage near Katkarpada junction has been cleared by our team. Waterlogging issue is now resolved.',
-        authorType: 'MunicipalPage',
-        user: { name: 'Boisar Municipal Council', avatar: null, _id: '992a6c0b-1234-5678-90ab-cdef12345678', isPage: true },
-        municipalPage: '992a6c0b-1234-5678-90ab-cdef12345678',
-        officialUpdateType: 'RESOLVED',
-        timeAgo: '1d ago',
-        image: null,
-        upvotes: ['u1', 'u2', 'u3'],
-        downvotes: [],
-        commentCount: 9,
-        status: 'Resolved',
-        location: { address: 'Katkarpada, Boisar' },
-        aiSeverity: null,
-        departmentTag: 'Drainage Dept',
-        emergency: false,
-    }
-];
-
 /* ─── Dummy municipal stories (Real IDs) ─── */
 const MUNICIPAL_STORIES = [
     { id: '992a6c0b-1234-5678-90ab-cdef12345678', name: 'Boisar', hasUpdate: true, verified: true, avatar: null }, // Boisar
@@ -176,6 +77,23 @@ export default function HomeFeed({ navigation }: any) {
 
     // Scroll animation for header collapse
     const scrollY = useRef(new Animated.Value(0)).current;
+
+    const sortMunicipalByPriority = useCallback((items: any[]) => {
+        return [...items].sort((a, b) => {
+            const bucketA = typeof a.feedBucket === 'number'
+                ? a.feedBucket
+                : ((a.isFollowingPage ? 0 : 2) + (a.isSeen ? 1 : 0));
+            const bucketB = typeof b.feedBucket === 'number'
+                ? b.feedBucket
+                : ((b.isFollowingPage ? 0 : 2) + (b.isSeen ? 1 : 0));
+
+            if (bucketA !== bucketB) return bucketA - bucketB;
+
+            const ta = new Date(a?.createdAt || 0).getTime();
+            const tb = new Date(b?.createdAt || 0).getTime();
+            return tb - ta;
+        });
+    }, []);
 
     /* ─── Scroll-driven collapsing header animations ─── */
     const SCROLL_COLLAPSE = 140;
@@ -223,20 +141,23 @@ export default function HomeFeed({ navigation }: any) {
         logger.info('HomeFeed', `Fetching ${feedMode} feed, filter: ${activeFilter}`);
         try {
             const filter = activeFilter === 'all' ? undefined : activeFilter;
-            const { data } = await issuesAPI.getFeed(filter, user?._id);
             if (feedMode === 'municipal') {
-                // Use real municipal posts if any, otherwise fall back to dummy
-                const realMunicipal = data.filter((i: any) => i.authorType === 'MunicipalPage');
-                setIssues(realMunicipal.length > 0 ? realMunicipal : DUMMY_MUNICIPAL_POSTS);
+                const { data } = await issuesAPI.getMunicipalFeed(filter, 100);
+                setIssues(sortMunicipalByPriority(Array.isArray(data) ? data : []));
             } else {
-                setIssues(data.filter((i: any) => i.authorType !== 'MunicipalPage'));
+                const { data } = await issuesAPI.getFeed(filter, user?._id, undefined, 'User');
+                const sorted = [...(Array.isArray(data) ? data : [])].sort((a: any, b: any) => {
+                    const ta = new Date(a?.createdAt || 0).getTime();
+                    const tb = new Date(b?.createdAt || 0).getTime();
+                    return tb - ta;
+                });
+                setIssues(sorted);
             }
         } catch (e) {
             console.log('Feed error:', e);
-            // Show dummy municipal posts even on error
-            if (feedMode === 'municipal') setIssues(DUMMY_MUNICIPAL_POSTS);
+            setIssues([]);
         }
-    }, [activeFilter, feedMode, user?._id]);
+    }, [activeFilter, feedMode, user?._id, sortMunicipalByPriority]);
 
     const fetchStats = async () => {
         try {
@@ -258,8 +179,6 @@ export default function HomeFeed({ navigation }: any) {
 
     /* ─── Actions ─── */
     const handleUpvote = async (issueId: string) => {
-        // Skip for dummy municipal posts
-        if (issueId.startsWith('muni-')) return;
         logger.tap('HomeFeed', 'Upvote', { issueId });
         try {
             const { data } = await issuesAPI.upvote(issueId);
@@ -272,7 +191,6 @@ export default function HomeFeed({ navigation }: any) {
     };
 
     const handleDownvote = async (issueId: string) => {
-        if (issueId.startsWith('muni-')) return;
         logger.tap('HomeFeed', 'Downvote', { issueId });
         try {
             const { data } = await issuesAPI.downvote(issueId);
@@ -299,18 +217,50 @@ export default function HomeFeed({ navigation }: any) {
         setFilterDrawerOpen(false);
     };
 
-    /* ─── Feed data with injections ─── */
-    const feedData = useMemo(() => {
-        if (loading || issues.length === 0) return issues;
-        const items = [...issues];
-        if (feedMode === 'municipal' && items.length >= 2) {
-            items.splice(2, 0, { _id: 'suggestion_injection', type: 'suggestion' });
+    const markMunicipalSeenLocal = useCallback((issueId: string) => {
+        setIssues(prev => {
+            const updated = prev.map(item =>
+                item._id === issueId ? { ...item, isSeen: true } : item
+            );
+            return sortMunicipalByPriority(updated);
+        });
+    }, [sortMunicipalByPriority]);
+
+    const handleOpenPost = useCallback(async (item: any) => {
+        if (item?.authorType === 'MunicipalPage') {
+            try {
+                await issuesAPI.markMunicipalSeen(item._id);
+                markMunicipalSeenLocal(item._id);
+            } catch (e) {
+                console.log('Mark municipal seen error:', e);
+            }
         }
-        if (feedMode === 'community' && items.length >= 3) {
-            items.splice(3, 0, { _id: 'suggestion_injection', type: 'suggestion' });
+        navigation.navigate('IssueDetail', { issueId: item._id });
+    }, [navigation, markMunicipalSeenLocal]);
+
+    const handleFollowPress = useCallback(async (item: any) => {
+        const pageId = item?.municipalPage;
+        if (!pageId) return;
+
+        try {
+            if (item.isFollowingPage) {
+                await api.post(`/municipal/${pageId}/unfollow`);
+            } else {
+                await api.post(`/municipal/${pageId}/follow`);
+            }
+
+            setIssues(prev => {
+                const updated = prev.map((feedItem) =>
+                    feedItem.municipalPage === pageId
+                        ? { ...feedItem, isFollowingPage: !item.isFollowingPage }
+                        : feedItem
+                );
+                return sortMunicipalByPriority(updated);
+            });
+        } catch (e) {
+            console.log('Follow/unfollow page error:', e);
         }
-        return items;
-    }, [issues, loading, feedMode]);
+    }, [sortMunicipalByPriority]);
 
     /* ─── Get active filter label ─── */
     const activeFilterLabel = FILTER_CATEGORIES.find(f => f.id === activeFilter)?.label || 'All Issues';
@@ -417,26 +367,22 @@ export default function HomeFeed({ navigation }: any) {
 
     /* ─── Render feed item ─── */
     const renderItem = ({ item, index }: { item: any; index: number }) => {
-        if (item.type === 'suggestion') {
-            return <SuggestedFollows navigation={navigation} />;
-        }
         return (
             <FeedPost
                 item={item}
                 userId={user?._id}
                 index={index}
-                onPress={() =>
-                    navigation.navigate('IssueDetail', { issueId: item._id })
-                }
+                onPress={() => handleOpenPost(item)}
                 onUpvote={handleUpvote}
                 onDownvote={handleDownvote}
-                onComment={(id) => navigation.navigate('IssueDetail', { issueId: id })}
+                onComment={() => handleOpenPost(item)}
                 onShare={handleShare}
                 onUserPress={(it) => {
                     if (it.authorType === 'MunicipalPage') {
                         navigation.navigate('MunicipalProfile', { pageId: it.municipalPage });
                     }
                 }}
+                onFollowPress={feedMode === 'municipal' ? handleFollowPress : undefined}
             />
         );
     };
@@ -488,7 +434,7 @@ export default function HomeFeed({ navigation }: any) {
                     </View>
                 ) : (
                     <FlatList
-                        data={loading ? [] : feedData}
+                        data={loading ? [] : issues}
                         renderItem={renderItem}
                         keyExtractor={i => i._id}
                         ListHeaderComponent={renderHeader}
