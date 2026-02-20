@@ -1,7 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { makeRedirectUri } from 'expo-auth-session';
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
@@ -9,6 +8,7 @@ import { authAPI } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { UserLocation, getStoredLocation, saveLocation, clearStoredLocation } from '../services/locationService';
 import logger from '../utils/logger';
+import { registerForPushNotificationsAsync } from '../services/notificationService';
 
 // Ensure WebBrowser finishes its work
 WebBrowser.maybeCompleteAuthSession();
@@ -205,6 +205,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (stored) {
                 const parsed = JSON.parse(stored);
                 setUser(parsed);
+                // Register push token now that we have a user
+                registerForPushNotificationsAsync();
                 logger.success('Auth', `Restored session for: ${parsed.email} (role: ${parsed.role})`);
 
                 // Always show location detection on every app open
@@ -267,6 +269,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await AsyncStorage.setItem('token', data.token);
             await AsyncStorage.setItem('user', JSON.stringify(data));
             setUser(data);
+            registerForPushNotificationsAsync();
             logger.success('Auth', `Login successful: ${data.name}`);
 
             // Check setup flow based on REAL data from the server
@@ -288,6 +291,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await AsyncStorage.setItem('user', JSON.stringify(data));
             setUser(data);
             setNeedsLocationSetup(true);
+            registerForPushNotificationsAsync();
             logger.success('Auth', `Registration successful: ${data.name}`);
             return { success: true };
         } catch (e: any) {

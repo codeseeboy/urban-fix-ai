@@ -49,10 +49,24 @@ class NotificationService {
             const messaging = getMessaging();
             if (!messaging) return notification;
 
+
+
+            // Use sendEachForMulticast for v13+
+            // Note: message object structure is compatible
             const message = {
                 notification: {
                     title,
                     body
+                },
+                android: {
+                    priority: 'high',
+                    notification: {
+                        channelId: 'default', // MUST match the channel ID created on frontend
+                        sound: 'default',
+                        priority: 'high',
+                        defaultSound: true,
+                        defaultVibrateTimings: true
+                    }
                 },
                 data: {
                     ...data,
@@ -61,8 +75,6 @@ class NotificationService {
                 tokens: tokens.map(t => t.token)
             };
 
-            // Use sendEachForMulticast for v13+
-            // Note: message object structure is compatible
             const response = await messaging.sendEachForMulticast(message);
 
             if (response.failureCount > 0) {
