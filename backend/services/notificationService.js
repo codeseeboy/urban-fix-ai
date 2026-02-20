@@ -65,13 +65,14 @@ class NotificationService {
                         sound: 'default',
                         priority: 'high',
                         defaultSound: true,
-                        defaultVibrateTimings: true
+                        defaultVibrateTimings: true,
+                        notificationCount: 1,
                     }
                 },
-                data: {
-                    ...data,
-                    click_action: 'FLUTTER_NOTIFICATION_CLICK', // standard for some
-                },
+                // FCM data values MUST be strings
+                data: Object.fromEntries(
+                    Object.entries(data).map(([k, v]) => [k, String(v)])
+                ),
                 tokens: tokens.map(t => t.token)
             };
 
