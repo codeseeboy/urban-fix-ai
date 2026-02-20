@@ -184,7 +184,7 @@ export default function FeedPost({
                                         onPress={() => onFollowPress(item)}
                                         activeOpacity={0.7}
                                     >
-                                        <Text style={styles.followBtnText}>Follow</Text>
+                                        <Text style={styles.followBtnText}>{item.isFollowingPage ? 'Following' : 'Follow'}</Text>
                                     </TouchableOpacity>
                                 )
                             )}

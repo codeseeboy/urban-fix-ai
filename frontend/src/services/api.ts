@@ -120,12 +120,47 @@ export const authAPI = {
 
 // ── ISSUES ──
 export const issuesAPI = {
-  getFeed: (filter?: string, userId?: string, municipalPageId?: string) =>
-    api.get('/issues', { params: { filter, userId, municipalPageId } }),
+  getFeed: (filter?: string, userId?: string, municipalPageId?: string, authorType?: 'MunicipalPage' | 'User') =>
+    api.get('/issues', { params: { filter, userId, municipalPageId, authorType } }),
+  getMunicipalFeed: (filter?: string, limit?: number) =>
+    api.get('/issues/municipal-feed', { params: { filter, limit } }),
+  markMunicipalSeen: (id: string) =>
+    api.post(`/issues/${id}/seen`),
   getById: (id: string) =>
     api.get(`/issues/${id}`),
-  create: (data: { title: string; description?: string; image?: string; video?: string; location?: any; category?: string; anonymous?: boolean; emergency?: boolean }) =>
-    api.post('/issues', data),
+  create: async (data: { title: string; description?: string; image?: string; video?: string; location?: any; category?: string; anonymous?: boolean; emergency?: boolean }) => {
+    const formData = new FormData();
+    formData.append('title', data.title);
+    if (data.description) formData.append('description', data.description);
+    if (data.category) formData.append('category', data.category);
+    if (data.anonymous !== undefined) formData.append('anonymous', String(data.anonymous));
+    if (data.emergency !== undefined) formData.append('emergency', String(data.emergency));
+    if (data.location) formData.append('location', JSON.stringify(data.location));
+
+    if (data.image) {
+      // @ts-ignore
+      formData.append('image', {
+        uri: data.image,
+        name: 'issue_image.jpg',
+        type: 'image/jpeg',
+      });
+    }
+
+    if (data.video) {
+        // @ts-ignore
+        formData.append('video', {
+            uri: data.video,
+            name: 'issue_video.mp4',
+            type: 'video/mp4',
+        });
+    }
+
+    return api.post('/issues', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
   upvote: (id: string) =>
     api.put(`/issues/${id}/upvote`),
   downvote: (id: string) =>

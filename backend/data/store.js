@@ -122,12 +122,16 @@ async function getCitizensLeaderboard() {
 // ISSUE QUERIES
 // ════════════════════════════════════════════════════════════════════════════
 
-async function getIssues(filter, userId, municipalPageId = null) {
+async function getIssues(filter, userId, municipalPageId = null, authorType = null) {
     return withRetry(async () => {
         let query = supabase.from('issues').select('*');
 
         if (municipalPageId) {
             query = query.eq('municipal_page_id', municipalPageId);
+        }
+
+        if (authorType === 'MunicipalPage' || authorType === 'User') {
+            query = query.eq('author_type', authorType);
         }
 
         if (filter === 'high_priority') {
@@ -138,7 +142,9 @@ async function getIssues(filter, userId, municipalPageId = null) {
             query = query.eq('user_id', userId);
         }
 
-        query = query.order('created_at', { ascending: false });
+        query = query
+            .order('created_at', { ascending: false })
+            .order('id', { ascending: false });
         const result = await query;
         let issues = handleError(result, 'getIssues');
 
@@ -548,6 +554,42 @@ async function getFollowingCount(userId) {
     return result.count || 0;
 }
 
+async function getFollowingPageIds(userId) {
+    const result = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', userId);
+    return (result.data || []).map((row) => row.following_id);
+}
+
+async function getSeenMunicipalPostIds(userId, issueIds = []) {
+    if (!issueIds.length) return [];
+    const result = await supabase
+        .from('municipal_post_seen')
+        .select('issue_id')
+        .eq('user_id', userId)
+        .in('issue_id', issueIds);
+    return (result.data || []).map((row) => row.issue_id);
+}
+
+async function markMunicipalPostSeen(userId, issueId) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('municipal_post_seen')
+            .upsert(
+                {
+                    user_id: userId,
+                    issue_id: issueId,
+                    seen_at: new Date().toISOString(),
+                },
+                { onConflict: 'user_id,issue_id' }
+            )
+            .select('*')
+            .single();
+        return handleError(result, 'markMunicipalPostSeen');
+    });
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // STATS
 // ════════════════════════════════════════════════════════════════════════════
@@ -662,6 +704,7 @@ module.exports = {
 
     // Follows
     isFollowing, addFollow, removeFollow, getFollowerIds, getFollowingCount,
+    getFollowingPageIds, getSeenMunicipalPostIds, markMunicipalPostSeen,
 
     // Stats
     getIssueStats, getUserIssueCount, getUserResolvedCount,
