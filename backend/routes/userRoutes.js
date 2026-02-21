@@ -139,6 +139,15 @@ router.post('/push-token', protect, async (req, res) => {
         const { token, deviceType } = req.body;
         if (!token) return res.status(400).json({ message: 'Token is required' });
 
+        if (
+            typeof token === 'string' &&
+            (token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken['))
+        ) {
+            return res.status(400).json({
+                message: 'Invalid token type: backend expects native FCM/APNs device token, not Expo push token.',
+            });
+        }
+
         const saved = await store.addPushToken(req.user._id, token, deviceType || 'unknown');
         res.json({ message: 'Token registered', token: saved });
     } catch (error) {
