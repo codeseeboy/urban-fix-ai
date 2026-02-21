@@ -46,7 +46,12 @@ export async function registerForPushNotificationsAsync() {
       const tokenResponse = await Notifications.getDevicePushTokenAsync();
       token = tokenResponse.data;
 
-      logger.info('Notifications', `Device Push Token: ${token}`);
+      if (!token || token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken[')) {
+        logger.warn('Notifications', `Invalid native push token received (type: ${tokenResponse.type || 'unknown'})`);
+        return;
+      }
+
+      logger.info('Notifications', `Device Push Token (${tokenResponse.type || 'unknown'}): ${token}`);
 
       // Register with backend
       const deviceType = Platform.OS === 'android' ? 'android' : Platform.OS === 'ios' ? 'ios' : 'web';

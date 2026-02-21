@@ -3,6 +3,7 @@
  * tap-to-mark-read, clear all, and auto-polling.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
     ActivityIndicator, Animated, PanResponder, Alert, Dimensions,
@@ -15,6 +16,7 @@ import { colors, fonts, radius } from '../../theme/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = -80;
+const NOTIF_CACHE_KEY = 'notifications:cache:v1';
 
 const ICONS: Record<string, { name: string; color: string }> = {
     status: { name: 'sync-circle', color: colors.primary },
@@ -150,7 +152,24 @@ export default function NotificationsScreen() {
             }));
             setNotifications(mapped);
             setUnreadCount(data.unreadCount || 0);
-        } catch (e) { console.log('Notif error:', e); }
+            await AsyncStorage.setItem(
+                NOTIF_CACHE_KEY,
+                JSON.stringify({ notifications: mapped, unreadCount: data.unreadCount || 0 })
+            );
+        } catch (e) {
+            console.log('Notif error:', e);
+            try {
+                const cached = await AsyncStorage.getItem(NOTIF_CACHE_KEY);
+                if (!cached) return;
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed?.notifications)) {
+                    setNotifications(parsed.notifications);
+                }
+                if (typeof parsed?.unreadCount === 'number') {
+                    setUnreadCount(parsed.unreadCount);
+                }
+            } catch {}
+        }
     }, []);
 
     // Initial load
