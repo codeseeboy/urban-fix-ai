@@ -78,6 +78,7 @@ export default function HomeFeed({ navigation }: any) {
     const pendingUpvotesRef = useRef<Set<string>>(new Set());
     const pendingDownvotesRef = useRef<Set<string>>(new Set());
     const pendingFollowPagesRef = useRef<Set<string>>(new Set());
+    const latestFeedKeyRef = useRef('');
 
     // Scroll animation for header collapse
     const scrollY = useRef(new Animated.Value(0)).current;
@@ -111,6 +112,10 @@ export default function HomeFeed({ navigation }: any) {
         return `homefeed:${feedMode}:${activeFilter}:${user?._id || 'anon'}`;
     }, [feedMode, activeFilter, user?._id]);
 
+    useEffect(() => {
+        latestFeedKeyRef.current = getFeedCacheKey();
+    }, [getFeedCacheKey]);
+
     const hydrateIssuesFromCache = useCallback(async () => {
         try {
             const cacheKey = getFeedCacheKey();
@@ -119,6 +124,8 @@ export default function HomeFeed({ navigation }: any) {
 
             const parsed = JSON.parse(cached);
             if (!Array.isArray(parsed)) return false;
+
+            if (cacheKey !== latestFeedKeyRef.current) return false;
 
             setIssues(feedMode === 'municipal' ? sortMunicipalByPriority(parsed) : sortByNewest(parsed));
             return true;
@@ -178,19 +185,21 @@ export default function HomeFeed({ navigation }: any) {
             if (feedMode === 'municipal') {
                 const { data } = await issuesAPI.getMunicipalFeed(filter, 100);
                 const nextIssues = sortMunicipalByPriority(Array.isArray(data) ? data : []);
+                if (cacheKey !== latestFeedKeyRef.current) return;
                 setIssues(nextIssues);
                 await AsyncStorage.setItem(cacheKey, JSON.stringify(nextIssues));
             } else {
                 const { data } = await issuesAPI.getFeed(filter, user?._id, undefined, 'User');
                 const sorted = sortByNewest(Array.isArray(data) ? data : []);
+                if (cacheKey !== latestFeedKeyRef.current) return;
                 setIssues(sorted);
                 await AsyncStorage.setItem(cacheKey, JSON.stringify(sorted));
             }
         } catch (e) {
             console.log('Feed error:', e);
-            setIssues([]);
+            await hydrateIssuesFromCache();
         }
-    }, [activeFilter, feedMode, user?._id, sortMunicipalByPriority, sortByNewest, getFeedCacheKey]);
+    }, [activeFilter, feedMode, user?._id, sortMunicipalByPriority, sortByNewest, getFeedCacheKey, hydrateIssuesFromCache]);
 
     const fetchStats = async () => {
         try {

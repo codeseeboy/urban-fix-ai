@@ -46,6 +46,19 @@ api.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
+  if ((config.method || 'get').toLowerCase() === 'get') {
+    config.headers = {
+      ...(config.headers || {}),
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
+      Expires: '0',
+    };
+    config.params = {
+      ...(config.params || {}),
+      _ts: Date.now(),
+    };
+  }
+
   logger.apiReq(
     config.method || 'GET',
     config.url || '',

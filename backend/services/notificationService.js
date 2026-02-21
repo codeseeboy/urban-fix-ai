@@ -45,6 +45,30 @@ class NotificationService {
                 return notification;
             }
 
+            const validTokenRows = [];
+            for (const tokenRow of tokens) {
+                const value = tokenRow?.token;
+                const isExpoToken = typeof value === 'string' && (
+                    value.startsWith('ExponentPushToken[') ||
+                    value.startsWith('ExpoPushToken[')
+                );
+
+                if (!value || isExpoToken) {
+                    if (value) {
+                        console.warn(`⚠️  Removing non-FCM token for user ${userId}: ${value.slice(0, 24)}...`);
+                        store.deletePushToken(value).catch(() => {});
+                    }
+                    continue;
+                }
+
+                validTokenRows.push(tokenRow);
+            }
+
+            if (validTokenRows.length === 0) {
+                console.log(`ℹ️  No valid FCM tokens for user ${userId}`);
+                return notification;
+            }
+
             // 3. Send via FCM
             const messaging = getMessaging();
             if (!messaging) return notification;
@@ -73,7 +97,7 @@ class NotificationService {
                 data: Object.fromEntries(
                     Object.entries(data).map(([k, v]) => [k, String(v)])
                 ),
-                tokens: tokens.map(t => t.token)
+                tokens: validTokenRows.map(t => t.token)
             };
 
             const response = await messaging.sendEachForMulticast(message);
@@ -82,12 +106,16 @@ class NotificationService {
                 const failedTokens = [];
                 response.responses.forEach((resp, idx) => {
                     if (!resp.success) {
-                        failedTokens.push(tokens[idx].token);
+                        failedTokens.push(validTokenRows[idx].token);
                         console.error(`❌ FCM Error for token ${idx}:`, resp.error); // Log the full error
 
                         // v13 error codes might differ slightly, but checking code is standard
-                        if (resp.error && (resp.error.code === 'messaging/registration-token-not-registered' || resp.error.code === 'messaging/invalid-registration-token')) {
-                            store.deletePushToken(tokens[idx].token);
+                        if (resp.error && (
+                            resp.error.code === 'messaging/registration-token-not-registered' ||
+                            resp.error.code === 'messaging/invalid-registration-token' ||
+                            resp.error.code === 'messaging/invalid-argument'
+                        )) {
+                            store.deletePushToken(validTokenRows[idx].token);
                         }
                     }
                 });
