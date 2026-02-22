@@ -417,6 +417,11 @@ export default function MapScreen({ navigation }: any) {
                         showsCompass={false}
                         userInterfaceStyle="dark"
                         onPress={() => setSelectedIssue(null)}
+                        onMapReady={() => console.log('Map ready')}
+                        loadingEnabled={true}
+                        loadingIndicatorColor={colors.primary}
+                        loadingBackgroundColor={colors.background}
+                        moveOnMarkerPress={false}
                     >
                         {/* Heatmap Density Circles */}
                         {showHeatmap && filteredIssues.map((issue) => (
