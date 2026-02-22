@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Share, Modal } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,10 +10,23 @@ import { issuesAPI } from '../../services/api';
 import logger from '../../utils/logger';
 import { colors, fonts, radius } from '../../theme/colors';
 
+const ISSUE_ACTION_QUEUE_KEY = 'issueDetail:actionQueue:v1';
+
+type QueuedIssueAction = {
+    id: string;
+    type: 'upvote' | 'downvote' | 'comment';
+    issueId: string;
+    text?: string;
+    tempId?: string;
+    retries: number;
+    createdAt: number;
+};
+
 export default function IssueDetailScreen({ route, navigation }: any) {
     const insets = useSafeAreaInsets();
     const { user } = useAuth();
     const { issueId } = route.params;
+    const isFocused = useIsFocused();
     const [issue, setIssue] = useState<any>(null);
     const [comments, setComments] = useState<any[]>([]);
     const [newComment, setNewComment] = useState('');
@@ -20,10 +35,41 @@ export default function IssueDetailScreen({ route, navigation }: any) {
     const [following, setFollowing] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const pendingRef = useRef({ upvote: false, downvote: false, follow: false, comment: false });
+    const queueProcessingRef = useRef(false);
 
-    useEffect(() => { fetchIssue(); }, []);
+    const isTransientNetworkError = useCallback((error: any) => {
+        return !error?.response || error?.code === 'ECONNABORTED' || error?.message?.includes('Network Error');
+    }, []);
 
-    const fetchIssue = async () => {
+    const readActionQueue = useCallback(async (): Promise<QueuedIssueAction[]> => {
+        try {
+            const raw = await AsyncStorage.getItem(ISSUE_ACTION_QUEUE_KEY);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }, []);
+
+    const writeActionQueue = useCallback(async (queue: QueuedIssueAction[]) => {
+        try {
+            await AsyncStorage.setItem(ISSUE_ACTION_QUEUE_KEY, JSON.stringify(queue));
+        } catch {}
+    }, []);
+
+    const enqueueAction = useCallback(async (action: Omit<QueuedIssueAction, 'id' | 'retries' | 'createdAt'>) => {
+        const queue = await readActionQueue();
+        queue.push({
+            ...action,
+            id: `${action.type}:${action.issueId}:${Date.now()}`,
+            retries: 0,
+            createdAt: Date.now(),
+        });
+        await writeActionQueue(queue);
+    }, [readActionQueue, writeActionQueue]);
+
+    const fetchIssue = useCallback(async () => {
         try {
             const { data } = await issuesAPI.getById(issueId);
             setIssue(data);
@@ -31,7 +77,52 @@ export default function IssueDetailScreen({ route, navigation }: any) {
             setFollowing((data.followers || []).includes(user?._id));
         } catch (e) { Alert.alert('Error', 'Failed to load issue'); }
         setLoading(false);
-    };
+    }, [issueId, user?._id]);
+
+    const processActionQueue = useCallback(async () => {
+        if (queueProcessingRef.current) return;
+
+        queueProcessingRef.current = true;
+        try {
+            const queue = await readActionQueue();
+            if (!queue.length) return;
+
+            const remaining: QueuedIssueAction[] = [];
+
+            for (const action of queue) {
+                try {
+                    if (action.type === 'upvote') {
+                        await issuesAPI.upvote(action.issueId);
+                    } else if (action.type === 'downvote') {
+                        await issuesAPI.downvote(action.issueId);
+                    } else if (action.type === 'comment' && action.text) {
+                        const { data } = await issuesAPI.addComment(action.issueId, action.text);
+                        if (action.issueId === issueId && action.tempId) {
+                            setComments(prev => prev.map(c => c._id === action.tempId ? data : c));
+                        }
+                    }
+                } catch (error) {
+                    if (isTransientNetworkError(error) && action.retries < 5) {
+                        remaining.push({ ...action, retries: action.retries + 1 });
+                    }
+                }
+            }
+
+            await writeActionQueue(remaining);
+        } finally {
+            queueProcessingRef.current = false;
+        }
+    }, [issueId, readActionQueue, writeActionQueue, isTransientNetworkError]);
+
+    useEffect(() => {
+        fetchIssue();
+        processActionQueue();
+    }, [fetchIssue, processActionQueue]);
+
+    useEffect(() => {
+        if (!isFocused) return;
+        processActionQueue();
+    }, [isFocused, processActionQueue]);
 
     const handleUpvote = async () => {
         logger.tap('IssueDetail', 'Upvote');
@@ -50,7 +141,11 @@ export default function IssueDetailScreen({ route, navigation }: any) {
         try {
             await issuesAPI.upvote(issueId);
         } catch (e) {
-            setIssue(previousIssue);
+            if (isTransientNetworkError(e)) {
+                await enqueueAction({ type: 'upvote', issueId });
+            } else {
+                setIssue(previousIssue);
+            }
             console.log('Upvote error');
         } finally {
             pendingRef.current.upvote = false;
@@ -74,7 +169,11 @@ export default function IssueDetailScreen({ route, navigation }: any) {
         try {
             await issuesAPI.downvote(issueId);
         } catch (e) {
-            setIssue(previousIssue);
+            if (isTransientNetworkError(e)) {
+                await enqueueAction({ type: 'downvote', issueId });
+            } else {
+                setIssue(previousIssue);
+            }
             console.log('Downvote error');
         } finally {
             pendingRef.current.downvote = false;
@@ -123,6 +222,7 @@ export default function IssueDetailScreen({ route, navigation }: any) {
             _id: tempId,
             text,
             timeAgo: 'Just now',
+            pending: false,
             user: {
                 _id: user._id,
                 name: user.name,
@@ -137,9 +237,14 @@ export default function IssueDetailScreen({ route, navigation }: any) {
             const { data } = await issuesAPI.addComment(issueId, text);
             setComments(prev => prev.map(c => c._id === tempId ? data : c));
         } catch (e) {
-            setComments(prev => prev.filter(c => c._id !== tempId));
-            setNewComment(text);
-            Alert.alert('Error', 'Failed to post comment');
+            if (isTransientNetworkError(e)) {
+                setComments(prev => prev.map(c => c._id === tempId ? { ...c, pending: true, timeAgo: 'Pending sync' } : c));
+                await enqueueAction({ type: 'comment', issueId, text, tempId });
+            } else {
+                setComments(prev => prev.filter(c => c._id !== tempId));
+                setNewComment(text);
+                Alert.alert('Error', 'Failed to post comment');
+            }
         } finally {
             setPosting(false);
             pendingRef.current.comment = false;

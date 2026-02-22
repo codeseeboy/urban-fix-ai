@@ -2,6 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const { initFirebase } = require('./config/firebase');
+const { startPromoScheduler } = require('./services/promoScheduler');
 
 dotenv.config();
 
@@ -43,4 +44,7 @@ app.listen(PORT, () => {
     console.log(`✅ UrbanFix AI API running on http://localhost:${PORT}`);
     console.log(`🗄️  Database: Supabase PostgreSQL`);
     console.log(`📡 Project: ${process.env.SUPABASE_URL || 'NOT SET'}`);
+
+    // Start promotional notification scheduler
+    startPromoScheduler();
 });
