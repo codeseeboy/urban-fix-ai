@@ -8,6 +8,7 @@ import {
     View, StyleSheet, FlatList, Text, TouchableOpacity, Animated,
     RefreshControl, ActivityIndicator, Share, Dimensions,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,6 +26,18 @@ import FilterDrawer from '../../components/feed/FilterDrawer';
 import FeedPost from '../../components/feed/FeedPost';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const FEED_PAGE_SIZE = 30;
+const FEED_RETRY_DELAYS_MS = [700, 1400];
+const FEED_CACHE_FRESH_MS = 120000;
+const FEED_ACTION_QUEUE_KEY = 'homefeed:actionQueue:v1';
+
+type QueuedFeedAction = {
+    id: string;
+    type: 'upvote' | 'downvote';
+    issueId: string;
+    createdAt: number;
+    retries: number;
+};
 
 /* ─── Greeting based on device time ─── */
 const getGreeting = () => {
@@ -65,6 +78,7 @@ export default function HomeFeed({ navigation }: any) {
     const { user } = useAuth();
     const greeting = getGreeting();
     const firstName = user?.name?.split(' ')[0] || 'Citizen';
+    const isFocused = useIsFocused();
 
     // Core state
     const [feedMode, setFeedMode] = useState<'community' | 'municipal'>('community');
@@ -75,10 +89,19 @@ export default function HomeFeed({ navigation }: any) {
     const [stats, setStats] = useState({ totalIssues: 0, resolved: 0, critical: 0, inProgress: 0, pending: 0 });
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [nextOffset, setNextOffset] = useState(0);
     const pendingUpvotesRef = useRef<Set<string>>(new Set());
     const pendingDownvotesRef = useRef<Set<string>>(new Set());
     const pendingFollowPagesRef = useRef<Set<string>>(new Set());
     const latestFeedKeyRef = useRef('');
+    const issuesRef = useRef<any[]>([]);
+    const prefetchedPageRef = useRef<{ offset: number; items: any[] } | null>(null);
+    const prefetchInFlightRef = useRef(false);
+    const initialLoadDoneRef = useRef(false);
+    const cacheFreshRef = useRef(false);
+    const queueProcessingRef = useRef(false);
 
     // Scroll animation for header collapse
     const scrollY = useRef(new Animated.Value(0)).current;
@@ -114,7 +137,79 @@ export default function HomeFeed({ navigation }: any) {
 
     useEffect(() => {
         latestFeedKeyRef.current = getFeedCacheKey();
+        prefetchedPageRef.current = null;
+        prefetchInFlightRef.current = false;
     }, [getFeedCacheKey]);
+
+    useEffect(() => {
+        issuesRef.current = issues;
+    }, [issues]);
+
+    const isTransientNetworkError = useCallback((error: any) => {
+        return !error?.response || error?.code === 'ECONNABORTED' || error?.message?.includes('Network Error');
+    }, []);
+
+    const readActionQueue = useCallback(async (): Promise<QueuedFeedAction[]> => {
+        try {
+            const raw = await AsyncStorage.getItem(FEED_ACTION_QUEUE_KEY);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }, []);
+
+    const writeActionQueue = useCallback(async (items: QueuedFeedAction[]) => {
+        try {
+            await AsyncStorage.setItem(FEED_ACTION_QUEUE_KEY, JSON.stringify(items));
+        } catch {}
+    }, []);
+
+    const enqueueFeedAction = useCallback(async (type: 'upvote' | 'downvote', issueId: string) => {
+        const queue = await readActionQueue();
+        const nextQueue = [
+            ...queue,
+            {
+                id: `${type}:${issueId}:${Date.now()}`,
+                type,
+                issueId,
+                createdAt: Date.now(),
+                retries: 0,
+            },
+        ];
+        await writeActionQueue(nextQueue);
+    }, [readActionQueue, writeActionQueue]);
+
+    const processFeedActionQueue = useCallback(async () => {
+        if (queueProcessingRef.current) return;
+
+        queueProcessingRef.current = true;
+        try {
+            const queue = await readActionQueue();
+            if (!queue.length) return;
+
+            const remaining: QueuedFeedAction[] = [];
+
+            for (const action of queue) {
+                try {
+                    if (action.type === 'upvote') {
+                        await issuesAPI.upvote(action.issueId);
+                    } else {
+                        await issuesAPI.downvote(action.issueId);
+                    }
+                } catch (error) {
+                    if (isTransientNetworkError(error) && action.retries < 5) {
+                        remaining.push({ ...action, retries: action.retries + 1 });
+                    }
+                }
+            }
+
+            await writeActionQueue(remaining);
+        } finally {
+            queueProcessingRef.current = false;
+        }
+    }, [readActionQueue, writeActionQueue, isTransientNetworkError]);
 
     const hydrateIssuesFromCache = useCallback(async () => {
         try {
@@ -123,13 +218,26 @@ export default function HomeFeed({ navigation }: any) {
             if (!cached) return false;
 
             const parsed = JSON.parse(cached);
-            if (!Array.isArray(parsed)) return false;
+            const normalized = Array.isArray(parsed)
+                ? { items: parsed, cachedAt: 0 }
+                : parsed;
+
+            if (!Array.isArray(normalized?.items)) return false;
 
             if (cacheKey !== latestFeedKeyRef.current) return false;
 
-            setIssues(feedMode === 'municipal' ? sortMunicipalByPriority(parsed) : sortByNewest(parsed));
+            const cachedAt = typeof normalized.cachedAt === 'number' ? normalized.cachedAt : 0;
+            cacheFreshRef.current = cachedAt > 0 && (Date.now() - cachedAt) <= FEED_CACHE_FRESH_MS;
+
+            const sorted = feedMode === 'municipal'
+                ? sortMunicipalByPriority(normalized.items)
+                : sortByNewest(normalized.items);
+
+            issuesRef.current = sorted;
+            setIssues(sorted);
             return true;
         } catch {
+            cacheFreshRef.current = false;
             return false;
         }
     }, [feedMode, getFeedCacheKey, sortMunicipalByPriority, sortByNewest]);
@@ -176,30 +284,95 @@ export default function HomeFeed({ navigation }: any) {
     useEffect(() => { scrollY.setValue(0); }, [activeSection]);
 
     /* ─── Data fetching ─── */
-    const fetchIssues = useCallback(async () => {
-        logger.info('HomeFeed', `Fetching ${feedMode} feed, filter: ${activeFilter}`);
-        try {
-            const filter = activeFilter === 'all' ? undefined : activeFilter;
-            const cacheKey = getFeedCacheKey();
+    const fetchPageWithRetry = useCallback(async (offset: number, attempt = 0): Promise<any[] | null> => {
+        const filter = activeFilter === 'all' ? undefined : activeFilter;
 
+        try {
             if (feedMode === 'municipal') {
-                const { data } = await issuesAPI.getMunicipalFeed(filter, 100);
-                const nextIssues = sortMunicipalByPriority(Array.isArray(data) ? data : []);
-                if (cacheKey !== latestFeedKeyRef.current) return;
-                setIssues(nextIssues);
-                await AsyncStorage.setItem(cacheKey, JSON.stringify(nextIssues));
-            } else {
-                const { data } = await issuesAPI.getFeed(filter, user?._id, undefined, 'User');
-                const sorted = sortByNewest(Array.isArray(data) ? data : []);
-                if (cacheKey !== latestFeedKeyRef.current) return;
-                setIssues(sorted);
-                await AsyncStorage.setItem(cacheKey, JSON.stringify(sorted));
+                const { data } = await issuesAPI.getMunicipalFeed(filter, FEED_PAGE_SIZE, offset);
+                return sortMunicipalByPriority(Array.isArray(data) ? data : []);
             }
-        } catch (e) {
-            console.log('Feed error:', e);
-            await hydrateIssuesFromCache();
+
+            const { data } = await issuesAPI.getFeed(filter, user?._id, undefined, 'User', FEED_PAGE_SIZE, offset);
+            return sortByNewest(Array.isArray(data) ? data : []);
+        } catch (error) {
+            if (attempt < FEED_RETRY_DELAYS_MS.length) {
+                await new Promise((resolve) => setTimeout(resolve, FEED_RETRY_DELAYS_MS[attempt]));
+                return fetchPageWithRetry(offset, attempt + 1);
+            }
+            return null;
         }
-    }, [activeFilter, feedMode, user?._id, sortMunicipalByPriority, sortByNewest, getFeedCacheKey, hydrateIssuesFromCache]);
+    }, [activeFilter, feedMode, user?._id, sortMunicipalByPriority, sortByNewest]);
+
+    const maybePrefetchNextPage = useCallback(async (offset: number) => {
+        if (prefetchInFlightRef.current || !hasMore) return;
+
+        prefetchInFlightRef.current = true;
+        try {
+            const items = await fetchPageWithRetry(offset);
+            if (items && items.length > 0) {
+                prefetchedPageRef.current = { offset, items };
+            }
+        } finally {
+            prefetchInFlightRef.current = false;
+        }
+    }, [fetchPageWithRetry, hasMore]);
+
+    const loadFeedPage = useCallback(async (offset: number, append: boolean) => {
+        logger.info('HomeFeed', `Fetching ${feedMode} feed, filter: ${activeFilter}, offset: ${offset}`);
+
+        const cacheKey = getFeedCacheKey();
+        let pageItems: any[] | null = null;
+
+        if (append && prefetchedPageRef.current?.offset === offset) {
+            pageItems = prefetchedPageRef.current.items;
+            prefetchedPageRef.current = null;
+        } else {
+            pageItems = await fetchPageWithRetry(offset);
+        }
+
+        if (cacheKey !== latestFeedKeyRef.current) return;
+
+        if (!pageItems) {
+            if (!append) {
+                await hydrateIssuesFromCache();
+            }
+            return;
+        }
+
+        if (pageItems.length === 0) {
+            if (!append) {
+                const restored = await hydrateIssuesFromCache();
+                if (restored) return;
+            }
+            setHasMore(false);
+            return;
+        }
+
+        const current = append ? issuesRef.current : [];
+        const merged = [...current, ...pageItems];
+        const uniqueById = Array.from(new Map(merged.map((item) => [item._id, item])).values());
+        const ordered = feedMode === 'municipal' ? sortMunicipalByPriority(uniqueById) : sortByNewest(uniqueById);
+
+        issuesRef.current = ordered;
+        setIssues(ordered);
+        await AsyncStorage.setItem(cacheKey, JSON.stringify({ items: ordered, cachedAt: Date.now() }));
+
+        const computedNextOffset = offset + pageItems.length;
+        setNextOffset(computedNextOffset);
+        setHasMore(pageItems.length >= FEED_PAGE_SIZE);
+
+        if (!append && pageItems.length >= FEED_PAGE_SIZE) {
+            maybePrefetchNextPage(computedNextOffset).catch(() => {});
+        }
+    }, [activeFilter, feedMode, getFeedCacheKey, fetchPageWithRetry, hydrateIssuesFromCache, sortMunicipalByPriority, sortByNewest, maybePrefetchNextPage]);
+
+    const refreshFeed = useCallback(async () => {
+        setHasMore(true);
+        setNextOffset(0);
+        prefetchedPageRef.current = null;
+        await loadFeedPage(0, false);
+    }, [loadFeedPage]);
 
     const fetchStats = async () => {
         try {
@@ -217,10 +390,23 @@ export default function HomeFeed({ navigation }: any) {
             const hadCachedFeed = await hydrateIssuesFromCache();
             if (hadCachedFeed && isMounted) {
                 setLoading(false);
+                setNextOffset(issuesRef.current.length);
             }
 
-            await Promise.all([fetchIssues(), fetchStats()]);
+            await processFeedActionQueue();
+
+            if (hadCachedFeed && cacheFreshRef.current) {
+                if (isMounted) {
+                    initialLoadDoneRef.current = true;
+                }
+                refreshFeed().catch(() => {});
+                fetchStats().catch(() => {});
+                return;
+            }
+
+            await Promise.all([refreshFeed(), fetchStats()]);
             if (isMounted) {
+                initialLoadDoneRef.current = true;
                 setLoading(false);
             }
         };
@@ -230,16 +416,37 @@ export default function HomeFeed({ navigation }: any) {
         return () => {
             isMounted = false;
         };
-    }, [activeFilter, feedMode, fetchIssues, hydrateIssuesFromCache]);
+    }, [activeFilter, feedMode, refreshFeed, hydrateIssuesFromCache, processFeedActionQueue]);
+
+    useEffect(() => {
+        if (!isFocused) return;
+        if (!initialLoadDoneRef.current) return;
+        processFeedActionQueue();
+        refreshFeed();
+    }, [isFocused, refreshFeed, processFeedActionQueue]);
 
     const onRefresh = async () => {
         setRefreshing(true);
-        await Promise.all([fetchIssues(), fetchStats()]);
+        await processFeedActionQueue();
+        await Promise.all([refreshFeed(), fetchStats()]);
         setRefreshing(false);
     };
 
+    const loadMoreIssues = useCallback(async () => {
+        if (loading || refreshing || loadingMore || !hasMore) return;
+        setLoadingMore(true);
+        try {
+            await loadFeedPage(nextOffset, true);
+            if (hasMore) {
+                maybePrefetchNextPage(issuesRef.current.length).catch(() => {});
+            }
+        } finally {
+            setLoadingMore(false);
+        }
+    }, [loading, refreshing, loadingMore, hasMore, nextOffset, loadFeedPage, maybePrefetchNextPage]);
+
     /* ─── Actions ─── */
-    const handleUpvote = async (issueId: string) => {
+    const handleUpvote = useCallback(async (issueId: string) => {
         logger.tap('HomeFeed', 'Upvote', { issueId });
         if (!user?._id || pendingUpvotesRef.current.has(issueId)) return;
 
@@ -260,16 +467,18 @@ export default function HomeFeed({ navigation }: any) {
         try {
             await issuesAPI.upvote(issueId);
         } catch (e) {
-            if (previousIssue) {
+            if (isTransientNetworkError(e)) {
+                await enqueueFeedAction('upvote', issueId);
+            } else if (previousIssue) {
                 setIssues(prev => prev.map(i => i._id === issueId ? previousIssue : i));
             }
             console.log('Upvote error:', e);
         } finally {
             pendingUpvotesRef.current.delete(issueId);
         }
-    };
+    }, [user?._id, isTransientNetworkError, enqueueFeedAction]);
 
-    const handleDownvote = async (issueId: string) => {
+    const handleDownvote = useCallback(async (issueId: string) => {
         logger.tap('HomeFeed', 'Downvote', { issueId });
         if (!user?._id || pendingDownvotesRef.current.has(issueId)) return;
 
@@ -290,16 +499,18 @@ export default function HomeFeed({ navigation }: any) {
         try {
             await issuesAPI.downvote(issueId);
         } catch (e) {
-            if (previousIssue) {
+            if (isTransientNetworkError(e)) {
+                await enqueueFeedAction('downvote', issueId);
+            } else if (previousIssue) {
                 setIssues(prev => prev.map(i => i._id === issueId ? previousIssue : i));
             }
             console.log('Downvote error:', e);
         } finally {
             pendingDownvotesRef.current.delete(issueId);
         }
-    };
+    }, [user?._id, isTransientNetworkError, enqueueFeedAction]);
 
-    const handleShare = async (item: any) => {
+    const handleShare = useCallback(async (item: any) => {
         logger.tap('HomeFeed', 'Share', { issueId: item._id });
         try {
             await Share.share({
@@ -307,12 +518,12 @@ export default function HomeFeed({ navigation }: any) {
                 message: `🚨 ${item.title}\n📍 ${item.location?.address || 'Unknown'}\n\nReported on UrbanFix AI\n#UrbanFixAI #CivicEngagement`,
             });
         } catch (e) { console.log('Share error:', e); }
-    };
+    }, []);
 
-    const handleFilterSelect = (filterId: string) => {
+    const handleFilterSelect = useCallback((filterId: string) => {
         setActiveFilter(filterId);
         setFilterDrawerOpen(false);
-    };
+    }, []);
 
     const markMunicipalSeenLocal = useCallback((issueId: string) => {
         setIssues(prev => {
@@ -475,7 +686,7 @@ export default function HomeFeed({ navigation }: any) {
     );
 
     /* ─── Render feed item ─── */
-    const renderItem = ({ item, index }: { item: any; index: number }) => {
+    const renderItem = useCallback(({ item, index }: { item: any; index: number }) => {
         return (
             <FeedPost
                 item={item}
@@ -494,7 +705,7 @@ export default function HomeFeed({ navigation }: any) {
                 onFollowPress={feedMode === 'municipal' ? handleFollowPress : undefined}
             />
         );
-    };
+    }, [user?._id, handleOpenPost, handleUpvote, handleDownvote, handleShare, handleFollowPress, feedMode, navigation]);
 
     return (
         <View style={styles.container}>
@@ -547,13 +758,20 @@ export default function HomeFeed({ navigation }: any) {
                         renderItem={renderItem}
                         keyExtractor={i => i._id}
                         ListHeaderComponent={renderHeader}
+                        onEndReached={loadMoreIssues}
+                        onEndReachedThreshold={0.35}
                         contentContainerStyle={styles.feedContent}
                         showsVerticalScrollIndicator={false}
+                        removeClippedSubviews={true}
+                        maxToRenderPerBatch={8}
+                        windowSize={5}
+                        initialNumToRender={6}
+                        updateCellsBatchingPeriod={50}
                         onScroll={Animated.event(
                             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
                             { useNativeDriver: false },
                         )}
-                        scrollEventThrottle={16}
+                        scrollEventThrottle={32}
                         refreshControl={
                             <RefreshControl
                                 refreshing={refreshing}
@@ -584,6 +802,13 @@ export default function HomeFeed({ navigation }: any) {
                                     </Text>
                                 </View>
                             )
+                        }
+                        ListFooterComponent={
+                            loadingMore ? (
+                                <View style={{ paddingVertical: 16 }}>
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                </View>
+                            ) : null
                         }
                     />
                 )}

@@ -7,7 +7,7 @@ import logger from '../../utils/logger';
 import { colors, fonts, radius } from '../../theme/colors';
 
 export default function LoginScreen({ navigation }: any) {
-    const { login, loginWithOTP, loginWithGoogle } = useAuth();
+    const { login, loginWithGoogle } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPass, setShowPass] = useState(false);
@@ -33,24 +33,9 @@ export default function LoginScreen({ navigation }: any) {
         // Success auto-navigates via AuthContext
     };
 
-    const handleOTPLogin = async () => {
-        logger.tap('LoginScreen', 'Magic Link Login', { email });
-        if (!email.trim()) {
-            Alert.alert('Required', 'Please enter your email address');
-            return;
-        }
-        setLoading(true);
-        const result = await loginWithOTP(email.trim());
-        setLoading(false);
-        if (result.success) {
-            Alert.alert(
-                'Check Your Email',
-                'We sent a magic link to your email. Click it to sign in instantly.',
-                [{ text: 'OK' }]
-            );
-        } else {
-            Alert.alert('Error', result.error);
-        }
+    const handleOTPLogin = () => {
+        logger.tap('LoginScreen', 'Magic Link Login');
+        navigation.navigate('MagicLink', { mode: 'login' });
     };
 
     const handleGoogleLogin = async () => {

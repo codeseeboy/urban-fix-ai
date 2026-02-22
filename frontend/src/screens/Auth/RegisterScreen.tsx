@@ -7,7 +7,7 @@ import { colors, fonts, radius } from '../../theme/colors';
 import logger from '../../utils/logger';
 
 export default function RegisterScreen({ navigation }: any) {
-    const { register, loginWithOTP, loginWithGoogle } = useAuth();
+    const { register, loginWithGoogle } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -37,24 +37,9 @@ export default function RegisterScreen({ navigation }: any) {
         }
     };
 
-    const handleOTPSignup = async () => {
-        logger.tap('RegisterScreen', 'OTP Signup', { email });
-        if (!email.trim()) {
-            Alert.alert('Required', 'Please enter your email address');
-            return;
-        }
-        setLoading(true);
-        const result = await loginWithOTP(email.trim());
-        setLoading(false);
-        if (result.success) {
-            Alert.alert(
-                'Check Your Email',
-                'We sent a magic link to your email. Click it to complete signup.',
-                [{ text: 'OK' }]
-            );
-        } else {
-            Alert.alert('Error', result.error);
-        }
+    const handleOTPSignup = () => {
+        logger.tap('RegisterScreen', 'OTP Signup');
+        navigation.navigate('MagicLink', { mode: 'signup' });
     };
 
     const handleGoogleSignup = async () => {

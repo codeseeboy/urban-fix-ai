@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Dimensions, Platform, Animated, Easing } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Circle, Region } from 'react-native-maps';
@@ -45,6 +45,132 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): 
 }
 
 const NEARBY_RADIUS_KM = 50; // Only show issues within 50km of user
+
+// Retry config for network resilience
+const MAP_RETRY_DELAYS = [800, 1600, 3000];
+const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+// Story-style shimmer loading component
+function MapLoadingShimmer() {
+    const shimmerAnim = useRef(new Animated.Value(0)).current;
+    const pulseAnim = useRef(new Animated.Value(0.3)).current;
+
+    useEffect(() => {
+        // Shimmer sweep animation
+        Animated.loop(
+            Animated.timing(shimmerAnim, {
+                toValue: 1,
+                duration: 1500,
+                easing: Easing.linear,
+                useNativeDriver: true,
+            })
+        ).start();
+
+        // Pulse animation for pins
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+            ])
+        ).start();
+    }, []);
+
+    const shimmerTranslate = shimmerAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-width, width],
+    });
+
+    return (
+        <View style={shimmerStyles.container}>
+            {/* Fake map background */}
+            <View style={shimmerStyles.mapBg}>
+                {/* Shimmer sweep */}
+                <Animated.View
+                    style={[
+                        shimmerStyles.shimmerBar,
+                        { transform: [{ translateX: shimmerTranslate }] },
+                    ]}
+                />
+
+                {/* Animated pin placeholders */}
+                {[1, 2, 3, 4, 5].map((i) => (
+                    <Animated.View
+                        key={i}
+                        style={[
+                            shimmerStyles.fakePin,
+                            {
+                                top: `${15 + i * 15}%`,
+                                left: `${10 + ((i * 17) % 70)}%`,
+                                opacity: pulseAnim,
+                            },
+                        ]}
+                    >
+                        <View style={shimmerStyles.fakePinInner} />
+                    </Animated.View>
+                ))}
+
+                {/* Center loading indicator */}
+                <View style={shimmerStyles.centerLoader}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={shimmerStyles.loadingText}>Loading Map...</Text>
+                    <Text style={shimmerStyles.subText}>Finding nearby issues</Text>
+                </View>
+            </View>
+        </View>
+    );
+}
+
+const shimmerStyles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    mapBg: {
+        flex: 1,
+        backgroundColor: '#1a1a2e',
+        overflow: 'hidden',
+    },
+    shimmerBar: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        width: 100,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+    },
+    fakePin: {
+        position: 'absolute',
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(0,127,255,0.15)',
+        borderWidth: 2,
+        borderColor: 'rgba(0,127,255,0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    fakePinInner: {
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: 'rgba(0,127,255,0.4)',
+    },
+    centerLoader: {
+        position: 'absolute',
+        top: '40%',
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+    },
+    loadingText: {
+        fontFamily: 'Inter_600SemiBold',
+        color: colors.text,
+        fontSize: 16,
+        marginTop: 16,
+    },
+    subText: {
+        fontFamily: 'Inter_400Regular',
+        color: colors.textMuted,
+        fontSize: 12,
+        marginTop: 4,
+    },
+});
 
 export default function MapScreen({ navigation }: any) {
     const insets = useSafeAreaInsets();
@@ -123,17 +249,27 @@ export default function MapScreen({ navigation }: any) {
             );
         }
 
-        // Step 3: Fetch fresh issues (background refresh if cache was shown)
-        try {
-            const { data } = await issuesAPI.getFeed();
-            const nextIssues = Array.isArray(data) ? data : [];
-            setIssues(nextIssues);
-            AsyncStorage.setItem('mapscreen:issues', JSON.stringify(nextIssues)).catch(() => {});
-        } catch (e) {
-            console.log('Issue fetch failed:', e);
-            if (!hasCacheRef.current && issues.length === 0) {
-                setError('Could not load issues. Please check your connection.');
+        // Step 3: Fetch fresh issues with retry logic
+        let fetchSuccess = false;
+        for (let attempt = 0; attempt <= MAP_RETRY_DELAYS.length; attempt++) {
+            try {
+                const { data } = await issuesAPI.getFeed();
+                const nextIssues = Array.isArray(data) ? data : [];
+                setIssues(nextIssues);
+                AsyncStorage.setItem('mapscreen:issues', JSON.stringify(nextIssues)).catch(() => {});
+                setError(null);
+                fetchSuccess = true;
+                break;
+            } catch (e) {
+                console.log(`Map fetch attempt ${attempt + 1} failed:`, e);
+                if (attempt < MAP_RETRY_DELAYS.length) {
+                    await delay(MAP_RETRY_DELAYS[attempt]);
+                }
             }
+        }
+
+        if (!fetchSuccess && !hasCacheRef.current && issues.length === 0) {
+            setError('Could not load issues. Please check your connection.');
         }
 
         // Step 4: Animate map to user's GPS
@@ -269,10 +405,7 @@ export default function MapScreen({ navigation }: any) {
                         </TouchableOpacity>
                     </View>
                 ) : loading && issues.length === 0 ? (
-                    <View style={styles.loadingOverlay}>
-                        <ActivityIndicator size="large" color={colors.primary} />
-                        <Text style={styles.loadingText}>Loading civic data...</Text>
-                    </View>
+                    <MapLoadingShimmer />
                 ) : (
                     <>
                     <MapView
@@ -333,7 +466,6 @@ export default function MapScreen({ navigation }: any) {
                             </Marker>
                         ))}
                     </MapView>
-                )}
 
                 {/* GPS Locate Button */}
                 {!error && (

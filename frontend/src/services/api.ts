@@ -23,23 +23,24 @@ import logger from '../utils/logger';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ← CHANGE THIS to your PC's LAN IP if using a physical device
-const LAN_IP = '192.168.0.102'; // ← Your PC's LAN IP (auto-detected)
+const LAN_IP = '192.168.0.100'; // ← Your PC's LAN IP (auto-detected)
 const PROD_URL = 'https://urban-fix-ai.onrender.com';
+const USE_LOCAL_IN_PROD = false; // Set true if you want APK to hit local LAN IP
 
-const BASE = __DEV__
-    ? Platform.select({
-        android: `http://${LAN_IP}:5000`,   // Physical Android device
-        ios: `http://${LAN_IP}:5000`,   // Physical iOS device
-        default: 'http://localhost:5000',
-    })
-    : PROD_URL;
+const LOCAL_BASE = Platform.select({
+  android: `http://${LAN_IP}:5000`,   // Physical Android device
+  ios: `http://${LAN_IP}:5000`,       // Physical iOS device
+  default: 'http://localhost:5000',
+});
+
+const BASE = (__DEV__ || USE_LOCAL_IN_PROD) ? LOCAL_BASE : PROD_URL;
 
 // Uncomment below to use emulator instead:
 // const BASE = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
 
 logger.info('API', `Base URL: ${BASE}`);
 
-const api = axios.create({ baseURL: BASE + '/api', timeout: 10000 });
+const api = axios.create({ baseURL: BASE + '/api', timeout: 20000 });
 
 // ── Request Interceptor: log + attach token ──
 api.interceptors.request.use(async (config) => {
@@ -47,12 +48,9 @@ api.interceptors.request.use(async (config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
   if ((config.method || 'get').toLowerCase() === 'get') {
-    config.headers = {
-      ...(config.headers || {}),
-      'Cache-Control': 'no-cache',
-      Pragma: 'no-cache',
-      Expires: '0',
-    };
+    config.headers.set('Cache-Control', 'no-cache');
+    config.headers.set('Pragma', 'no-cache');
+    config.headers.set('Expires', '0');
     config.params = {
       ...(config.params || {}),
       _ts: Date.now(),
@@ -133,10 +131,10 @@ export const authAPI = {
 
 // ── ISSUES ──
 export const issuesAPI = {
-  getFeed: (filter?: string, userId?: string, municipalPageId?: string, authorType?: 'MunicipalPage' | 'User') =>
-    api.get('/issues', { params: { filter, userId, municipalPageId, authorType } }),
-  getMunicipalFeed: (filter?: string, limit?: number) =>
-    api.get('/issues/municipal-feed', { params: { filter, limit } }),
+  getFeed: (filter?: string, userId?: string, municipalPageId?: string, authorType?: 'MunicipalPage' | 'User', limit?: number, offset?: number) =>
+    api.get('/issues', { params: { filter, userId, municipalPageId, authorType, limit, offset } }),
+  getMunicipalFeed: (filter?: string, limit?: number, offset?: number) =>
+    api.get('/issues/municipal-feed', { params: { filter, limit, offset } }),
   markMunicipalSeen: (id: string) =>
     api.post(`/issues/${id}/seen`),
   getById: (id: string) =>

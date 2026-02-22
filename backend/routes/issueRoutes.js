@@ -113,7 +113,9 @@ async function enrichIssue(issue, req, options = {}) {
 router.get('/', async (req, res) => {
     try {
         const { filter, userId, municipalPageId, authorType } = req.query;
-        const issues = await store.getIssues(filter, userId, municipalPageId, authorType);
+        const limit = req.query.limit ? Math.min(parseInt(req.query.limit, 10) || 50, 100) : null;
+        const offset = req.query.offset ? Math.max(parseInt(req.query.offset, 10) || 0, 0) : 0;
+        const issues = await store.getIssues(filter, userId, municipalPageId, authorType, limit, offset);
         const enriched = await Promise.all(
             issues.map(i => enrichIssue(i, req, { includeTimelineProof: false }))
         );
@@ -129,6 +131,7 @@ router.get('/municipal-feed', protect, async (req, res) => {
     try {
         const { filter } = req.query;
         const limit = Math.min(parseInt(req.query.limit, 10) || 100, 200);
+        const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
 
         const issues = await store.getIssues(filter, req.user._id, null, 'MunicipalPage');
         const issueIds = issues.map((i) => i.id);
@@ -165,7 +168,7 @@ router.get('/municipal-feed', protect, async (req, res) => {
                 return (b.issue.id || '').localeCompare(a.issue.id || '');
             });
 
-        const feedRows = prioritized.slice(0, limit);
+        const feedRows = prioritized.slice(offset, offset + limit);
         const enriched = await Promise.all(
             feedRows.map(async (row) => {
                 const payload = await enrichIssue(row.issue, req, { includeTimelineProof: false });
@@ -407,6 +410,17 @@ router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name:
                 { type: 'status', issueId: issue.id, navigationTarget: 'IssueDetails' }
             );
         }
+
+        // Broadcast to all other users that a new issue was posted
+        // Fire-and-forget to not slow down the response
+        setImmediate(() => {
+            NotificationService.broadcastNewIssue(
+                req.user._id,
+                title,
+                issue.id,
+                category
+            ).catch(e => console.error('Broadcast error:', e.message));
+        });
 
         const enriched = await enrichIssue(issue, req);
         res.status(201).json(enriched);

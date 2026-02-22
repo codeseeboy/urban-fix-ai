@@ -130,6 +130,96 @@ class NotificationService {
             return null;
         }
     }
+
+    /**
+     * Broadcast a notification to all users except the poster
+     * Used when a new issue is created
+     */
+    static async broadcastNewIssue(excludeUserId, issueTitle, issueId, category) {
+        try {
+            const tokenRows = await store.getAllPushTokensExcept(excludeUserId);
+
+            if (!tokenRows || tokenRows.length === 0) {
+                console.log('ℹ️  No push tokens for broadcast');
+                return;
+            }
+
+            // Filter out Expo tokens
+            const validTokens = tokenRows.filter(row => {
+                const token = row?.token;
+                if (!token) return false;
+                const isExpoToken = token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken[');
+                return !isExpoToken;
+            });
+
+            if (validTokens.length === 0) {
+                console.log('ℹ️  No valid FCM tokens for broadcast');
+                return;
+            }
+
+            const messaging = getMessaging();
+            if (!messaging) return;
+
+            const title = '🆕 New Issue Reported';
+            const body = `${issueTitle} — Check it out and upvote if you're affected!`;
+
+            // FCM has a limit of 500 tokens per multicast
+            const BATCH_SIZE = 500;
+            for (let i = 0; i < validTokens.length; i += BATCH_SIZE) {
+                const batch = validTokens.slice(i, i + BATCH_SIZE);
+
+                const message = {
+                    notification: { title, body },
+                    android: {
+                        priority: 'high',
+                        notification: {
+                            channelId: 'default',
+                            sound: 'default',
+                            priority: 'high',
+                        }
+                    },
+                    data: {
+                        type: 'new_issue',
+                        issueId: String(issueId),
+                        category: String(category || 'general'),
+                        navigationTarget: 'IssueDetail',
+                    },
+                    tokens: batch.map(t => t.token)
+                };
+
+                const response = await messaging.sendEachForMulticast(message);
+                console.log(`📢 Broadcast batch ${Math.floor(i / BATCH_SIZE) + 1}: ${response.successCount} sent, ${response.failureCount} failed`);
+
+                // Clean up invalid tokens
+                if (response.failureCount > 0) {
+                    response.responses.forEach((resp, idx) => {
+                        if (!resp.success && resp.error && (
+                            resp.error.code === 'messaging/registration-token-not-registered' ||
+                            resp.error.code === 'messaging/invalid-registration-token'
+                        )) {
+                            store.deletePushToken(batch[idx].token).catch(() => {});
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('❌ Broadcast Error:', error.message);
+        }
+    }
+
+    /**
+     * Send promotional/engagement notification to a user
+     */
+    static async sendPromoNotification(userId, title, body) {
+        try {
+            await this.sendToUser(userId, title, body, {
+                type: 'promo',
+                navigationTarget: 'HomeFeed'
+            });
+        } catch (error) {
+            console.error('❌ Promo notification error:', error.message);
+        }
+    }
 }
 
 module.exports = NotificationService;

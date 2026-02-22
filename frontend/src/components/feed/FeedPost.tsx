@@ -3,7 +3,7 @@
  * Supports both Community (user issue) and Municipal (official) posts
  * Instagram-level polish with smooth animations
  */
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, memo } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, Image, Dimensions,
 } from 'react-native';
@@ -37,7 +37,7 @@ interface FeedPostProps {
     onFollowPress?: (item: any) => void;
 }
 
-export default function FeedPost({
+function FeedPost({
     item, userId, index, onPress, onUpvote, onDownvote,
     onComment, onShare, onUserPress, onFollowPress,
 }: FeedPostProps) {
@@ -320,6 +320,19 @@ export default function FeedPost({
         </Animated.View>
     );
 }
+
+export default memo(FeedPost, (prevProps, nextProps) => {
+    // Only re-render if these specific props change
+    return (
+        prevProps.item._id === nextProps.item._id &&
+        prevProps.item.upvotes?.length === nextProps.item.upvotes?.length &&
+        prevProps.item.downvotes?.length === nextProps.item.downvotes?.length &&
+        prevProps.item.commentCount === nextProps.item.commentCount &&
+        prevProps.item.isSeen === nextProps.item.isSeen &&
+        prevProps.item.isFollowingPage === nextProps.item.isFollowingPage &&
+        prevProps.userId === nextProps.userId
+    );
+});
 
 const styles = StyleSheet.create({
     postContainer: {

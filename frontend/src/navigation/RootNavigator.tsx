@@ -7,6 +7,7 @@ import { colors } from '../theme/colors';
 import OnboardingScreen from '../screens/Auth/OnboardingScreen';
 import LoginScreen from '../screens/Auth/LoginScreen';
 import RegisterScreen from '../screens/Auth/RegisterScreen';
+import MagicLinkScreen from '../screens/Auth/MagicLinkScreen';
 import LocationSetupScreen from '../screens/Auth/LocationSetupScreen';
 import ProfileSetupScreen from '../screens/Auth/ProfileSetupScreen';
 import OTPVerifyScreen from '../screens/Auth/OTPVerifyScreen';
@@ -42,6 +43,7 @@ export default function RootNavigator() {
                         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
                         <Stack.Screen name="Login" component={LoginScreen} />
                         <Stack.Screen name="Register" component={RegisterScreen} />
+                        <Stack.Screen name="MagicLink" component={MagicLinkScreen} />
                         <Stack.Screen name="OTPVerify" component={OTPVerifyScreen} />
                     </>
                 ) : needsLocationSetup ? (
