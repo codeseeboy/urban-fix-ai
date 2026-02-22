@@ -180,6 +180,7 @@ export default function NotificationsScreen() {
     // Auto-poll when screen is focused
     useEffect(() => {
         if (!isFocused) return;
+        fetchNotifs();
         const interval = setInterval(fetchNotifs, POLL_INTERVAL);
         return () => clearInterval(interval);
     }, [isFocused, fetchNotifs]);
@@ -348,6 +349,10 @@ export default function NotificationsScreen() {
                     keyExtractor={i => i._id}
                     contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
                     showsVerticalScrollIndicator={false}
+                    removeClippedSubviews={true}
+                    maxToRenderPerBatch={10}
+                    windowSize={7}
+                    initialNumToRender={8}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}

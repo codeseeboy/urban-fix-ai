@@ -122,8 +122,10 @@ async function getCitizensLeaderboard() {
 // ISSUE QUERIES
 // ════════════════════════════════════════════════════════════════════════════
 
-async function getIssues(filter, userId, municipalPageId = null, authorType = null) {
+async function getIssues(filter, userId, municipalPageId = null, authorType = null, limit = null, offset = 0) {
     return withRetry(async () => {
+        const parsedLimit = limit ? Math.min(Math.max(parseInt(limit, 10) || 0, 1), 100) : null;
+        const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
         let query = supabase.from('issues').select('*');
 
         if (municipalPageId) {
@@ -145,6 +147,12 @@ async function getIssues(filter, userId, municipalPageId = null, authorType = nu
         query = query
             .order('created_at', { ascending: false })
             .order('id', { ascending: false });
+
+        if (parsedLimit && filter !== 'following' && filter !== 'trending') {
+            const end = parsedOffset + parsedLimit - 1;
+            query = query.range(parsedOffset, end);
+        }
+
         const result = await query;
         let issues = handleError(result, 'getIssues');
 
@@ -182,6 +190,10 @@ async function getIssues(filter, userId, municipalPageId = null, authorType = nu
                 countMap[u.issue_id] = (countMap[u.issue_id] || 0) + 1;
             });
             issues.sort((a, b) => (countMap[b.id] || 0) - (countMap[a.id] || 0));
+        }
+
+        if (parsedLimit) {
+            issues = issues.slice(parsedOffset, parsedOffset + parsedLimit);
         }
 
         return issues;
@@ -465,6 +477,39 @@ async function deletePushToken(token) {
     });
 }
 
+// Get all push tokens except for a specific user (for broadcasts)
+async function getAllPushTokensExcept(excludeUserId) {
+    return withRetry(async () => {
+        let query = supabase
+            .from('push_tokens')
+            .select('token, user_id, device_type');
+
+        if (excludeUserId) {
+            query = query.neq('user_id', excludeUserId);
+        }
+
+        const result = await query;
+        return handleError(result, 'getAllPushTokensExcept');
+    });
+}
+
+// Get all active users for daily promo notifications
+async function getAllActiveUserIds() {
+    return withRetry(async () => {
+        // Get users who have logged in within last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const result = await supabase
+            .from('users')
+            .select('id')
+            .gte('last_login_at', thirtyDaysAgo.toISOString());
+        
+        const users = handleError(result, 'getAllActiveUserIds');
+        return users.map(u => u.id);
+    });
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // BADGE QUERIES
 // ════════════════════════════════════════════════════════════════════════════
@@ -704,7 +749,7 @@ module.exports = {
     // Notifications
     getNotifications, createNotification, markNotificationsRead, markNotificationRead,
     deleteNotification, deleteAllNotifications, getUnreadNotificationCount,
-    addPushToken, getPushTokens, deletePushToken,
+    addPushToken, getPushTokens, deletePushToken, getAllPushTokensExcept, getAllActiveUserIds,
 
     // Badges
     getAllBadges,
