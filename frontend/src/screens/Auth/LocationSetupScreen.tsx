@@ -6,7 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker } from '../../components/map/MapView';
 import { colors, fonts, radius } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { getCurrentLocation, UserLocation, checkLocationPermission } from '../../services/locationService';
