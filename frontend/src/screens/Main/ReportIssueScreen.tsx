@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker } from '../../components/map/MapView';
 import { issuesAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import {

@@ -26,6 +26,7 @@ import logger from '../utils/logger';
 const LAN_IP = '192.168.0.100'; // ← Your PC's LAN IP (auto-detected)
 const PROD_URL = 'https://urban-fix-ai.onrender.com';
 const USE_LOCAL_IN_PROD = false; // Set true if you want APK to hit local LAN IP
+const USE_PROD_ON_WEB = true;
 
 const LOCAL_BASE = Platform.select({
   android: `http://${LAN_IP}:5000`,   // Physical Android device
@@ -33,7 +34,9 @@ const LOCAL_BASE = Platform.select({
   default: 'http://localhost:5000',
 });
 
-const BASE = (__DEV__ || USE_LOCAL_IN_PROD) ? LOCAL_BASE : PROD_URL;
+const BASE = (Platform.OS === 'web' && USE_PROD_ON_WEB)
+  ? PROD_URL
+  : ((__DEV__ || USE_LOCAL_IN_PROD) ? LOCAL_BASE : PROD_URL);
 
 // Uncomment below to use emulator instead:
 // const BASE = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';

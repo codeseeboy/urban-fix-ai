@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: urbanfix-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install; npm run web:build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
