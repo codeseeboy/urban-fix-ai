@@ -1,10 +1,12 @@
+const path = require('path');
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+
 const { initFirebase } = require('./config/firebase');
 const { startPromoScheduler } = require('./services/promoScheduler');
-
-dotenv.config();
 
 // Eagerly initialise Firebase Admin so push notifications work from the first request
 initFirebase();
