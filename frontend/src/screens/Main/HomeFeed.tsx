@@ -102,6 +102,9 @@ export default function HomeFeed({ navigation }: any) {
     const initialLoadDoneRef = useRef(false);
     const cacheFreshRef = useRef(false);
     const queueProcessingRef = useRef(false);
+    const fetchInProgressRef = useRef(false);
+    const refreshFeedRef = useRef<() => Promise<void>>(() => Promise.resolve());
+    const processFeedActionQueueRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
     // Scroll animation for header collapse
     const scrollY = useRef(new Animated.Value(0)).current;
@@ -368,11 +371,21 @@ export default function HomeFeed({ navigation }: any) {
     }, [activeFilter, feedMode, getFeedCacheKey, fetchPageWithRetry, hydrateIssuesFromCache, sortMunicipalByPriority, sortByNewest, maybePrefetchNextPage]);
 
     const refreshFeed = useCallback(async () => {
-        setHasMore(true);
-        setNextOffset(0);
-        prefetchedPageRef.current = null;
-        await loadFeedPage(0, false);
+        if (fetchInProgressRef.current) return;
+        fetchInProgressRef.current = true;
+        try {
+            setHasMore(true);
+            setNextOffset(0);
+            prefetchedPageRef.current = null;
+            await loadFeedPage(0, false);
+        } finally {
+            fetchInProgressRef.current = false;
+        }
     }, [loadFeedPage]);
+
+    // Keep refs in sync so isFocused effect doesn't depend on function identity
+    useEffect(() => { refreshFeedRef.current = refreshFeed; }, [refreshFeed]);
+    useEffect(() => { processFeedActionQueueRef.current = processFeedActionQueue; }, [processFeedActionQueue]);
 
     const fetchStats = async () => {
         try {
@@ -416,14 +429,17 @@ export default function HomeFeed({ navigation }: any) {
         return () => {
             isMounted = false;
         };
-    }, [activeFilter, feedMode, refreshFeed, hydrateIssuesFromCache, processFeedActionQueue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeFilter, feedMode]);
 
     useEffect(() => {
         if (!isFocused) return;
         if (!initialLoadDoneRef.current) return;
-        processFeedActionQueue();
-        refreshFeed();
-    }, [isFocused, refreshFeed, processFeedActionQueue]);
+        processFeedActionQueueRef.current();
+        refreshFeedRef.current();
+    // Only react to actual focus changes, not function-reference changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isFocused]);
 
     const onRefresh = async () => {
         setRefreshing(true);

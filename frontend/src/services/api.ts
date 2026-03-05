@@ -23,7 +23,7 @@ import logger from '../utils/logger';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ← CHANGE THIS to your PC's LAN IP if using a physical device
-const LAN_IP = '192.168.0.100'; // ← Your PC's LAN IP (auto-detected)
+const LAN_IP = '192.168.182.42'; // ← Your PC's LAN IP (auto-detected)
 const PROD_URL = 'https://urban-fix-ai.onrender.com';
 const USE_LOCAL_IN_PROD = false; // Set true if you want APK to hit local LAN IP
 const USE_PROD_ON_WEB = true;
