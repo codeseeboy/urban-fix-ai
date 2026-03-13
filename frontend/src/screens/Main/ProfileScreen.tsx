@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, RefreshControl, Modal, Animated, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { gamificationAPI } from '../../services/api';
 import { colors, fonts, radius } from '../../theme/colors';
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 const { width } = Dimensions.get('window');
 
@@ -45,28 +46,28 @@ export default function ProfileScreen({ navigation }: any) {
         ]).start();
     }, []);
 
-    const fetchBadges = async () => {
+    const fetchBadges = useCallback(async () => {
         try {
             const { data } = await gamificationAPI.getBadges();
             setBadges(data);
         } catch (e) {
             setBadges(ALL_BADGES.map(b => ({ ...b, earned: user?.badges?.includes(b.id) || false })));
         }
-    };
+    }, [user?.badges]);
 
-    const onRefresh = async () => {
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await refreshProfile();
         await fetchBadges();
         setRefreshing(false);
-    };
+    }, [refreshProfile, fetchBadges]);
 
-    const handleLogout = () => {
+    const handleLogout = useCallback(() => {
         Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Sign Out', style: 'destructive', onPress: logout },
         ]);
-    };
+    }, [logout]);
 
     const role = ROLE_CONFIG[user?.role || 'citizen'];
     const level = user?.levelInfo?.level || 1;
@@ -77,9 +78,11 @@ export default function ProfileScreen({ navigation }: any) {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
+            <AuthCanvas />
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+                contentContainerStyle={styles.scrollContent}
             >
                 {/* ─── HEADER ────────────────────────────────────────────────── */}
                 <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
@@ -291,6 +294,7 @@ export default function ProfileScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
+    scrollContent: { paddingBottom: 110 },
 
     // Header
     header: {

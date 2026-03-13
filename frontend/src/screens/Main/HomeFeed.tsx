@@ -2,7 +2,7 @@
  * HomeFeed — Premium redesigned feed with Community/Municipal toggle,
  * Stories, Reels section, side filter drawer, and social-media-grade cards
  */
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     View, StyleSheet, FlatList, Text, TouchableOpacity, Animated,
@@ -65,13 +65,8 @@ const SECTION_TABS = [
     { id: 'reels', label: 'Reels', icon: 'play-circle-outline' },
 ];
 
-/* ─── Dummy municipal stories (Real IDs) ─── */
-const MUNICIPAL_STORIES = [
-    { id: '992a6c0b-1234-5678-90ab-cdef12345678', name: 'Boisar', hasUpdate: true, verified: true, avatar: null }, // Boisar
-    { id: '881b5d1a-2345-6789-01bc-def012345679', name: 'Palghar', hasUpdate: true, verified: true, avatar: null }, // Palghar
-    { id: '770c4e2b-3456-7890-12cd-ef0123456780', name: 'Roads', hasUpdate: false, verified: true, avatar: null }, // Roads
-    { id: '669d3f3c-4567-8901-23de-f01234567881', name: 'Water', hasUpdate: true, verified: false, avatar: null }, // Water
-];
+// No hardcoded municipal stories; this will be populated from real municipal pages only (via backend)
+const MUNICIPAL_STORIES: any[] = [];
 
 export default function HomeFeed({ navigation }: any) {
     const insets = useSafeAreaInsets();
@@ -105,6 +100,9 @@ export default function HomeFeed({ navigation }: any) {
     const fetchInProgressRef = useRef(false);
     const refreshFeedRef = useRef<() => Promise<void>>(() => Promise.resolve());
     const processFeedActionQueueRef = useRef<() => Promise<void>>(() => Promise.resolve());
+    const endReachedCalledRef = useRef(false);
+    const lastLoadMoreAtRef = useRef(0);
+    const lastNetworkRefreshAtRef = useRef(0);
 
     // Scroll animation for header collapse
     const scrollY = useRef(new Animated.Value(0)).current;
@@ -142,6 +140,10 @@ export default function HomeFeed({ navigation }: any) {
         latestFeedKeyRef.current = getFeedCacheKey();
         prefetchedPageRef.current = null;
         prefetchInFlightRef.current = false;
+        setIssues([]);
+        issuesRef.current = [];
+        setNextOffset(0);
+        setHasMore(true);
     }, [getFeedCacheKey]);
 
     useEffect(() => {
@@ -353,17 +355,22 @@ export default function HomeFeed({ navigation }: any) {
         }
 
         const current = append ? issuesRef.current : [];
+        const currentIds = new Set(current.map((item) => item._id));
         const merged = [...current, ...pageItems];
         const uniqueById = Array.from(new Map(merged.map((item) => [item._id, item])).values());
         const ordered = feedMode === 'municipal' ? sortMunicipalByPriority(uniqueById) : sortByNewest(uniqueById);
+        const newItemsAdded = append ? pageItems.some((item) => !currentIds.has(item._id)) : ordered.length > 0;
 
         issuesRef.current = ordered;
         setIssues(ordered);
         await AsyncStorage.setItem(cacheKey, JSON.stringify({ items: ordered, cachedAt: Date.now() }));
+        lastNetworkRefreshAtRef.current = Date.now();
 
         const computedNextOffset = offset + pageItems.length;
         setNextOffset(computedNextOffset);
-        setHasMore(pageItems.length >= FEED_PAGE_SIZE);
+        // Stop infinite pagination loops when backend keeps returning duplicate pages.
+        const hasAnotherPage = pageItems.length >= FEED_PAGE_SIZE && (!append || newItemsAdded);
+        setHasMore(hasAnotherPage);
 
         if (!append && pageItems.length >= FEED_PAGE_SIZE) {
             maybePrefetchNextPage(computedNextOffset).catch(() => {});
@@ -387,12 +394,12 @@ export default function HomeFeed({ navigation }: any) {
     useEffect(() => { refreshFeedRef.current = refreshFeed; }, [refreshFeed]);
     useEffect(() => { processFeedActionQueueRef.current = processFeedActionQueue; }, [processFeedActionQueue]);
 
-    const fetchStats = async () => {
+    const fetchStats = useCallback(async () => {
         try {
             const { data } = await gamificationAPI.getStats();
             setStats(data);
         } catch (e) { console.log('Stats error:', e); }
-    };
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -436,20 +443,26 @@ export default function HomeFeed({ navigation }: any) {
         if (!isFocused) return;
         if (!initialLoadDoneRef.current) return;
         processFeedActionQueueRef.current();
-        refreshFeedRef.current();
+        // Avoid aggressive auto-refresh loops when navigation focus toggles repeatedly.
+        if ((Date.now() - lastNetworkRefreshAtRef.current) > 45000) {
+            refreshFeedRef.current();
+        }
     // Only react to actual focus changes, not function-reference changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isFocused]);
 
-    const onRefresh = async () => {
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await processFeedActionQueue();
         await Promise.all([refreshFeed(), fetchStats()]);
         setRefreshing(false);
-    };
+    }, [processFeedActionQueue, refreshFeed, fetchStats]);
 
     const loadMoreIssues = useCallback(async () => {
+        const now = Date.now();
+        if (now - lastLoadMoreAtRef.current < 1200) return;
         if (loading || refreshing || loadingMore || !hasMore) return;
+        lastLoadMoreAtRef.current = now;
         setLoadingMore(true);
         try {
             await loadFeedPage(nextOffset, true);
@@ -601,8 +614,12 @@ export default function HomeFeed({ navigation }: any) {
     /* ─── Get active filter label ─── */
     const activeFilterLabel = FILTER_CATEGORIES.find(f => f.id === activeFilter)?.label || 'All Issues';
 
+    // Stable style objects to avoid re-creation on render
+    const headerMarginStyle = useMemo(() => ({ marginHorizontal: -16 }), []);
+    const topBarSpacer = useMemo(() => ({ width: 90 }), []);
+
     /* ─── Stylish UrbanFix AI branding ─── */
-    const BrandTag = () => (
+    const brandTag = useMemo(() => (
         <View style={styles.brandRow}>
             <LinearGradient
                 colors={['transparent', colors.textMuted + '40', 'transparent']}
@@ -623,10 +640,10 @@ export default function HomeFeed({ navigation }: any) {
                 style={styles.brandLine}
             />
         </View>
-    );
+    ), []);
 
     /* ─── Section Tabs (always visible — shared between Posts & Reels) ─── */
-    const SectionTabsBar = () => (
+    const sectionTabsBar = useMemo(() => (
         <View style={styles.sectionTabsContainer}>
             <View style={styles.sectionTabs}>
                 {SECTION_TABS.map(tab => (
@@ -662,11 +679,11 @@ export default function HomeFeed({ navigation }: any) {
                 </View>
             )}
         </View>
-    );
+    ), [activeSection, activeFilter, activeFilterLabel]);
 
     /* ─── Header (scrollable — greeting, toggle, tabs, brand, stories) ─── */
-    const renderHeader = () => (
-        <View style={{ marginHorizontal: -16 }}>
+    const renderHeader = useCallback(() => (
+        <View style={headerMarginStyle}>
             {/* Greeting Row — scrolls with content */}
             <View style={styles.greetingRow}>
                 <View>
@@ -675,18 +692,18 @@ export default function HomeFeed({ navigation }: any) {
                     </Text>
                     <Text style={styles.userName}>{firstName}</Text>
                 </View>
-                <View style={{ width: 90 }} />
+                <View style={topBarSpacer} />
             </View>
 
             {/* Feed Mode Toggle */}
             <FeedToggle activeTab={feedMode} onToggle={setFeedMode} />
 
             {/* Section Tabs */}
-            <SectionTabsBar />
+            {sectionTabsBar}
 
             {/* UrbanFix AI branding — fades/lifts out as sticky version appears */}
             <Animated.View style={{ opacity: feedBrandOpacity, transform: [{ translateY: feedBrandSlideY }] }}>
-                <BrandTag />
+                {brandTag}
             </Animated.View>
 
             {/* Stories Row (shows in municipal mode) */}
@@ -699,7 +716,42 @@ export default function HomeFeed({ navigation }: any) {
                 />
             )}
         </View>
-    );
+    ), [greeting, firstName, feedMode, sectionTabsBar, brandTag, feedBrandOpacity, feedBrandSlideY, navigation]);
+
+    const listEmptyComponent = useMemo(() => {
+        if (loading) {
+            return (
+                <View style={styles.loadWrap}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={styles.loadText}>Loading feed...</Text>
+                </View>
+            );
+        }
+        return (
+            <View style={styles.emptyWrap}>
+                <View style={styles.emptyIcon}>
+                    <Ionicons name="telescope-outline" size={48} color={colors.textMuted} />
+                </View>
+                <Text style={styles.emptyTitle}>
+                    {feedMode === 'municipal' ? 'No municipal updates' : 'No issues found'}
+                </Text>
+                <Text style={styles.emptySubtitle}>
+                    {feedMode === 'municipal'
+                        ? 'Follow municipal pages to see updates here'
+                        : 'Pull down to refresh or try a different filter'}
+                </Text>
+            </View>
+        );
+    }, [loading, feedMode]);
+
+    const listFooterComponent = useMemo(() => {
+        if (!loadingMore) return null;
+        return (
+            <View style={styles.loadMoreWrap}>
+                <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+        );
+    }, [loadingMore]);
 
     /* ─── Render feed item ─── */
     const renderItem = useCallback(({ item, index }: { item: any; index: number }) => {
@@ -756,7 +808,7 @@ export default function HomeFeed({ navigation }: any) {
                             </View>
                         </View>
                         <FeedToggle activeTab={feedMode} onToggle={setFeedMode} />
-                        <SectionTabsBar />
+                        {sectionTabsBar}
                         <ReelsTab
                             reels={[]}
                             loading={false}
@@ -774,8 +826,15 @@ export default function HomeFeed({ navigation }: any) {
                         renderItem={renderItem}
                         keyExtractor={i => i._id}
                         ListHeaderComponent={renderHeader}
-                        onEndReached={loadMoreIssues}
+                        onEndReached={() => {
+                            if (endReachedCalledRef.current) return;
+                            endReachedCalledRef.current = true;
+                            loadMoreIssues();
+                        }}
                         onEndReachedThreshold={0.35}
+                        onMomentumScrollBegin={() => {
+                            endReachedCalledRef.current = false;
+                        }}
                         contentContainerStyle={styles.feedContent}
                         showsVerticalScrollIndicator={false}
                         removeClippedSubviews={true}
@@ -797,35 +856,8 @@ export default function HomeFeed({ navigation }: any) {
                                 progressBackgroundColor={colors.surface}
                             />
                         }
-                        ListEmptyComponent={
-                            loading ? (
-                                <View style={styles.loadWrap}>
-                                    <ActivityIndicator size="large" color={colors.primary} />
-                                    <Text style={styles.loadText}>Loading feed...</Text>
-                                </View>
-                            ) : (
-                                <View style={styles.emptyWrap}>
-                                    <View style={styles.emptyIcon}>
-                                        <Ionicons name="telescope-outline" size={48} color={colors.textMuted} />
-                                    </View>
-                                    <Text style={styles.emptyTitle}>
-                                        {feedMode === 'municipal' ? 'No municipal updates' : 'No issues found'}
-                                    </Text>
-                                    <Text style={styles.emptySubtitle}>
-                                        {feedMode === 'municipal'
-                                            ? 'Follow municipal pages to see updates here'
-                                            : 'Pull down to refresh or try a different filter'}
-                                    </Text>
-                                </View>
-                            )
-                        }
-                        ListFooterComponent={
-                            loadingMore ? (
-                                <View style={{ paddingVertical: 16 }}>
-                                    <ActivityIndicator size="small" color={colors.primary} />
-                                </View>
-                            ) : null
-                        }
+                        ListEmptyComponent={listEmptyComponent}
+                        ListFooterComponent={listFooterComponent}
                     />
                 )}
             </View>
@@ -881,6 +913,22 @@ export default function HomeFeed({ navigation }: any) {
                     <Animated.View style={[styles.stickyBorderLine, { opacity: stickyBorderOpacity }]} />
                 </View>
             )}
+
+            {/* ─── AI Chatbot FAB ─── */}
+            <TouchableOpacity
+                style={styles.chatFab}
+                onPress={() => navigation.navigate('Chatbot')}
+                activeOpacity={0.85}
+            >
+                <LinearGradient
+                    colors={['#0A84FF', '#0055CC']}
+                    style={styles.chatFabGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
+                    <Ionicons name="chatbubble-ellipses" size={22} color="#FFF" />
+                </LinearGradient>
+            </TouchableOpacity>
 
             {/* ─── Filter Side Drawer ─── */}
             <FilterDrawer
@@ -1174,5 +1222,29 @@ const styles = StyleSheet.create({
         fontSize: 13,
         textAlign: 'center',
         lineHeight: 19,
+    },
+    loadMoreWrap: {
+        paddingVertical: 16,
+        alignItems: 'center',
+    },
+
+    /* ─── Chatbot FAB ─── */
+    chatFab: {
+        position: 'absolute',
+        bottom: 84,
+        right: 16,
+        zIndex: 90,
+        shadowColor: '#0A84FF',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    chatFabGradient: {
+        width: 52,
+        height: 52,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

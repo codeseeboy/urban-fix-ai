@@ -16,6 +16,7 @@ import {
 } from '../../services/locationService';
 import logger from '../../utils/logger';
 import { colors, fonts, radius } from '../../theme/colors';
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 const { width } = Dimensions.get('window');
 
@@ -247,6 +248,7 @@ export default function ReportIssueScreen({ navigation }: any) {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
+            <AuthCanvas />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="close" size={22} color={colors.text} />
@@ -255,7 +257,8 @@ export default function ReportIssueScreen({ navigation }: any) {
                 <View style={{ width: 36 }} />
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20 }}>
+            <View style={styles.contentSheet}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                 {/* ── Category ─────────────────────────────────────────── */}
                 <Text style={styles.sectionLabel} allowFontScaling={false}>Category</Text>
                 <View style={styles.catGrid}>
@@ -503,6 +506,7 @@ export default function ReportIssueScreen({ navigation }: any) {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+            </View>
         </View>
     );
 }
@@ -512,8 +516,20 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: 16, paddingVertical: 12,
-        borderBottomWidth: 1, borderBottomColor: colors.border,
+        borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(12,15,28,0.76)',
     },
+    contentSheet: {
+        flex: 1,
+        marginHorizontal: 10,
+        marginTop: 8,
+        borderRadius: radius.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(15,18,32,0.72)',
+        overflow: 'hidden',
+    },
+    scrollContent: { padding: 20, paddingBottom: 44 },
     backBtn: {
         width: 36, height: 36, borderRadius: 18,
         backgroundColor: colors.surfaceLight,

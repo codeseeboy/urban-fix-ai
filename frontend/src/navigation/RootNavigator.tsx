@@ -19,7 +19,8 @@ import ReportIssueScreen from '../screens/Main/ReportIssueScreen';
 import LeaderboardScreen from '../screens/Main/LeaderboardScreen';
 import SettingsScreen from '../screens/Main/SettingsScreen';
 import EditProfileScreen from '../screens/Main/EditProfileScreen';
-import MunicipalProfileScreen from '../screens/Municipal/MunicipalProfileScreen'; // New Import
+import MunicipalProfileScreen from '../screens/Municipal/MunicipalProfileScreen';
+import ChatbotScreen from '../screens/Main/ChatbotScreen';
 
 const Stack = createStackNavigator();
 
@@ -61,6 +62,7 @@ export default function RootNavigator() {
                         <Stack.Screen name="Settings" component={SettingsScreen} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
                         <Stack.Screen name="MunicipalProfile" component={MunicipalProfileScreen} />
+                        <Stack.Screen name="Chatbot" component={ChatbotScreen} />
                     </>
                 )}
             </Stack.Navigator>

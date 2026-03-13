@@ -241,6 +241,7 @@ router.post('/seed-nearby', async (req, res) => {
 
             const issue = await store.createIssue({
                 user_id: defaultUserId,
+                author_type: 'User',
                 title: tmpl.title,
                 description: tmpl.desc,
                 image: tmpl.img,
@@ -350,29 +351,43 @@ router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name:
             videoPath = `/public/uploads/${req.files.video[0].filename}`;
         }
 
-        // Mock AI processing
-        const severities = ['Low', 'Medium', 'High', 'Critical'];
-        const aiSeverity = emergency === 'true' || emergency === true ? 'Critical' : severities[Math.floor(Math.random() * 3) + 1];
-        const deptMap = { roads: 'Roads', lighting: 'Electricity', trash: 'Sanitation', water: 'Water', parks: 'Parks' };
+        // AI analysis (uses rule-based logic now; swap to ML models via services/ai/index.js)
+        const aiService = require('../services/ai');
+        const isEmergency = emergency === 'true' || emergency === true;
+        const lat = location?.coordinates?.[1] || 28.614;
+        const lon = location?.coordinates?.[0] || 77.209;
+
+        const aiResult = await aiService.analyzeIssue({
+            category: category || 'other',
+            description: description || '',
+            title,
+            emergency: isEmergency,
+            imageUrl: imagePath,
+            latitude: lat,
+            longitude: lon,
+        });
 
         const issue = await store.createIssue({
             user_id: (anonymous === 'true' || anonymous === true) ? null : req.user._id,
+            author_type: 'User',
             title,
             description: description || '',
             image: imagePath,
             video: videoPath || null,
             location_address: location?.address || 'Unknown',
-            location_longitude: location?.coordinates?.[0] || 77.209,
-            location_latitude: location?.coordinates?.[1] || 28.614,
-            department_tag: deptMap[category] || 'General',
+            location_longitude: lon,
+            location_latitude: lat,
+            department_tag: aiResult.departmentTag,
             status: 'Submitted',
             category: category || 'other',
-            priority_score: Math.floor(Math.random() * 40) + 20,
-            ai_severity: aiSeverity,
-            ai_tags: [category || 'general', 'civic-issue'],
+            priority_score: aiResult.priorityScore,
+            ai_severity: aiResult.aiSeverity,
+            ai_tags: aiResult.aiTags,
             anonymous: (anonymous === 'true' || anonymous === true),
-            emergency: (emergency === 'true' || emergency === true),
+            emergency: isEmergency,
         });
+
+        const aiSeverity = aiResult.aiSeverity;
 
         // Add initial status timeline entry
         await store.addStatusTimeline({

@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { userAPI } from '../../services/api';
 import logger from '../../utils/logger';
 import { colors, fonts, radius } from '../../theme/colors';
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 const { width } = Dimensions.get('window');
 
@@ -360,10 +361,7 @@ export default function ProfileSetupScreen() {
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-            <LinearGradient
-                colors={['#060610', '#0D1B2A', '#0A0A14']}
-                style={StyleSheet.absoluteFill}
-            />
+            <AuthCanvas />
 
             <ScrollView
                 showsVerticalScrollIndicator={false}

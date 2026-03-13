@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { issuesAPI } from '../../services/api';
 import logger from '../../utils/logger';
 import { colors, fonts, radius } from '../../theme/colors';
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 const ISSUE_ACTION_QUEUE_KEY = 'issueDetail:actionQueue:v1';
 
@@ -259,6 +260,7 @@ export default function IssueDetailScreen({ route, navigation }: any) {
 
     return (
         <KeyboardAvoidingView style={[styles.container, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <AuthCanvas />
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -270,6 +272,7 @@ export default function IssueDetailScreen({ route, navigation }: any) {
                 </TouchableOpacity>
             </View>
 
+            <View style={styles.contentSheet}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Image */}
                 {issue.image && (
@@ -419,6 +422,7 @@ export default function IssueDetailScreen({ route, navigation }: any) {
                     ))}
                 </View>
             </ScrollView>
+            </View>
 
             {/* Comment Input */}
             <View style={[styles.commentInput, { paddingBottom: insets.bottom + 8 }]}>
@@ -447,7 +451,18 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border,
+        paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(12,15,28,0.76)',
+    },
+    contentSheet: {
+        flex: 1,
+        marginHorizontal: 10,
+        marginTop: 8,
+        borderRadius: radius.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(15,18,32,0.72)',
+        overflow: 'hidden',
     },
     backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceLight, justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 17, color: colors.text },
