@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Switch, Alert, Linking, Platform,
+    Switch, Alert, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fonts, radius } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { clearStoredLocation } from '../../services/locationService';
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 // ─── STORAGE KEYS ───────────────────────────────────────────────────────────
 const KEYS = {
@@ -29,9 +30,14 @@ export default function SettingsScreen({ navigation }: any) {
     // Load persisted settings
     useEffect(() => {
         (async () => {
-            const dm = await AsyncStorage.getItem(KEYS.DARK_MODE);
-            const notif = await AsyncStorage.getItem(KEYS.NOTIFICATIONS);
-            const loc = await AsyncStorage.getItem(KEYS.LOCATION_UPDATES);
+            const entries = await AsyncStorage.multiGet([
+                KEYS.DARK_MODE,
+                KEYS.NOTIFICATIONS,
+                KEYS.LOCATION_UPDATES,
+            ]);
+            const dm = entries.find(([key]) => key === KEYS.DARK_MODE)?.[1] ?? null;
+            const notif = entries.find(([key]) => key === KEYS.NOTIFICATIONS)?.[1] ?? null;
+            const loc = entries.find(([key]) => key === KEYS.LOCATION_UPDATES)?.[1] ?? null;
             if (dm !== null) setDarkMode(dm === 'true');
             if (notif !== null) setNotifications(notif === 'true');
             if (loc !== null) setLocationUpdates(loc === 'true');
@@ -39,7 +45,7 @@ export default function SettingsScreen({ navigation }: any) {
     }, []);
 
     // ─── Toggle handlers (persist immediately) ──────────────────────────────
-    const toggleDarkMode = async (val: boolean) => {
+    const toggleDarkMode = useCallback(async (val: boolean) => {
         setDarkMode(val);
         await AsyncStorage.setItem(KEYS.DARK_MODE, String(val));
         if (!val) {
@@ -49,20 +55,20 @@ export default function SettingsScreen({ navigation }: any) {
                 [{ text: 'OK', onPress: () => { setDarkMode(true); AsyncStorage.setItem(KEYS.DARK_MODE, 'true'); } }]
             );
         }
-    };
+    }, []);
 
-    const toggleNotifications = async (val: boolean) => {
+    const toggleNotifications = useCallback(async (val: boolean) => {
         setNotifications(val);
         await AsyncStorage.setItem(KEYS.NOTIFICATIONS, String(val));
-    };
+    }, []);
 
-    const toggleLocationUpdates = async (val: boolean) => {
+    const toggleLocationUpdates = useCallback(async (val: boolean) => {
         setLocationUpdates(val);
         await AsyncStorage.setItem(KEYS.LOCATION_UPDATES, String(val));
-    };
+    }, []);
 
     // ─── Actions ─────────────────────────────────────────────────────────────
-    const handleClearCache = () => {
+    const handleClearCache = useCallback(() => {
         Alert.alert('Clear Cache', 'This will clear cached location and temporary data.', [
             { text: 'Cancel', style: 'cancel' },
             {
@@ -72,9 +78,9 @@ export default function SettingsScreen({ navigation }: any) {
                 }
             },
         ]);
-    };
+    }, []);
 
-    const handleDeleteAccount = () => {
+    const handleDeleteAccount = useCallback(() => {
         Alert.alert(
             'Delete Account',
             'This action is permanent and cannot be undone. All your reports and data will be removed.',
@@ -87,18 +93,18 @@ export default function SettingsScreen({ navigation }: any) {
                 },
             ]
         );
-    };
+    }, []);
 
-    const handleLogout = () => {
+    const handleLogout = useCallback(() => {
         Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Sign Out', style: 'destructive', onPress: logout },
         ]);
-    };
+    }, [logout]);
 
-    const openPrivacyPolicy = () => Linking.openURL('https://urbanfix.ai/privacy');
-    const openTerms = () => Linking.openURL('https://urbanfix.ai/terms');
-    const openSupport = () => Linking.openURL('mailto:support@urbanfix.ai');
+    const openPrivacyPolicy = useCallback(() => Linking.openURL('https://urbanfix.ai/privacy'), []);
+    const openTerms = useCallback(() => Linking.openURL('https://urbanfix.ai/terms'), []);
+    const openSupport = useCallback(() => Linking.openURL('mailto:support@urbanfix.ai'), []);
 
     // ─── MENU SECTIONS ──────────────────────────────────────────────────────
     type MenuItem = {
@@ -185,6 +191,7 @@ export default function SettingsScreen({ navigation }: any) {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
+            <AuthCanvas />
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
@@ -194,6 +201,7 @@ export default function SettingsScreen({ navigation }: any) {
                 <View style={{ width: 38 }} />
             </View>
 
+            <View style={styles.contentSheet}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
                 {sections.map((section, sIndex) => (
                     <View key={sIndex} style={styles.section}>
@@ -274,18 +282,30 @@ export default function SettingsScreen({ navigation }: any) {
                     UrbanFix AI v1.0.0{'\n'}Made with care for smarter cities
                 </Text>
             </ScrollView>
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
+    contentSheet: {
+        flex: 1,
+        marginHorizontal: 10,
+        marginTop: 8,
+        borderRadius: radius.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(15,18,32,0.72)',
+        overflow: 'hidden',
+    },
 
     // Header
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: 16, paddingVertical: 12,
-        borderBottomWidth: 1, borderBottomColor: colors.border,
+        borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(12,15,28,0.76)',
     },
     backBtn: {
         width: 38, height: 38, borderRadius: 19,

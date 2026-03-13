@@ -1,0 +1,86 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  --background: #06060e;
+  --foreground: #e2e8f0;
+  --card: #0d0d18;
+  --card-border: rgba(255, 255, 255, 0.06);
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --muted: rgba(255, 255, 255, 0.4);
+  --success: #22c55e;
+  --warning: #eab308;
+  --error: #ef4444;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass-card {
+  background: rgba(13, 13, 24, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+}
+
+.stat-glow {
+  box-shadow: 0 0 40px -10px rgba(59, 130, 246, 0.15);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+.leaflet-container {
+  background: #0a0a15 !important;
+  border-radius: 12px;
+}
+
+@media (max-width: 640px) {
+  select option {
+    background: #141420;
+    color: #e2e8f0;
+  }
+}

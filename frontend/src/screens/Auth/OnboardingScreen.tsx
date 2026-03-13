@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, Dimensions,
-    FlatList, Animated, Image, NativeScrollEvent, NativeSyntheticEvent,
+    FlatList, Animated, NativeScrollEvent, NativeSyntheticEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,39 +12,38 @@ import { useAuth } from '../../context/AuthContext';
 const { width, height } = Dimensions.get('window');
 
 // ─── SLIDE DATA ─────────────────────────────────────────────────────────────
-// Premium illustrations from Storyset (Freepik) — free for commercial use
 const slides = [
     {
         id: '1',
-        image: 'https://cdn-icons-png.flaticon.com/512/4727/4727424.png',
+        icon: 'camera-outline' as const,
         title: 'Snap & Report',
         subtitle: 'See a pothole, broken light, or garbage pile?\nJust snap a photo and our AI handles the rest.',
         accent: '#007AFF',
     },
     {
         id: '2',
-        image: 'https://cdn-icons-png.flaticon.com/512/4616/4616734.png',
+        icon: 'sparkles-outline' as const,
         title: 'AI-Powered Analysis',
         subtitle: 'Instant severity scoring, smart duplicate\ndetection and automatic department routing.',
         accent: '#FF6B35',
     },
     {
         id: '3',
-        image: 'https://cdn-icons-png.flaticon.com/512/3815/3815243.png',
+        icon: 'business-outline' as const,
         title: 'Direct to Authorities',
         subtitle: 'Reports go straight to the right municipal\ndepartment. No middlemen, no delays.',
         accent: '#30D158',
     },
     {
         id: '4',
-        image: 'https://cdn-icons-png.flaticon.com/512/3176/3176366.png',
+        icon: 'trophy-outline' as const,
         title: 'Track & Earn Rewards',
         subtitle: 'Follow your report in real-time. Earn points,\nbadges, and climb the civic leaderboard.',
         accent: '#FFD60A',
     },
     {
         id: '5',
-        image: 'https://cdn-icons-png.flaticon.com/512/2942/2942243.png',
+        icon: 'heart-outline' as const,
         title: 'Build Smart Cities',
         subtitle: 'Join thousands of citizens making their\nneighborhoods cleaner, safer and better.',
         accent: '#AF52DE',
@@ -163,10 +162,10 @@ export default function OnboardingScreen({ navigation }: any) {
                                 {/* Glow ring behind image */}
                                 <View style={[styles.imageRing, { borderColor: item.accent + '15' }]}>
                                     <View style={[styles.imageInnerRing, { backgroundColor: item.accent + '08' }]}>
-                                        <Image
-                                            source={{ uri: item.image }}
-                                            style={styles.slideImage}
-                                            resizeMode="contain"
+                                        <Ionicons
+                                            name={item.icon}
+                                            size={72}
+                                            color={item.accent}
                                         />
                                     </View>
                                 </View>

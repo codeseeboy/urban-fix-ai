@@ -65,15 +65,18 @@ export default function CitizenTabs() {
             id="CitizenTabs"
             screenOptions={{
                 headerShown: false,
+                lazy: true,
                 tabBarStyle: {
                     position: 'absolute',
-                    bottom: 0, left: 0, right: 0,
-                    backgroundColor: 'rgba(10, 10, 15, 0.97)',
-                    borderTopWidth: 0.5,
-                    borderTopColor: colors.border,
-                    height: 64,
-                    paddingBottom: 8,
-                    paddingTop: 6,
+                    bottom: 8, left: 14, right: 14,
+                    backgroundColor: 'rgba(12, 15, 28, 0.94)',
+                    borderTopWidth: 1,
+                    borderTopColor: 'rgba(255,255,255,0.08)',
+                    borderRadius: 20,
+                    height: 68,
+                    paddingBottom: 10,
+                    paddingTop: 8,
+                    paddingHorizontal: 6,
                     elevation: 0,
                 },
                 tabBarActiveTintColor: colors.primary,
@@ -99,7 +102,7 @@ export default function CitizenTabs() {
                 options={{
                     tabBarIcon: () => (
                         <View style={styles.reportBtnOuter}>
-                            <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.reportBtn}>
+                            <LinearGradient colors={['#0A84FF', '#0055CC']} style={styles.reportBtn}>
                                 <Ionicons name="add" size={28} color="#FFF" />
                             </LinearGradient>
                         </View>
@@ -131,8 +134,8 @@ export default function CitizenTabs() {
 
 const styles = StyleSheet.create({
     reportBtnOuter: {
-        width: 58, height: 58, borderRadius: 29,
-        marginBottom: 18,
+        width: 56, height: 56, borderRadius: 28,
+        marginBottom: 16,
         shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.5, shadowRadius: 10, elevation: 10,
     },

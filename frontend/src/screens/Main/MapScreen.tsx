@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Dimensions, Platform, Animated, Easing } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -187,6 +187,58 @@ export default function MapScreen({ navigation }: any) {
     const [error, setError] = useState<string | null>(null);
     const hasCacheRef = useRef(false);
 
+    const fetchIssuesWithRetry = useCallback(async () => {
+        for (let attempt = 0; attempt <= MAP_RETRY_DELAYS.length; attempt++) {
+            try {
+                const { data } = await issuesAPI.getFeed();
+                return Array.isArray(data) ? data : [];
+            } catch (e) {
+                console.log(`Map fetch attempt ${attempt + 1} failed:`, e);
+                if (attempt < MAP_RETRY_DELAYS.length) {
+                    await delay(MAP_RETRY_DELAYS[attempt]);
+                }
+            }
+        }
+        return null;
+    }, []);
+
+    const resolveUserCoords = useCallback(async () => {
+        try {
+            const perm = await Location.getForegroundPermissionsAsync();
+            let status = perm.status;
+            if (status !== 'granted') {
+                const req = await Location.requestForegroundPermissionsAsync();
+                status = req.status;
+            }
+
+            if (status !== 'granted') return null;
+
+            const lastKnown = await Location.getLastKnownPositionAsync();
+            if (lastKnown?.coords) {
+                const quickCoords = {
+                    latitude: lastKnown.coords.latitude,
+                    longitude: lastKnown.coords.longitude,
+                };
+                setUserLocation(quickCoords);
+                AsyncStorage.setItem('mapscreen:userLocation', JSON.stringify(quickCoords)).catch(() => {});
+            }
+
+            const liveLoc = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+            });
+            const liveCoords = {
+                latitude: liveLoc.coords.latitude,
+                longitude: liveLoc.coords.longitude,
+            };
+            setUserLocation(liveCoords);
+            AsyncStorage.setItem('mapscreen:userLocation', JSON.stringify(liveCoords)).catch(() => {});
+            return liveCoords;
+        } catch (e) {
+            console.log('Location detection failed (non-critical):', e);
+            return null;
+        }
+    }, []);
+
     // ── Phase 1: Instant render from cache + saved location ──
     useEffect(() => {
         (async () => {
@@ -219,57 +271,24 @@ export default function MapScreen({ navigation }: any) {
     }, []);
 
     // ── Phase 2: Background refresh (GPS + feed) — doesn't block UI ──
-    const initMap = async () => {
+    const initMap = useCallback(async () => {
         // Only show spinner if we have NO cached data
         if (!hasCacheRef.current) {
             setLoading(true);
         }
         setError(null);
 
-        // Step 1 + 2: GPS + seed run in parallel-safe way
-        let coords: { latitude: number; longitude: number } | null = null;
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status === 'granted') {
-                const loc = await Location.getCurrentPositionAsync({
-                    accuracy: Location.Accuracy.Balanced,
-                });
-                coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-                setUserLocation(coords);
-                // Cache location for instant next-launch
-                AsyncStorage.setItem('mapscreen:userLocation', JSON.stringify(coords)).catch(() => {});
-            }
-        } catch (e) {
-            console.log('Location detection failed (non-critical):', e);
-        }
+        // Run location resolve and issue fetch in parallel.
+        const [coords, nextIssues] = await Promise.all([
+            resolveUserCoords(),
+            fetchIssuesWithRetry(),
+        ]);
 
-        // Seed nearby (fire-and-forget — don't block issue fetch)
-        if (coords) {
-            issuesAPI.seedNearby(coords.latitude, coords.longitude).catch(e =>
-                console.log('Seed nearby skipped:', e)
-            );
-        }
-
-        // Step 3: Fetch fresh issues with retry logic
-        let fetchSuccess = false;
-        for (let attempt = 0; attempt <= MAP_RETRY_DELAYS.length; attempt++) {
-            try {
-                const { data } = await issuesAPI.getFeed();
-                const nextIssues = Array.isArray(data) ? data : [];
-                setIssues(nextIssues);
-                AsyncStorage.setItem('mapscreen:issues', JSON.stringify(nextIssues)).catch(() => {});
-                setError(null);
-                fetchSuccess = true;
-                break;
-            } catch (e) {
-                console.log(`Map fetch attempt ${attempt + 1} failed:`, e);
-                if (attempt < MAP_RETRY_DELAYS.length) {
-                    await delay(MAP_RETRY_DELAYS[attempt]);
-                }
-            }
-        }
-
-        if (!fetchSuccess && !hasCacheRef.current && issues.length === 0) {
+        if (nextIssues) {
+            setIssues(nextIssues);
+            AsyncStorage.setItem('mapscreen:issues', JSON.stringify(nextIssues)).catch(() => {});
+            setError(null);
+        } else if (!hasCacheRef.current) {
             setError('Could not load issues. Please check your connection.');
         }
 
@@ -285,10 +304,10 @@ export default function MapScreen({ navigation }: any) {
         }
 
         setLoading(false);
-    };
+    }, [fetchIssuesWithRetry, resolveUserCoords]);
 
     // Filter issues: only show those NEAR the user's GPS (within 50km)
-    const filteredIssues = issues.filter((i) => {
+    const filteredIssues = useMemo(() => issues.filter((i) => {
         if (!i?.location?.coordinates) return false;
         const catMatch = activeCategory === 'all' || i.category === activeCategory;
         const statusMatch = activeStatus === 'all' || i.status === activeStatus;
@@ -302,9 +321,9 @@ export default function MapScreen({ navigation }: any) {
             return dist <= NEARBY_RADIUS_KM;
         }
         return true; // No GPS, show all
-    });
+    }), [issues, activeCategory, activeStatus, userLocation]);
 
-    const handleLocateMe = async () => {
+    const handleLocateMe = useCallback(async () => {
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
@@ -318,11 +337,11 @@ export default function MapScreen({ navigation }: any) {
         } catch (e) {
             Alert.alert('Error', 'Could not detect your location.');
         }
-    };
+    }, []);
 
-    const getSeverityColor = (severity: string) => SEVERITY_COLORS[severity] || '#888';
+    const getSeverityColor = useCallback((severity: string) => SEVERITY_COLORS[severity] || '#888', []);
 
-    const getCategoryIcon = (cat: string) => {
+    const getCategoryIcon = useCallback((cat: string) => {
         switch (cat) {
             case 'roads': return 'car';
             case 'lighting': return 'bulb';
@@ -331,7 +350,11 @@ export default function MapScreen({ navigation }: any) {
             case 'parks': return 'leaf';
             default: return 'alert';
         }
-    };
+    }, []);
+
+    const filterBarStyle = useMemo(() => ({ paddingHorizontal: 12, gap: 6 }), []);
+
+    const getIssueId = useCallback((issue: any) => issue?._id || issue?.id, []);
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -366,7 +389,7 @@ export default function MapScreen({ navigation }: any) {
                     data={CATEGORIES}
                     keyExtractor={(c) => c.id}
                     showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingHorizontal: 12, gap: 6 }}
+                    contentContainerStyle={filterBarStyle}
                     renderItem={({ item }) => (
                         <TouchableOpacity
                             style={[styles.filterChip, activeCategory === item.id && styles.filterChipActive]}
@@ -427,7 +450,7 @@ export default function MapScreen({ navigation }: any) {
                         {/* Heatmap Density Circles */}
                         {showHeatmap && filteredIssues.map((issue) => (
                             <Circle
-                                key={`heat-${issue._id}`}
+                                key={`heat-${getIssueId(issue)}`}
                                 center={{
                                     latitude: issue.location.coordinates[1],
                                     longitude: issue.location.coordinates[0],
@@ -456,7 +479,7 @@ export default function MapScreen({ navigation }: any) {
                         {/* Issue Markers */}
                         {filteredIssues.map((issue) => (
                             <Marker
-                                key={issue._id}
+                                key={getIssueId(issue)}
                                 coordinate={{
                                     latitude: issue.location.coordinates[1],
                                     longitude: issue.location.coordinates[0],
@@ -530,7 +553,7 @@ export default function MapScreen({ navigation }: any) {
                     <TouchableOpacity
                         style={styles.issueCard}
                         activeOpacity={0.95}
-                        onPress={() => navigation.navigate('IssueDetail', { issueId: selectedIssue._id })}
+                        onPress={() => navigation.navigate('IssueDetail', { issueId: getIssueId(selectedIssue) })}
                     >
                         <View style={[styles.cardGlow, { backgroundColor: getSeverityColor(selectedIssue.aiSeverity) }]} />
                         <View style={styles.cardContent}>
@@ -583,6 +606,17 @@ export default function MapScreen({ navigation }: any) {
                     </TouchableOpacity>
                 </View>
             )}
+
+            {/* AI Chatbot FAB */}
+            <TouchableOpacity
+                style={styles.chatFab}
+                onPress={() => navigation.navigate('Chatbot')}
+                activeOpacity={0.85}
+            >
+                <LinearGradient colors={['#0A84FF', '#0055CC']} style={styles.chatFabGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                    <Ionicons name="chatbubble-ellipses" size={22} color="#FFF" />
+                </LinearGradient>
+            </TouchableOpacity>
         </View>
     );
 }
@@ -716,5 +750,14 @@ const styles = StyleSheet.create({
         position: 'absolute', top: 6, right: 6,
         width: 24, height: 24, borderRadius: 12,
         backgroundColor: colors.surfaceLight, justifyContent: 'center', alignItems: 'center',
+    },
+    chatFab: {
+        position: 'absolute', bottom: 84, right: 16, zIndex: 90,
+        shadowColor: '#0A84FF', shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4, shadowRadius: 8, elevation: 8,
+    },
+    chatFabGradient: {
+        width: 52, height: 52, borderRadius: 16,
+        justifyContent: 'center', alignItems: 'center',
     },
 });
