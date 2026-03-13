@@ -11,6 +11,7 @@ import { colors, fonts, radius } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { getCurrentLocation, UserLocation, checkLocationPermission } from '../../services/locationService';
 import logger from '../../utils/logger';
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 const { width } = Dimensions.get('window');
 
@@ -103,10 +104,7 @@ export default function LocationSetupScreen() {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
-            <LinearGradient
-                colors={['#060610', '#0D1B2A', '#0A0A14']}
-                style={StyleSheet.absoluteFill}
-            />
+            <AuthCanvas />
 
             {/* Subtle glow */}
             <View style={styles.bgGlow} />
@@ -274,7 +272,7 @@ const styles = StyleSheet.create({
         top: '10%', left: '10%',
         width: width * 0.8, height: width * 0.8,
         borderRadius: width * 0.4,
-        backgroundColor: 'rgba(0,122,255,0.04)',
+        backgroundColor: 'rgba(0,122,255,0.03)',
     },
     content: { flex: 1, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' },
     iconOuter: { marginBottom: 24, alignItems: 'center', justifyContent: 'center' },

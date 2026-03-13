@@ -2,7 +2,7 @@
  * NotificationsScreen — Real-time notifications with swipe-to-delete,
  * tap-to-mark-read, clear all, and auto-polling.
  */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
@@ -13,6 +13,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { notificationsAPI } from '../../services/api';
 import { colors, fonts, radius } from '../../theme/colors';
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = -80;
@@ -121,6 +122,16 @@ function SwipeableNotifCard({ item, onDelete, onTap }: {
     );
 }
 
+function getTimeAgo(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+}
+
 export default function NotificationsScreen() {
     const insets = useSafeAreaInsets();
     const isFocused = useIsFocused();
@@ -132,18 +143,28 @@ export default function NotificationsScreen() {
     const pendingDeleteRef = useRef<Set<string>>(new Set());
     const pendingMarkAllRef = useRef(false);
     const pendingClearAllRef = useRef(false);
+    const fetchingRef = useRef(false);
 
-    const getTimeAgo = (dateStr: string) => {
-        const diff = Date.now() - new Date(dateStr).getTime();
-        const mins = Math.floor(diff / 60000);
-        if (mins < 1) return 'just now';
-        if (mins < 60) return `${mins}m ago`;
-        const hrs = Math.floor(mins / 60);
-        if (hrs < 24) return `${hrs}h ago`;
-        return `${Math.floor(hrs / 24)}d ago`;
-    };
+    const hydrateFromCache = useCallback(async () => {
+        try {
+            const cached = await AsyncStorage.getItem(NOTIF_CACHE_KEY);
+            if (!cached) return false;
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed?.notifications)) {
+                setNotifications(parsed.notifications);
+            }
+            if (typeof parsed?.unreadCount === 'number') {
+                setUnreadCount(parsed.unreadCount);
+            }
+            return true;
+        } catch {
+            return false;
+        }
+    }, []);
 
     const fetchNotifs = useCallback(async () => {
+        if (fetchingRef.current) return;
+        fetchingRef.current = true;
         try {
             const { data } = await notificationsAPI.getAll();
             const mapped = (data.notifications || []).map((n: any) => ({
@@ -158,24 +179,30 @@ export default function NotificationsScreen() {
             );
         } catch (e) {
             console.log('Notif error:', e);
-            try {
-                const cached = await AsyncStorage.getItem(NOTIF_CACHE_KEY);
-                if (!cached) return;
-                const parsed = JSON.parse(cached);
-                if (Array.isArray(parsed?.notifications)) {
-                    setNotifications(parsed.notifications);
-                }
-                if (typeof parsed?.unreadCount === 'number') {
-                    setUnreadCount(parsed.unreadCount);
-                }
-            } catch {}
+            await hydrateFromCache();
+        } finally {
+            fetchingRef.current = false;
         }
-    }, []);
+    }, [hydrateFromCache]);
 
-    // Initial load
+    // Initial load: show cache instantly, then refresh in background
     useEffect(() => {
-        fetchNotifs().finally(() => setLoading(false));
-    }, []);
+        let mounted = true;
+        (async () => {
+            const hadCache = await hydrateFromCache();
+            if (mounted && hadCache) {
+                setLoading(false);
+            }
+            await fetchNotifs();
+            if (mounted) {
+                setLoading(false);
+            }
+        })();
+
+        return () => {
+            mounted = false;
+        };
+    }, [fetchNotifs, hydrateFromCache]);
 
     // Auto-poll when screen is focused
     useEffect(() => {
@@ -197,13 +224,13 @@ export default function NotificationsScreen() {
         return () => clearInterval(interval);
     }, [isFocused]);
 
-    const onRefresh = async () => {
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await fetchNotifs();
         setRefreshing(false);
-    };
+    }, [fetchNotifs]);
 
-    const markAllRead = async () => {
+    const markAllRead = useCallback(async () => {
         if (pendingMarkAllRef.current || unreadCount === 0) return;
 
         pendingMarkAllRef.current = true;
@@ -222,9 +249,9 @@ export default function NotificationsScreen() {
         } finally {
             pendingMarkAllRef.current = false;
         }
-    };
+    }, [notifications, unreadCount]);
 
-    const handleTap = async (item: any) => {
+    const handleTap = useCallback(async (item: any) => {
         if (item.read || pendingMarkReadRef.current.has(item._id)) return;
 
         pendingMarkReadRef.current.add(item._id);
@@ -244,9 +271,9 @@ export default function NotificationsScreen() {
         } finally {
             pendingMarkReadRef.current.delete(item._id);
         }
-    };
+    }, []);
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = useCallback(async (id: string) => {
         if (pendingDeleteRef.current.has(id) || pendingClearAllRef.current) return;
 
         pendingDeleteRef.current.add(id);
@@ -265,9 +292,9 @@ export default function NotificationsScreen() {
         } finally {
             pendingDeleteRef.current.delete(id);
         }
-    };
+    }, [notifications, unreadCount]);
 
-    const handleClearAll = () => {
+    const handleClearAll = useCallback(() => {
         if (notifications.length === 0) return;
         Alert.alert(
             'Clear All Notifications',
@@ -298,14 +325,17 @@ export default function NotificationsScreen() {
                 },
             ],
         );
-    };
+    }, [notifications, unreadCount]);
 
-    const renderNotif = ({ item }: any) => (
+    const renderNotif = useCallback(({ item }: any) => (
         <SwipeableNotifCard item={item} onDelete={handleDelete} onTap={handleTap} />
-    );
+    ), [handleDelete, handleTap]);
+
+    const contentStyle = useMemo(() => ({ padding: 16, paddingBottom: 100 }), []);
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
+            <AuthCanvas />
             {/* Header */}
             <View style={styles.header}>
                 <View>
@@ -338,6 +368,7 @@ export default function NotificationsScreen() {
                 </View>
             )}
 
+            <View style={styles.contentSheet}>
             {loading ? (
                 <View style={styles.loadWrap}>
                     <ActivityIndicator size="large" color={colors.primary} />
@@ -347,7 +378,7 @@ export default function NotificationsScreen() {
                     data={notifications}
                     renderItem={renderNotif}
                     keyExtractor={i => i._id}
-                    contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+                    contentContainerStyle={contentStyle}
                     showsVerticalScrollIndicator={false}
                     removeClippedSubviews={true}
                     maxToRenderPerBatch={10}
@@ -373,12 +404,23 @@ export default function NotificationsScreen() {
                     }
                 />
             )}
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
+    contentSheet: {
+        flex: 1,
+        marginHorizontal: 10,
+        marginBottom: 8,
+        borderRadius: radius.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(15,18,32,0.72)',
+        overflow: 'hidden',
+    },
 
     /* Header */
     header: {

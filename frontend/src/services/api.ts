@@ -23,7 +23,7 @@ import logger from '../utils/logger';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ← CHANGE THIS to your PC's LAN IP if using a physical device
-const LAN_IP = '192.168.182.42'; // ← Your PC's LAN IP (auto-detected)
+const LAN_IP = '192.168.0.105'; // ← Your PC's LAN IP (auto-detected)
 const PROD_URL = 'https://urban-fix-ai.onrender.com';
 const USE_LOCAL_IN_PROD = false; // Set true if you want APK to hit local LAN IP
 const USE_PROD_ON_WEB = true;
@@ -45,20 +45,33 @@ logger.info('API', `Base URL: ${BASE}`);
 
 const api = axios.create({ baseURL: BASE + '/api', timeout: 20000 });
 
+let authTokenCache: string | null = null;
+let authTokenLoadPromise: Promise<string | null> | null = null;
+
+async function getAuthTokenCached() {
+  if (authTokenCache) return authTokenCache;
+  if (authTokenLoadPromise) return authTokenLoadPromise;
+
+  authTokenLoadPromise = AsyncStorage.getItem('token')
+    .then((token) => {
+      authTokenCache = token;
+      return token;
+    })
+    .finally(() => {
+      authTokenLoadPromise = null;
+    });
+
+  return authTokenLoadPromise;
+}
+
+export function setApiAuthToken(token: string | null) {
+  authTokenCache = token;
+}
+
 // ── Request Interceptor: log + attach token ──
 api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('token');
+  const token = await getAuthTokenCached();
   if (token) config.headers.Authorization = `Bearer ${token}`;
-
-  if ((config.method || 'get').toLowerCase() === 'get') {
-    config.headers.set('Cache-Control', 'no-cache');
-    config.headers.set('Pragma', 'no-cache');
-    config.headers.set('Expires', '0');
-    config.params = {
-      ...(config.params || {}),
-      _ts: Date.now(),
-    };
-  }
 
   logger.apiReq(
     config.method || 'GET',
@@ -185,8 +198,6 @@ export const issuesAPI = {
     api.get(`/issues/${id}/comments`),
   addComment: (id: string, text: string) =>
     api.post(`/issues/${id}/comments`, { text }),
-  seedNearby: (latitude: number, longitude: number) =>
-    api.post('/issues/seed-nearby', { latitude, longitude }),
 };
 
 // ── WORKFLOWS (Admin) ──
@@ -234,6 +245,13 @@ export const gamificationAPI = {
   getLeaderboard: () => api.get('/gamification/leaderboard'),
   getBadges: () => api.get('/gamification/badges'),
   getStats: () => api.get('/gamification/stats'),
+};
+
+// ── CHATBOT ──
+export const chatbotAPI = {
+  sendMessage: (message: string, location?: { latitude: number; longitude: number }) =>
+    api.post('/chatbot/message', { message, location }),
+  getQuickActions: () => api.get('/chatbot/quick-actions'),
 };
 
 export default api;

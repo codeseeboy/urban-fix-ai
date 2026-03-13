@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { colors, radius } from '../../theme/colors';
 import logger from '../../utils/logger';
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 export default function OTPVerifyScreen({ route, navigation }: any) {
     const { email } = route.params || {};
@@ -87,7 +88,8 @@ export default function OTPVerifyScreen({ route, navigation }: any) {
 
     return (
         <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
+            <AuthCanvas />
+            <Animated.View style={[styles.inner, styles.formCard, { opacity: fadeAnim }]}>
 
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -144,6 +146,15 @@ export default function OTPVerifyScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, justifyContent: 'center' },
     inner: { paddingHorizontal: 28 },
+    formCard: {
+        marginHorizontal: 10,
+        borderRadius: radius.xl,
+        backgroundColor: 'rgba(15,18,32,0.72)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        paddingTop: 12,
+        paddingBottom: 20,
+    },
     backBtn: { position: 'absolute', top: -60, left: 28, zIndex: 10, padding: 8 },
     iconWrap: { alignItems: 'center', marginBottom: 24 },
     iconBg: { width: 72, height: 72, borderRadius: 24, justifyContent: 'center', alignItems: 'center', shadowColor: colors.primary, shadowOpacity: 0.3, shadowRadius: 10, elevation: 5 },

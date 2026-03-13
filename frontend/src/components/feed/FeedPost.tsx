@@ -5,8 +5,9 @@
  */
 import React, { useRef, useEffect, useState, useCallback, memo } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, Image, Dimensions,
+    View, Text, StyleSheet, TouchableOpacity, Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -142,7 +143,7 @@ function FeedPost({
                         >
                             {/* Avatar */}
                             {item.user?.avatar ? (
-                                <Image source={{ uri: item.user.avatar }} style={styles.avatar} />
+                                <Image source={{ uri: item.user.avatar }} style={styles.avatar} cachePolicy="memory-disk" contentFit="cover" />
                             ) : (
                                 <LinearGradient
                                     colors={isMunicipal ? ['#8B5CF6', '#6D28D9'] : [colors.primary, '#0055CC']}
@@ -210,6 +211,10 @@ function FeedPost({
                             <Image
                                 source={{ uri: item.image }}
                                 style={styles.postImage}
+                                contentFit="cover"
+                                cachePolicy="memory-disk"
+                                recyclingKey={item._id}
+                                transition={200}
                                 onLoad={() => setImageLoaded(true)}
                             />
 

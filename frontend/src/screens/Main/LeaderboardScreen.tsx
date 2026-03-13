@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { gamificationAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { colors, fonts, radius } from '../../theme/colors';
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 const { width } = Dimensions.get('window');
 
@@ -164,6 +165,7 @@ export default function LeaderboardScreen({ navigation }: any) {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
+            <AuthCanvas />
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
@@ -173,6 +175,7 @@ export default function LeaderboardScreen({ navigation }: any) {
                 <View style={{ width: 38 }} />
             </View>
 
+            <View style={styles.contentSheet}>
             {loading ? (
                 <View style={styles.loadWrap}>
                     <ActivityIndicator size="large" color={colors.primary} />
@@ -203,18 +206,30 @@ export default function LeaderboardScreen({ navigation }: any) {
                     }
                 />
             )}
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
+    contentSheet: {
+        flex: 1,
+        marginHorizontal: 10,
+        marginTop: 8,
+        borderRadius: radius.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(15,18,32,0.72)',
+        overflow: 'hidden',
+    },
 
     // Header
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: 16, paddingVertical: 12,
-        borderBottomWidth: 1, borderBottomColor: colors.border,
+        borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: 'rgba(12,15,28,0.76)',
     },
     backBtn: {
         width: 38, height: 38, borderRadius: 19,

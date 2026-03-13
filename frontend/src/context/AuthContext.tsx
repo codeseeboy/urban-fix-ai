@@ -1,10 +1,10 @@
-import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
-import { authAPI } from '../services/api';
+import { authAPI, setApiAuthToken } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { UserLocation, getStoredLocation, saveLocation, clearStoredLocation } from '../services/locationService';
 import logger from '../utils/logger';
@@ -205,6 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (stored) {
                 const parsed = JSON.parse(stored);
                 setUser(parsed);
+                setApiAuthToken(parsed.token || null);
                 // Register push token now that we have a user
                 registerForPushNotificationsAsync();
                 logger.success('Auth', `Restored session for: ${parsed.email} (role: ${parsed.role})`);
@@ -245,6 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             await AsyncStorage.setItem('token', data.token);
             await AsyncStorage.setItem('user', JSON.stringify(data));
+            setApiAuthToken(data.token || null);
             setUser(data);
 
             logger.success('Auth', `Supabase Login successful: ${data.name}`);
@@ -262,12 +264,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const login = async (email: string, password: string) => {
+    const login = useCallback(async (email: string, password: string) => {
         logger.action('Auth', `Login attempt for: ${email}`);
         try {
             const { data } = await authAPI.login(email, password);
             await AsyncStorage.setItem('token', data.token);
             await AsyncStorage.setItem('user', JSON.stringify(data));
+            setApiAuthToken(data.token || null);
             setUser(data);
             registerForPushNotificationsAsync();
             logger.success('Auth', `Login successful: ${data.name}`);
@@ -281,14 +284,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logger.error('Auth', msg);
             return { success: false, error: msg };
         }
-    };
+    }, []);
 
-    const register = async (name: string, email: string, password: string) => {
+    const register = useCallback(async (name: string, email: string, password: string) => {
         logger.action('Auth', `Register attempt: ${email}`);
         try {
             const { data } = await authAPI.register(name, email, password);
             await AsyncStorage.setItem('token', data.token);
             await AsyncStorage.setItem('user', JSON.stringify(data));
+            setApiAuthToken(data.token || null);
             setUser(data);
             setNeedsLocationSetup(true);
             registerForPushNotificationsAsync();
@@ -299,9 +303,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logger.error('Auth', msg);
             return { success: false, error: msg };
         }
-    };
+    }, []);
 
-    const loginWithOTP = async (email: string) => {
+    const loginWithOTP = useCallback(async (email: string) => {
         logger.action('Auth', `OTP Request: ${email}`);
         try {
             const { error } = await supabase.auth.signInWithOtp({
@@ -316,9 +320,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logger.error('Auth', 'OTP Request failed', e);
             return { success: false, error: e.message };
         }
-    };
+    }, []);
 
-    const verifyOTP = async (email: string, token: string) => {
+    const verifyOTP = useCallback(async (email: string, token: string) => {
         logger.action('Auth', `Verifying OTP for: ${email}`);
         try {
             const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
@@ -331,9 +335,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logger.error('Auth', 'OTP Verification failed', e);
             return { success: false, error: e.message };
         }
-    };
+    }, []);
 
-    const loginWithGoogle = async () => {
+    const loginWithGoogle = useCallback(async () => {
         logger.action('Auth', 'Initiating Google OAuth...');
         try {
             // Production APK: always use urbanfix:// scheme
@@ -434,9 +438,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logger.error('Auth', 'Google Login failed', e);
             return { success: false, error: e.message };
         }
-    };
+    }, []);
 
-    const logout = async () => {
+    const logout = useCallback(async () => {
         if (isLoggingOut.current) return;
         isLoggingOut.current = true;
 
@@ -446,6 +450,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await supabase.auth.signOut(); // Clear Supabase session
             await AsyncStorage.multiRemove(['token', 'user', 'locationSetupDone', 'profileSetupDone', 'onboardingDone']);
             await clearStoredLocation();
+            setApiAuthToken(null);
             setUser(null);
             setNeedsLocationSetup(false);
             setNeedsProfileSetup(false);
@@ -457,14 +462,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } finally {
             isLoggingOut.current = false;
         }
-    };
+    }, []);
 
-    const updateUserLocation = async (location: UserLocation) => {
+    const updateUserLocation = useCallback(async (location: UserLocation) => {
         setUserLocationState(location);
         await saveLocation(location);
-    };
+    }, []);
 
-    const completeLocationSetup = async (location?: UserLocation) => {
+    const completeLocationSetup = useCallback(async (location?: UserLocation) => {
         if (location) await updateUserLocation(location);
         await AsyncStorage.setItem('locationSetupDone', 'true');
         setNeedsLocationSetup(false);
@@ -473,9 +478,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!profileDone && !isProfileComplete(user || {})) {
             setNeedsProfileSetup(true);
         }
-    };
+    }, [user, updateUserLocation]);
 
-    const completeProfileSetup = async (data: any) => {
+    const completeProfileSetup = useCallback(async (data: any) => {
         if (user) {
             const updated = { ...user, ...data };
             setUser(updated);
@@ -483,28 +488,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         await AsyncStorage.setItem('profileSetupDone', 'true');
         setNeedsProfileSetup(false);
-    };
+    }, [user]);
 
-    const completeOnboarding = async () => {
+    const completeOnboarding = useCallback(async () => {
         await AsyncStorage.setItem('onboardingDone', 'true');
-    };
+    }, []);
 
-    const refreshProfile = async () => {
+    const refreshProfile = useCallback(async () => {
         // Implement profile refresh logic here
-    };
+    }, []);
 
     // Keep logoutRef updated (defined here to be after logout declaration)
     useEffect(() => {
         logoutRef.current = logout;
     }, [logout]);
 
+    const contextValue = useMemo(() => ({
+        user, loading, needsLocationSetup, needsProfileSetup, userLocation,
+        login, register, logout,
+        updateUserLocation, completeLocationSetup, completeProfileSetup, completeOnboarding, refreshProfile,
+        loginWithOTP, verifyOTP, loginWithGoogle
+    }), [user, loading, needsLocationSetup, needsProfileSetup, userLocation,
+        login, register, logout,
+        updateUserLocation, completeLocationSetup, completeProfileSetup, completeOnboarding, refreshProfile,
+        loginWithOTP, verifyOTP, loginWithGoogle]);
+
     return (
-        <AuthContext.Provider value={{
-            user, loading, needsLocationSetup, needsProfileSetup, userLocation,
-            login, register, logout,
-            updateUserLocation, completeLocationSetup, completeProfileSetup, completeOnboarding, refreshProfile,
-            loginWithOTP, verifyOTP, loginWithGoogle
-        }}>
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     );

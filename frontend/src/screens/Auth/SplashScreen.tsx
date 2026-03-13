@@ -1,241 +1,111 @@
 import React, { useEffect, useRef } from 'react';
-import {
-    View, Text, StyleSheet, Animated, Dimensions, Easing, Image,
-    ImageBackground, Platform
-} from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-    useFonts,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Inter_900Black
-} from '@expo-google-fonts/inter';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
-
-const { width, height } = Dimensions.get('window');
-
-// Particle configuration
-const PARTICLE_COUNT = 20;
-const PARTICLES = Array.from({ length: PARTICLE_COUNT }).map((_, i) => ({
-    id: i,
-    x: Math.random() * width,
-    y: Math.random() * height,
-    size: Math.random() * 3 + 1,
-    duration: Math.random() * 2000 + 1500,
-    delay: Math.random() * 1000,
-}));
-
-// Standalone Particle component (hooks must be in a component, not a loop)
-function Particle({ config }: { config: typeof PARTICLES[0] }) {
-    const anim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        const loop = Animated.loop(
-            Animated.sequence([
-                Animated.timing(anim, { toValue: 1, duration: config.duration / 2, useNativeDriver: true }),
-                Animated.timing(anim, { toValue: 0, duration: config.duration / 2, useNativeDriver: true }),
-            ])
-        );
-        const timer = setTimeout(() => loop.start(), config.delay);
-        return () => clearTimeout(timer);
-    }, []);
-
-    return (
-        <Animated.View
-            style={{
-                position: 'absolute',
-                left: config.x,
-                top: config.y,
-                width: config.size,
-                height: config.size,
-                backgroundColor: colors.primaryLight,
-                borderRadius: 2,
-                opacity: anim,
-            }}
-        />
-    );
-}
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 export default function SplashScreen() {
     const insets = useSafeAreaInsets();
 
     // ─── ANIMATIONS ─────────────────────────────────────────────────────────
-    const logoScale = useRef(new Animated.Value(0)).current;
+    const logoScale = useRef(new Animated.Value(0.8)).current;
     const logoOpacity = useRef(new Animated.Value(0)).current;
-    const textSlide = useRef(new Animated.Value(50)).current;
+    const textSlide = useRef(new Animated.Value(18)).current;
     const textOpacity = useRef(new Animated.Value(0)).current;
-    const subTextOpacity = useRef(new Animated.Value(0)).current;
-    const gridTranslateY = useRef(new Animated.Value(0)).current;
-    const pulseScale = useRef(new Animated.Value(1)).current;
-    const pulseOpacity = useRef(new Animated.Value(0.6)).current;
-
-    // Font loading check (managed in App.tsx but good to have safety here too)
-    const [fontsLoaded] = useFonts({
-        Inter_400Regular,
-        Inter_500Medium,
-        Inter_600SemiBold,
-        Inter_700Bold,
-        Inter_900Black,
-    });
+    const taglineOpacity = useRef(new Animated.Value(0)).current;
+    const ringScale = useRef(new Animated.Value(1)).current;
+    const ringOpacity = useRef(new Animated.Value(0.38)).current;
 
     useEffect(() => {
-        // 1. Grid movement loop (Infinite floor effect)
-        Animated.loop(
-            Animated.timing(gridTranslateY, {
-                toValue: 100, // Move down by one grid cell size
-                duration: 3000,
-                easing: Easing.linear,
-                useNativeDriver: true,
-            })
-        ).start();
-
-        // 2. Pulse effect loop
         Animated.loop(
             Animated.parallel([
                 Animated.sequence([
-                    Animated.timing(pulseScale, { toValue: 1.5, duration: 1500, useNativeDriver: true }),
-                    Animated.timing(pulseScale, { toValue: 1, duration: 0, useNativeDriver: true }),
+                    Animated.timing(ringScale, {
+                        toValue: 1.35,
+                        duration: 1400,
+                        easing: Easing.out(Easing.quad),
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(ringScale, { toValue: 1, duration: 0, useNativeDriver: true }),
                 ]),
                 Animated.sequence([
-                    Animated.timing(pulseOpacity, { toValue: 0, duration: 1500, useNativeDriver: true }),
-                    Animated.timing(pulseOpacity, { toValue: 0.6, duration: 0, useNativeDriver: true }),
-                ])
+                    Animated.timing(ringOpacity, { toValue: 0.06, duration: 1400, useNativeDriver: true }),
+                    Animated.timing(ringOpacity, { toValue: 0.38, duration: 0, useNativeDriver: true }),
+                ]),
             ])
         ).start();
 
-        // 3. Entrance Sequence
         Animated.sequence([
-            // Logo pop
             Animated.parallel([
                 Animated.spring(logoScale, {
                     toValue: 1,
-                    friction: 6,
-                    tension: 40,
+                    friction: 7,
+                    tension: 65,
                     useNativeDriver: true,
                 }),
-                Animated.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+                Animated.timing(logoOpacity, { toValue: 1, duration: 520, useNativeDriver: true }),
             ]),
-            // Text slide up
             Animated.parallel([
                 Animated.timing(textSlide, {
                     toValue: 0,
-                    duration: 800,
-                    easing: Easing.out(Easing.back(1.5)),
+                    duration: 450,
+                    easing: Easing.out(Easing.cubic),
                     useNativeDriver: true,
                 }),
-                Animated.timing(textOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+                Animated.timing(textOpacity, { toValue: 1, duration: 420, useNativeDriver: true }),
             ]),
-            // Subtext fade
-            Animated.timing(subTextOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+            Animated.timing(taglineOpacity, { toValue: 1, duration: 480, useNativeDriver: true }),
         ]).start();
-
-    }, []);
-
-    // ─── RENDERERS ──────────────────────────────────────────────────────────
-
-    // Grid lines generator
-    const renderGrid = () => {
-        return (
-            <Animated.View style={[
-                styles.gridContainer,
-                {
-                    transform: [
-                        { perspective: 800 },
-                        { rotateX: '60deg' },
-                        { translateY: gridTranslateY }
-                    ]
-                }
-            ]}>
-                {/* Horizontal lines */}
-                {Array.from({ length: 20 }).map((_, i) => (
-                    <View key={`h-${i}`} style={[styles.gridLine, { top: i * 50 - 500 }]} />
-                ))}
-                {/* Vertical lines */}
-                {Array.from({ length: 15 }).map((_, i) => (
-                    <View key={`v-${i}`} style={[styles.gridLineVertical, { left: i * 50 - width / 2 }]} />
-                ))}
-            </Animated.View>
-        );
-    };
-
-    // Particles rendered as separate components (hooks can't be in loops)
-    const renderParticles = () => PARTICLES.map((p) => <Particle key={p.id} config={p} />);
-
-    if (!fontsLoaded) return null;
+    }, [logoScale, logoOpacity, textSlide, textOpacity, taglineOpacity, ringScale, ringOpacity]);
 
     return (
         <View style={styles.container}>
-            {/* Background Gradient */}
-            <LinearGradient
-                colors={['#020205', '#0A0F1E', '#16213E']}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-            />
+            <AuthCanvas />
 
-            {/* 3D Perspective Grid Floor */}
-            <View style={styles.floorContainer}>
-                {renderGrid()}
-                <LinearGradient
-                    colors={['#020205', 'transparent']}
-                    style={StyleSheet.absoluteFill}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 0.6 }} // Fade grid into distance
-                />
-            </View>
-
-            {/* Floating Particles */}
-            {renderParticles()}
-
-            {/* Content Center */}
             <View style={styles.centerContent}>
-                {/* Pulse Ring */}
                 <Animated.View style={[
                     styles.pulseRing,
                     {
-                        transform: [{ scale: pulseScale }],
-                        opacity: pulseOpacity,
-                    }
+                        transform: [{ scale: ringScale }],
+                        opacity: ringOpacity,
+                    },
                 ]} />
 
-                {/* Logo Icon */}
                 <Animated.View style={[
                     styles.logoWrapper,
-                    { opacity: logoOpacity, transform: [{ scale: logoScale }] }
+                    { opacity: logoOpacity, transform: [{ scale: logoScale }] },
                 ]}>
-                    <View style={styles.logoGradient}>
+                    <LinearGradient
+                        colors={['rgba(0,122,255,0.22)', 'rgba(0,122,255,0.08)']}
+                        style={styles.logoGradient}
+                    >
                         <Image
                             source={require('../../../assets/logo.png')}
                             style={{ width: 80, height: 80, borderRadius: 40 }}
                             resizeMode="contain"
                         />
-                    </View>
+                    </LinearGradient>
                 </Animated.View>
 
-                {/* Text Group */}
                 <Animated.View style={{
                     opacity: textOpacity,
                     transform: [{ translateY: textSlide }],
                     alignItems: 'center',
-                    marginTop: 30
+                    marginTop: 26,
                 }}>
                     <Text style={styles.title} allowFontScaling={false}>
                         Urban<Text style={{ color: colors.primary }}>Fix</Text> AI
                     </Text>
 
-                    <Animated.Text style={[styles.subtitle, { opacity: subTextOpacity }]} allowFontScaling={false}>
-                        Civic Intelligence for Smart Cities
+                    <Animated.Text style={[styles.subtitle, { opacity: taglineOpacity }]} allowFontScaling={false}>
+                        Report smarter. Resolve faster.
                     </Animated.Text>
                 </Animated.View>
             </View>
 
-            {/* Bottom Branding */}
             <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 20 }]}>
-                <Text style={styles.version} allowFontScaling={false}>v1.0.0 Production Build</Text>
+                <Text style={styles.version} allowFontScaling={false}>UrbanFix AI • Civic Platform</Text>
             </View>
         </View>
     );
@@ -244,41 +114,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#020205',
-        overflow: 'hidden',
-    },
-    floorContainer: {
-        position: 'absolute',
-        bottom: -200,
-        width: width,
-        height: height * 0.6,
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: 0.3,
-    },
-    gridContainer: {
-        width: 1000,
-        height: 1000,
-        position: 'absolute',
-    },
-    gridLine: {
-        position: 'absolute',
-        left: 0, right: 0,
-        height: 1,
-        backgroundColor: colors.primary,
-        opacity: 0.5,
-    },
-    gridLineVertical: {
-        position: 'absolute',
-        top: -500, bottom: 0,
-        width: 1,
-        backgroundColor: colors.primary,
-        opacity: 0.3,
-    },
-    particle: {
-        position: 'absolute',
-        backgroundColor: colors.primaryLight,
-        borderRadius: 2,
+        backgroundColor: '#05070F',
     },
     centerContent: {
         flex: 1,
@@ -288,18 +124,18 @@ const styles = StyleSheet.create({
     },
     pulseRing: {
         position: 'absolute',
-        width: 180,
-        height: 180,
-        borderRadius: 90,
-        borderWidth: 1,
+        width: 170,
+        height: 170,
+        borderRadius: 85,
+        borderWidth: 1.2,
         borderColor: colors.primary,
-        backgroundColor: 'rgba(0,122,255,0.05)',
+        backgroundColor: 'rgba(0,122,255,0.07)',
     },
     logoWrapper: {
         shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.5,
-        shadowRadius: 20,
+        shadowOpacity: 0.42,
+        shadowRadius: 16,
         elevation: 15,
     },
     logoGradient: {
@@ -309,24 +145,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderColor: 'rgba(255,255,255,0.24)',
     },
     title: {
-        fontFamily: 'Inter_900Black',
-        fontSize: 42,
+        fontFamily: 'Inter_700Bold',
+        fontSize: 40,
         color: '#FFF',
         letterSpacing: -1,
-        textShadowColor: 'rgba(0,122,255,0.5)',
+        textShadowColor: 'rgba(0,122,255,0.35)',
         textShadowOffset: { width: 0, height: 4 },
-        textShadowRadius: 10,
+        textShadowRadius: 12,
     },
     subtitle: {
         fontFamily: 'Inter_500Medium',
-        fontSize: 14,
-        color: 'rgba(255,255,255,0.6)',
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.68)',
         marginTop: 8,
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
+        letterSpacing: 0.2,
     },
     bottomBar: {
         position: 'absolute',
@@ -337,6 +172,6 @@ const styles = StyleSheet.create({
     version: {
         fontFamily: 'Inter_400Regular',
         fontSize: 10,
-        color: 'rgba(255,255,255,0.2)',
+        color: 'rgba(255,255,255,0.28)',
     },
 });

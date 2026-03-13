@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { colors, fonts, radius } from '../../theme/colors';
 import logger from '../../utils/logger';
+import AuthCanvas from '../../components/auth/AuthCanvas';
 
 export default function MagicLinkScreen({ navigation, route }: any) {
     const insets = useSafeAreaInsets();
@@ -79,11 +80,12 @@ export default function MagicLinkScreen({ navigation, route }: any) {
     if (sent) {
         return (
             <View style={[styles.container, { paddingTop: insets.top }]}>
+                <AuthCanvas />
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                     <Ionicons name="arrow-back" size={24} color={colors.text} />
                 </TouchableOpacity>
 
-                <Animated.View style={[styles.inner, { opacity: fadeAnim }]}>
+                <Animated.View style={[styles.inner, styles.formCard, { opacity: fadeAnim }]}>
                     <View style={styles.successIcon}>
                         <LinearGradient colors={['#30D158', '#28B14C']} style={styles.successGradient}>
                             <Ionicons name="mail-open-outline" size={48} color="#FFF" />
@@ -128,6 +130,7 @@ export default function MagicLinkScreen({ navigation, route }: any) {
             style={[styles.container, { paddingTop: insets.top }]}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
+            <AuthCanvas />
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                 <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
@@ -135,6 +138,7 @@ export default function MagicLinkScreen({ navigation, route }: any) {
             <Animated.View
                 style={[
                     styles.inner,
+                    styles.formCard,
                     { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
                 ]}
             >
@@ -220,6 +224,16 @@ const styles = StyleSheet.create({
     inner: {
         flex: 1,
         paddingHorizontal: 28,
+        paddingTop: 20,
+    },
+    formCard: {
+        marginTop: 12,
+        marginHorizontal: 12,
+        borderRadius: radius.xl,
+        backgroundColor: 'rgba(15,18,32,0.72)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        paddingHorizontal: 20,
         paddingTop: 20,
     },
     iconWrap: {
