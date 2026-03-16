@@ -5,11 +5,11 @@
     "version": "1.1.0",
     "scheme": "urbanfix",
     "orientation": "portrait",
-    "icon": "./assets/logo.png",
+    "icon": "./assets/logo2.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/logo.png",
+      "image": "./assets/logo2.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
@@ -26,7 +26,7 @@
         }
       },
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.png",
+      "foregroundImage": "./assets/logo2.png",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
@@ -46,13 +46,13 @@
       ]
     },
     "web": {
-      "favicon": "./assets/logo.png"
+      "favicon": "./assets/logo2.png"
     },
     "plugins": [
       [
         "expo-notifications",
         {
-          "icon": "./assets/logo.png",
+          "icon": "./assets/logo2.png",
           "color": "#ffffff",
           "defaultChannel": "default",
           "enableBackgroundRemoteNotifications": true
