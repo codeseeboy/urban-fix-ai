@@ -62,6 +62,25 @@ router.get('/suggested', protect, async (req, res) => {
     }
 });
 
+// @desc    Get posts for a specific page
+// @route   GET /api/municipal/:id/posts
+// @access  Private
+router.get('/:id/posts', protect, async (req, res) => {
+    try {
+        const page = await store.getMunicipalPageById(req.params.id);
+        if (!page) return res.status(404).json({ message: 'Page not found' });
+
+        const issues = await store.getIssues(null, null, page.id, 'MunicipalPage', 50, 0);
+        res.json(issues.map(i => ({
+            ...i,
+            _id: i.id,
+            municipalPage: { _id: page.id, name: page.name, handle: page.handle, verified: page.verified },
+        })));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // @desc    Get page details
 // @route   GET /api/municipal/:id
 // @access  Private

@@ -93,6 +93,7 @@ export const municipalAPI = {
     api.patch(`/municipal/${id}`, data),
   createPost: (id: string, data: Record<string, unknown>) =>
     api.post(`/municipal/${id}/post`, data),
+  getPosts: (id: string) => api.get(`/municipal/${id}/posts`),
 };
 
 export default api;
