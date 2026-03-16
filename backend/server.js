@@ -26,6 +26,7 @@ app.use((req, res, next) => {
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+// Static serving kept only for legacy URLs; new uploads go to Supabase Storage
 app.use('/public', express.static(require('path').join(__dirname, 'public')));
 app.use(require('./middleware/requestLogger'));
 

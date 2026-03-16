@@ -4,16 +4,13 @@ const { protect } = require('../middleware/authMiddleware');
 const store = require('../data/store');
 const NotificationService = require('../services/notificationService');
 const upload = require('../config/multer');
+const { uploadFile } = require('../config/storage');
 
 // Helper: resolve image path to full URL
-const PORT = process.env.PORT || 5000;
-function resolveImageUrl(path, req) {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    let protocol = req ? req.protocol : 'http';
-    if (req && req.get('x-forwarded-proto') === 'https') protocol = 'https';
-    const host = req ? `${protocol}://${req.get('host')}` : `http://localhost:${PORT}`;
-    return `${host}${path}`;
+function resolveImageUrl(imgPath) {
+    if (!imgPath) return null;
+    if (imgPath.startsWith('http')) return imgPath;
+    return null;
 }
 
 function getTimeAgo(dateStr) {
@@ -67,7 +64,7 @@ async function enrichIssue(issue, req, options = {}) {
         user: author,
         title: issue.title,
         description: issue.description,
-        image: resolveImageUrl(issue.image, req),
+        image: resolveImageUrl(issue.image),
         video: issue.video,
         location: {
             type: 'Point',
@@ -219,12 +216,12 @@ router.post('/seed-nearby', async (req, res) => {
         seededLocations.add(areaKey);
 
         const NEARBY_ISSUES = [
-            { title: 'Pothole on nearby road — Risk of accident', desc: 'A deep pothole has formed on the main road causing vehicles to swerve dangerously.', cat: 'roads', sev: 'High', dept: 'Roads', img: '/public/images/pothole.jpg' },
-            { title: 'Streetlight not working — Dark zone at night', desc: 'The streetlight near the junction has been non-functional for over a week.', cat: 'lighting', sev: 'Medium', dept: 'Electricity', img: '/public/images/streetlight.webp' },
-            { title: 'Garbage dump overflowing — Stench & flies', desc: 'The community garbage bin has not been cleared for 5 days.', cat: 'trash', sev: 'Critical', dept: 'Sanitation', img: '/public/images/garbage.avif' },
-            { title: 'Water pipe leaking — Wastage on street', desc: 'A major water pipe is leaking continuously near the residential block.', cat: 'water', sev: 'High', dept: 'Water', img: '/public/images/burst-pipe.jpg' },
-            { title: 'Broken park bench — Unsafe for elderly', desc: 'The wooden bench in the park has broken slats exposing nails.', cat: 'parks', sev: 'Low', dept: 'Public Works', img: '/public/images/brokenfootpath.jpg' },
-            { title: 'Open manhole — Extreme danger to pedestrians', desc: 'An uncovered manhole on the footpath is an extreme hazard.', cat: 'roads', sev: 'Critical', dept: 'Roads', img: '/public/images/pothole.jpg', emergency: true },
+            { title: 'Pothole on nearby road — Risk of accident', desc: 'A deep pothole has formed on the main road causing vehicles to swerve dangerously.', cat: 'roads', sev: 'High', dept: 'Roads', img: null },
+            { title: 'Streetlight not working — Dark zone at night', desc: 'The streetlight near the junction has been non-functional for over a week.', cat: 'lighting', sev: 'Medium', dept: 'Electricity', img: null },
+            { title: 'Garbage dump overflowing — Stench & flies', desc: 'The community garbage bin has not been cleared for 5 days.', cat: 'trash', sev: 'Critical', dept: 'Sanitation', img: null },
+            { title: 'Water pipe leaking — Wastage on street', desc: 'A major water pipe is leaking continuously near the residential block.', cat: 'water', sev: 'High', dept: 'Water', img: null },
+            { title: 'Broken park bench — Unsafe for elderly', desc: 'The wooden bench in the park has broken slats exposing nails.', cat: 'parks', sev: 'Low', dept: 'Public Works', img: null },
+            { title: 'Open manhole — Extreme danger to pedestrians', desc: 'An uncovered manhole on the footpath is an extreme hazard.', cat: 'roads', sev: 'Critical', dept: 'Roads', img: null, emergency: true },
         ];
 
         const statuses = ['Submitted', 'Acknowledged', 'InProgress', 'Submitted', 'Submitted', 'Submitted'];
@@ -337,18 +334,17 @@ router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name:
 
         if (!title) return res.status(400).json({ message: 'Title is required' });
 
-        // Handle File Uploads
-        let imagePath = req.body.image; // Fallback if regular JSON
+        // Upload files to Supabase Storage (no local disk)
+        let imagePath = req.body.image || null;
         if (req.files && req.files.image && req.files.image[0]) {
-            // Store relative path like '/public/uploads/filename.jpg'
-            imagePath = `/public/uploads/${req.files.image[0].filename}`;
-        } else if (!imagePath) {
-            imagePath = '/public/images/pothole.jpg'; // default
+            const uploaded = await uploadFile(req.files.image[0]);
+            if (uploaded) imagePath = uploaded;
         }
 
-        let videoPath = req.body.video;
+        let videoPath = req.body.video || null;
         if (req.files && req.files.video && req.files.video[0]) {
-            videoPath = `/public/uploads/${req.files.video[0].filename}`;
+            const uploaded = await uploadFile(req.files.video[0]);
+            if (uploaded) videoPath = uploaded;
         }
 
         // AI analysis (uses rule-based logic now; swap to ML models via services/ai/index.js)
