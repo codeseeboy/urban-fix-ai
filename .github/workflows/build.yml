@@ -40,7 +40,7 @@ jobs:
         run: cd frontend && npx expo prebuild --platform android --clean --no-install
 
       - name: Install React Native CLI
-        run: cd frontend && npm install --save-dev @react-native-community/cli @react-native-community/cli-platform-android
+        run: cd frontend && npm install --save-dev @react-native-community/cli @react-native-community/cli-platform-android @react-native/metro-config
 
       - name: Create assets directory
         run: mkdir -p frontend/android/app/src/main/assets
