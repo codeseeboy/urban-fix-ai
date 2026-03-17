@@ -9,24 +9,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v4
+
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      
-      - name: Setup Expo
-        run: npm install -g eas-cli expo-cli
-      
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Install dependencies
         run: cd frontend && npm install
-      
-      - name: Build APK
-        run: cd frontend && eas build --local --platform android --output=app.apk
-      
+
+      - name: Prebuild (generate native Android files)
+        run: cd frontend && npx expo prebuild --platform android --clean --no-install
+
+      - name: Make gradlew executable
+        run: chmod +x frontend/android/gradlew
+
+      - name: Build debug APK (no signing needed)
+        run: cd frontend/android && ./gradlew assembleDebug --no-daemon
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: frontend/app.apk
+          name: app-debug
+          path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
