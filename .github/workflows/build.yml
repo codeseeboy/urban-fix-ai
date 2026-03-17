@@ -39,14 +39,32 @@ jobs:
       - name: Prebuild (generate native Android files)
         run: cd frontend && npx expo prebuild --platform android --clean --no-install
 
+      - name: Create assets directory
+        run: mkdir -p frontend/android/app/src/main/assets
+
+      - name: Bundle JS for release
+        run: |
+          cd frontend
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+
+      - name: Remove duplicate drawable resources
+        run: |
+          cd frontend/android/app/src/main/res
+          find . -name "*.png" -path "*/drawable-*" -delete 2>/dev/null || true
+
       - name: Make gradlew executable
         run: chmod +x frontend/android/gradlew
 
-      - name: Build debug APK (no signing needed)
-        run: cd frontend/android && ./gradlew assembleDebug --no-daemon
+      - name: Build release APK
+        run: cd frontend/android && ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          name: urbanfix-release
+          path: frontend/android/app/build/outputs/apk/release/app-release.apk
