@@ -26,7 +26,7 @@
         }
       },
       "adaptiveIcon": {
-      "foregroundImage": "./assets/logo2.png",
+        "foregroundImage": "./assets/logo2.png",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
@@ -41,7 +41,10 @@
               "pathPrefix": "/callback"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -60,7 +63,8 @@
       ],
       [
         "expo-web-browser"
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "eas": {
