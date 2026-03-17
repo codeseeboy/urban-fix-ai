@@ -36,8 +36,11 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm install
 
-      - name: Prebuild (generate native Android files)
+      - name: Prebuild
         run: cd frontend && npx expo prebuild --platform android --clean --no-install
+
+      - name: Install React Native CLI
+        run: cd frontend && npm install --save-dev @react-native-community/cli @react-native-community/cli-platform-android
 
       - name: Create assets directory
         run: mkdir -p frontend/android/app/src/main/assets
@@ -45,26 +48,18 @@ jobs:
       - name: Bundle JS for release
         run: |
           cd frontend
-          npx react-native bundle \
-            --platform android \
-            --dev false \
-            --entry-file index.js \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res
-
-      - name: Remove duplicate drawable resources
-        run: |
-          cd frontend/android/app/src/main/res
-          find . -name "*.png" -path "*/drawable-*" -delete 2>/dev/null || true
+          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
 
       - name: Make gradlew executable
         run: chmod +x frontend/android/gradlew
 
-      - name: Build release APK
-        run: cd frontend/android && ./gradlew assembleRelease --no-daemon
+      - name: Build debug APK with embedded bundle
+        run: cd frontend/android && ./gradlew assembleDebug --no-daemon
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: urbanfix-release
-          path: frontend/android/app/build/outputs/apk/release/app-release.apk
+          name: urbanfix-apk
+          path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
