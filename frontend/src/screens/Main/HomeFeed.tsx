@@ -481,6 +481,8 @@ export default function HomeFeed({ navigation }: any) {
 
         pendingUpvotesRef.current.add(issueId);
         let previousIssue: any = null;
+        let shouldRemoveDownvote = false;
+        let shouldAddUpvote = false;
 
         setIssues(prev => prev.map(i => {
             if (i._id !== issueId) return i;
@@ -490,10 +492,24 @@ export default function HomeFeed({ navigation }: any) {
             const nextUpvotes = isUpvoted
                 ? currentUpvotes.filter((u: string) => u !== user._id)
                 : [...new Set([...currentUpvotes, user._id])];
-            return { ...i, upvotes: nextUpvotes };
+
+            const currentDownvotes = Array.isArray(i.downvotes) ? i.downvotes : [];
+            const isDownvoted = currentDownvotes.includes(user._id);
+            shouldAddUpvote = !isUpvoted;
+            shouldRemoveDownvote = !isUpvoted && isDownvoted;
+            const nextDownvotes = shouldRemoveDownvote
+                ? currentDownvotes.filter((u: string) => u !== user._id)
+                : currentDownvotes;
+
+            return { ...i, upvotes: nextUpvotes, downvotes: nextDownvotes };
         }));
 
         try {
+            // Enforce mutual exclusivity: if we are adding an upvote and the user had downvoted,
+            // remove downvote first, then upvote.
+            if (shouldRemoveDownvote) {
+                await issuesAPI.downvote(issueId);
+            }
             await issuesAPI.upvote(issueId);
         } catch (e) {
             if (isTransientNetworkError(e)) {
@@ -513,6 +529,8 @@ export default function HomeFeed({ navigation }: any) {
 
         pendingDownvotesRef.current.add(issueId);
         let previousIssue: any = null;
+        let shouldRemoveUpvote = false;
+        let shouldAddDownvote = false;
 
         setIssues(prev => prev.map(i => {
             if (i._id !== issueId) return i;
@@ -522,10 +540,24 @@ export default function HomeFeed({ navigation }: any) {
             const nextDownvotes = isDownvoted
                 ? currentDownvotes.filter((u: string) => u !== user._id)
                 : [...new Set([...currentDownvotes, user._id])];
-            return { ...i, downvotes: nextDownvotes };
+
+            const currentUpvotes = Array.isArray(i.upvotes) ? i.upvotes : [];
+            const isUpvoted = currentUpvotes.includes(user._id);
+            shouldAddDownvote = !isDownvoted;
+            shouldRemoveUpvote = !isDownvoted && isUpvoted;
+            const nextUpvotes = shouldRemoveUpvote
+                ? currentUpvotes.filter((u: string) => u !== user._id)
+                : currentUpvotes;
+
+            return { ...i, downvotes: nextDownvotes, upvotes: nextUpvotes };
         }));
 
         try {
+            // Enforce mutual exclusivity: if we are adding a downvote and the user had upvoted,
+            // remove upvote first, then downvote.
+            if (shouldRemoveUpvote) {
+                await issuesAPI.upvote(issueId);
+            }
             await issuesAPI.downvote(issueId);
         } catch (e) {
             if (isTransientNetworkError(e)) {

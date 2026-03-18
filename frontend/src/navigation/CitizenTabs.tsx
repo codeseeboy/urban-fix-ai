@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, DeviceEventEmitter } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -58,6 +58,16 @@ export default function CitizenTabs() {
             });
         });
         return () => { if (listenerRef.current) listenerRef.current.remove(); };
+    }, []);
+
+    // Keep tab badge in sync with Notifications screen actions (clear/mark read)
+    useEffect(() => {
+        const sub = DeviceEventEmitter.addListener('notif:unreadCount', (count: number) => {
+            const next = Math.max(0, Number(count) || 0);
+            setUnreadCount(next);
+            AsyncStorage.setItem('notif:unreadCount', String(next)).catch(() => {});
+        });
+        return () => sub.remove();
     }, []);
 
     return (

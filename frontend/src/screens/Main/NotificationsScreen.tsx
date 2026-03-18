@@ -6,11 +6,12 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-    ActivityIndicator, Animated, PanResponder, Alert, Dimensions,
+    ActivityIndicator, Animated, PanResponder, Alert, Dimensions, DeviceEventEmitter,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 import { notificationsAPI } from '../../services/api';
 import { colors, fonts, radius } from '../../theme/colors';
 import AuthCanvas from '../../components/auth/AuthCanvas';
@@ -239,12 +240,17 @@ export default function NotificationsScreen() {
 
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
         setUnreadCount(0);
+        AsyncStorage.setItem('notif:unreadCount', '0').catch(() => {});
+        DeviceEventEmitter.emit('notif:unreadCount', 0);
+        Notifications.setBadgeCountAsync(0).catch(() => {});
 
         try {
             await notificationsAPI.markAllRead();
         } catch (e) {
             setNotifications(previousNotifications);
             setUnreadCount(previousUnreadCount);
+            AsyncStorage.setItem('notif:unreadCount', String(previousUnreadCount)).catch(() => {});
+            DeviceEventEmitter.emit('notif:unreadCount', previousUnreadCount);
             console.log('Mark read error:', e);
         } finally {
             pendingMarkAllRef.current = false;
@@ -258,7 +264,13 @@ export default function NotificationsScreen() {
         setNotifications(prev => prev.map(n =>
             n._id === item._id ? { ...n, read: true } : n
         ));
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setUnreadCount(prev => {
+            const next = Math.max(0, prev - 1);
+            AsyncStorage.setItem('notif:unreadCount', String(next)).catch(() => {});
+            DeviceEventEmitter.emit('notif:unreadCount', next);
+            Notifications.setBadgeCountAsync(next).catch(() => {});
+            return next;
+        });
 
         try {
             await notificationsAPI.markRead(item._id);
@@ -266,7 +278,13 @@ export default function NotificationsScreen() {
             setNotifications(prev => prev.map(n =>
                 n._id === item._id ? { ...n, read: false } : n
             ));
-            setUnreadCount(prev => prev + 1);
+            setUnreadCount(prev => {
+                const next = prev + 1;
+                AsyncStorage.setItem('notif:unreadCount', String(next)).catch(() => {});
+                DeviceEventEmitter.emit('notif:unreadCount', next);
+                Notifications.setBadgeCountAsync(next).catch(() => {});
+                return next;
+            });
             console.log('Mark single read error:', e);
         } finally {
             pendingMarkReadRef.current.delete(item._id);
@@ -281,7 +299,15 @@ export default function NotificationsScreen() {
         const previousUnreadCount = unreadCount;
         const wasUnread = notifications.find(n => n._id === id && !n.read);
         setNotifications(prev => prev.filter(n => n._id !== id));
-        if (wasUnread) setUnreadCount(prev => Math.max(0, prev - 1));
+        if (wasUnread) {
+            setUnreadCount(prev => {
+                const next = Math.max(0, prev - 1);
+                AsyncStorage.setItem('notif:unreadCount', String(next)).catch(() => {});
+                DeviceEventEmitter.emit('notif:unreadCount', next);
+                Notifications.setBadgeCountAsync(next).catch(() => {});
+                return next;
+            });
+        }
 
         try {
             await notificationsAPI.deleteOne(id);
@@ -289,6 +315,9 @@ export default function NotificationsScreen() {
             console.log('Delete error:', e);
             setNotifications(previousNotifications);
             setUnreadCount(previousUnreadCount);
+            AsyncStorage.setItem('notif:unreadCount', String(previousUnreadCount)).catch(() => {});
+            DeviceEventEmitter.emit('notif:unreadCount', previousUnreadCount);
+            Notifications.setBadgeCountAsync(previousUnreadCount).catch(() => {});
         } finally {
             pendingDeleteRef.current.delete(id);
         }
@@ -312,12 +341,18 @@ export default function NotificationsScreen() {
 
                         setNotifications([]);
                         setUnreadCount(0);
+                        AsyncStorage.setItem('notif:unreadCount', '0').catch(() => {});
+                        DeviceEventEmitter.emit('notif:unreadCount', 0);
+                        Notifications.setBadgeCountAsync(0).catch(() => {});
                         try {
                             await notificationsAPI.deleteAll();
                         } catch (e) {
                             console.log('Clear all error:', e);
                             setNotifications(previousNotifications);
                             setUnreadCount(previousUnreadCount);
+                            AsyncStorage.setItem('notif:unreadCount', String(previousUnreadCount)).catch(() => {});
+                            DeviceEventEmitter.emit('notif:unreadCount', previousUnreadCount);
+                            Notifications.setBadgeCountAsync(previousUnreadCount).catch(() => {});
                         } finally {
                             pendingClearAllRef.current = false;
                         }
