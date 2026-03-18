@@ -62,7 +62,11 @@ export default function MunicipalProfileScreen({ route, navigation }: any) {
             // Fetch posts by this municipal page
             try {
                 const postsRes = await api.get('/issues', { params: { municipalPageId: pageId } });
-                setPosts(Array.isArray(postsRes.data) ? postsRes.data : []);
+                const arr = Array.isArray(postsRes.data) ? postsRes.data : [];
+                setPosts(arr.map((p: any) => ({
+                    ...p,
+                    _id: p._id || p.id,
+                })).filter((p: any) => !!p._id));
             } catch (err) {
                 console.log('Error fetching page posts:', err);
             }
@@ -214,7 +218,7 @@ export default function MunicipalProfileScreen({ route, navigation }: any) {
                                         key={post._id}
                                         style={styles.galleryCard}
                                         activeOpacity={0.85}
-                                        onPress={() => navigation.navigate('IssueDetail', { issueId: post._id })}
+                                        onPress={() => navigation.navigate('IssueDetail', { issueId: post._id || post.id })}
                                     >
                                         {post.image ? (
                                             <Image source={{ uri: post.image }} style={styles.galleryImage} />
