@@ -137,9 +137,19 @@ export default function IssueDetailScreen({ route, navigation }: any) {
             ? currentUpvotes.filter((u: string) => u !== user._id)
             : [...new Set([...currentUpvotes, user._id])];
 
-        setIssue((prev: any) => ({ ...prev, upvotes: nextUpvotes }));
+        const currentDownvotes = Array.isArray(issue.downvotes) ? issue.downvotes : [];
+        const isDownvoted = currentDownvotes.includes(user._id);
+        const shouldRemoveDownvote = !isUpvoted && isDownvoted;
+        const nextDownvotes = shouldRemoveDownvote
+            ? currentDownvotes.filter((u: string) => u !== user._id)
+            : currentDownvotes;
+
+        setIssue((prev: any) => ({ ...prev, upvotes: nextUpvotes, downvotes: nextDownvotes }));
 
         try {
+            if (shouldRemoveDownvote) {
+                await issuesAPI.downvote(issueId);
+            }
             await issuesAPI.upvote(issueId);
         } catch (e) {
             if (isTransientNetworkError(e)) {
@@ -165,9 +175,19 @@ export default function IssueDetailScreen({ route, navigation }: any) {
             ? currentDownvotes.filter((u: string) => u !== user._id)
             : [...new Set([...currentDownvotes, user._id])];
 
-        setIssue((prev: any) => ({ ...prev, downvotes: nextDownvotes }));
+        const currentUpvotes = Array.isArray(issue.upvotes) ? issue.upvotes : [];
+        const isUpvoted = currentUpvotes.includes(user._id);
+        const shouldRemoveUpvote = !isDownvoted && isUpvoted;
+        const nextUpvotes = shouldRemoveUpvote
+            ? currentUpvotes.filter((u: string) => u !== user._id)
+            : currentUpvotes;
+
+        setIssue((prev: any) => ({ ...prev, downvotes: nextDownvotes, upvotes: nextUpvotes }));
 
         try {
+            if (shouldRemoveUpvote) {
+                await issuesAPI.upvote(issueId);
+            }
             await issuesAPI.downvote(issueId);
         } catch (e) {
             if (isTransientNetworkError(e)) {
@@ -252,11 +272,26 @@ export default function IssueDetailScreen({ route, navigation }: any) {
         }
     };
 
+    const normalized = React.useMemo(() => {
+        if (!issue) return null;
+        return {
+            ...issue,
+            _id: issue._id || issue.id,
+            // Support both camelCase and snake_case payloads
+            aiSeverity: issue.aiSeverity || issue.ai_severity || 'Low',
+            aiTags: issue.aiTags || issue.ai_tags || [],
+            priorityScore: typeof issue.priorityScore === 'number' ? issue.priorityScore : (issue.priority_score ?? 0),
+            timeAgo: issue.timeAgo || issue.time_ago || issue.createdAt || issue.created_at,
+            location: issue.location || { address: issue.location_address || issue.locationAddress || '' },
+        };
+    }, [issue]);
+
     const getSevColor = (s: string) => s === 'Critical' ? '#FF003C' : s === 'High' ? '#FF453A' : s === 'Medium' ? '#FFD60A' : '#30D158';
     const getStatusColor = (s: string) => s === 'Resolved' ? colors.success : s === 'InProgress' ? colors.primary : s === 'Acknowledged' ? colors.secondary : colors.warning;
 
     if (loading) return <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}><ActivityIndicator size="large" color={colors.primary} /></View>;
     if (!issue) return <View style={[styles.container, { paddingTop: insets.top }]}><Text style={styles.errorText}>Issue not found</Text></View>;
+    const viewIssue = normalized || issue;
 
     return (
         <KeyboardAvoidingView style={[styles.container, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -275,15 +310,15 @@ export default function IssueDetailScreen({ route, navigation }: any) {
             <View style={styles.contentSheet}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Image */}
-                {issue.image && (
+                {viewIssue.image && (
                     <View style={styles.imageWrap}>
-                        <Image source={{ uri: issue.image }} style={styles.image} />
+                        <Image source={{ uri: viewIssue.image }} style={styles.image} />
                         <View style={styles.imgOverlay}>
-                            <View style={[styles.sevBadge, { backgroundColor: getSevColor(issue.aiSeverity) }]}>
-                                <Text style={styles.sevText}>{issue.aiSeverity}</Text>
+                            <View style={[styles.sevBadge, { backgroundColor: getSevColor(viewIssue.aiSeverity) }]}>
+                                <Text style={styles.sevText}>{viewIssue.aiSeverity}</Text>
                             </View>
                         </View>
-                        {issue.emergency && (
+                        {viewIssue.emergency && (
                             <View style={styles.emergencyOverlay}>
                                 <Ionicons name="warning" size={14} color="#FFF" />
                                 <Text style={styles.emergencyText}>EMERGENCY</Text>
@@ -294,15 +329,15 @@ export default function IssueDetailScreen({ route, navigation }: any) {
 
                 <View style={styles.content}>
                     {/* Title + meta */}
-                    <Text style={styles.title}>{issue.title}</Text>
+                    <Text style={styles.title}>{viewIssue.title}</Text>
                     <View style={styles.metaRow}>
-                        <Text style={styles.metaText}>📍 {issue.location?.address || 'Unknown'}</Text>
-                        <Text style={styles.metaText}>• {issue.timeAgo}</Text>
+                        <Text style={styles.metaText}>📍 {viewIssue.location?.address || 'Unknown'}</Text>
+                        <Text style={styles.metaText}>• {viewIssue.timeAgo || ''}</Text>
                     </View>
 
                     {/* AI Tags */}
                     <View style={styles.tagsRow}>
-                        {issue.aiTags?.map((t: string, i: number) => (
+                        {(viewIssue.aiTags || [])?.map((t: string, i: number) => (
                             <View key={i} style={styles.tagChip}>
                                 <Text style={styles.tagText}>🤖 {t}</Text>
                             </View>
@@ -310,23 +345,23 @@ export default function IssueDetailScreen({ route, navigation }: any) {
                     </View>
 
                     {/* Description */}
-                    <Text style={styles.description}>{issue.description}</Text>
+                    <Text style={styles.description}>{viewIssue.description}</Text>
 
                     {/* Priority Bar */}
                     <View style={styles.priorityCard}>
                         <View style={styles.priorityHeader}>
                             <Text style={styles.priorityLabel}>Priority Score</Text>
-                            <Text style={styles.priorityValue}>{issue.priorityScore}/100</Text>
+                            <Text style={styles.priorityValue}>{viewIssue.priorityScore}/100</Text>
                         </View>
                         <View style={styles.priorityBar}>
                             <LinearGradient colors={['#30D158', '#FFD60A', '#FF453A']}
-                                style={[styles.priorityFill, { width: `${Math.min(100, issue.priorityScore)}%` }]}
+                                style={[styles.priorityFill, { width: `${Math.min(100, viewIssue.priorityScore)}%` }]}
                                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
                         </View>
                     </View>
 
                     {/* Resolution Proof (Before/After) */}
-                    {issue.status === 'Resolved' && issue.resolutionProof && (
+                    {viewIssue.status === 'Resolved' && viewIssue.resolutionProof && (
                         <View style={styles.resolutionCard}>
                             <View style={styles.resolutionHeader}>
                                 <Ionicons name="checkmark-seal" size={20} color={colors.success} />
@@ -334,33 +369,33 @@ export default function IssueDetailScreen({ route, navigation }: any) {
                             </View>
 
                             <View style={styles.comparisonRow}>
-                                <TouchableOpacity style={styles.compareItem} onPress={() => setPreviewImage(issue.image)}>
-                                    <Image source={{ uri: issue.image }} style={styles.compareImg} />
+                                <TouchableOpacity style={styles.compareItem} onPress={() => setPreviewImage(viewIssue.image)}>
+                                    <Image source={{ uri: viewIssue.image }} style={styles.compareImg} />
                                     <View style={styles.compareLabel}><Text style={styles.compareLabelText}>BEFORE</Text></View>
                                 </TouchableOpacity>
                                 <Ionicons name="arrow-forward" size={20} color={colors.textMuted} />
-                                <TouchableOpacity style={styles.compareItem} onPress={() => setPreviewImage(issue.resolutionProof.afterImage)}>
-                                    <Image source={{ uri: issue.resolutionProof.afterImage }} style={styles.compareImg} />
+                                <TouchableOpacity style={styles.compareItem} onPress={() => setPreviewImage(viewIssue.resolutionProof.afterImage)}>
+                                    <Image source={{ uri: viewIssue.resolutionProof.afterImage }} style={styles.compareImg} />
                                     <View style={[styles.compareLabel, { backgroundColor: colors.success }]}><Text style={styles.compareLabelText}>AFTER</Text></View>
                                 </TouchableOpacity>
                             </View>
 
                             <View style={styles.officialRemarkBox}>
                                 <View style={styles.remarkHeader}>
-                                    <Text style={styles.remarkDept}>Municipal {issue.departmentTag} Team</Text>
-                                    <Text style={styles.remarkTime}>{new Date(issue.resolutionProof.resolvedAt).toLocaleDateString()}</Text>
+                                    <Text style={styles.remarkDept}>Municipal {viewIssue.departmentTag} Team</Text>
+                                    <Text style={styles.remarkTime}>{new Date(viewIssue.resolutionProof.resolvedAt).toLocaleDateString()}</Text>
                                 </View>
-                                <Text style={styles.remarkText}>{issue.resolutionProof.workerRemarks}</Text>
+                                <Text style={styles.remarkText}>{viewIssue.resolutionProof.workerRemarks}</Text>
                             </View>
                         </View>
                     )}
 
                     {/* Status Timeline */}
                     <Text style={styles.sectionTitle}>Status Timeline</Text>
-                    {issue.statusTimeline?.map((s: any, i: number) => (
+                    {viewIssue.statusTimeline?.map((s: any, i: number) => (
                         <View key={i} style={styles.timelineItem}>
                             <View style={[styles.timelineDot, { backgroundColor: getStatusColor(s.status) }]} />
-                            {i < issue.statusTimeline.length - 1 && <View style={styles.timelineLine} />}
+                            {i < viewIssue.statusTimeline.length - 1 && <View style={styles.timelineLine} />}
                             <View style={[styles.timelineContent, s.dept && styles.officialTimeline]}>
                                 <View style={styles.timelineHeaderRow}>
                                     <Text style={styles.timelineStatus}>{s.status}</Text>

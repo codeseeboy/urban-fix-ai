@@ -103,6 +103,15 @@ function FeedPost({
         }, 250);
     }, [item, onUserPress]);
 
+    const runActionWithoutOpening = useCallback((fn: () => void) => {
+        // Prevent the parent single-tap gesture from navigating to details
+        blockSingleTapRef.current = true;
+        fn();
+        setTimeout(() => {
+            blockSingleTapRef.current = false;
+        }, 250);
+    }, []);
+
     const doubleTap = Gesture.Tap()
         .numberOfTaps(2)
         .maxDuration(250)
@@ -182,7 +191,7 @@ function FeedPost({
                                 onFollowPress && (
                                     <TouchableOpacity
                                         style={styles.followBtn}
-                                        onPress={() => onFollowPress(item)}
+                                        onPress={() => runActionWithoutOpening(() => onFollowPress(item))}
                                         activeOpacity={0.7}
                                     >
                                         <Text style={styles.followBtnText}>{item.isFollowingPage ? 'Following' : 'Follow'}</Text>
@@ -270,7 +279,7 @@ function FeedPost({
                             {/* Upvote */}
                             <TouchableOpacity
                                 style={styles.actionBtn}
-                                onPress={() => onUpvote(item._id)}
+                                onPress={() => runActionWithoutOpening(() => onUpvote(item._id))}
                                 activeOpacity={0.7}
                             >
                                 <Ionicons
@@ -288,7 +297,7 @@ function FeedPost({
                             {/* Comment */}
                             <TouchableOpacity
                                 style={styles.actionBtn}
-                                onPress={() => onComment(item._id)}
+                                onPress={() => runActionWithoutOpening(() => onComment(item._id))}
                                 activeOpacity={0.7}
                             >
                                 <Ionicons name="chatbubble-outline" size={22} color={colors.textSecondary} />
@@ -300,7 +309,7 @@ function FeedPost({
                             {/* Share */}
                             <TouchableOpacity
                                 style={styles.actionBtn}
-                                onPress={() => onShare(item)}
+                                onPress={() => runActionWithoutOpening(() => onShare(item))}
                                 activeOpacity={0.7}
                             >
                                 <Ionicons name="paper-plane-outline" size={22} color={colors.textSecondary} />

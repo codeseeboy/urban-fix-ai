@@ -5,11 +5,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LogBox } from 'react-native';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_900Black } from '@expo-google-fonts/inter';
 import { AuthProvider } from './src/context/AuthContext';
+import { useAuth } from './src/context/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import SplashScreen from './src/screens/Auth/SplashScreen';
 import ErrorBoundary from './src/components/ui/ErrorBoundary';
 
 import * as Notifications from 'expo-notifications';
+import * as ExpoSplashScreen from 'expo-splash-screen';
+
+// Keep native splash visible until app is ready (prevents grey flash)
+ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Suppress common non-critical warnings that can clutter logs
 LogBox.ignoreLogs([
@@ -75,23 +80,39 @@ export default function App() {
         };
     }, []);
 
-    if (!fontsLoaded) {
-        return (
-            <SafeAreaProvider>
-                <SplashScreen />
-            </SafeAreaProvider>
-        );
-    }
-
     return (
         <ErrorBoundary>
             <AuthProvider>
                 <SafeAreaProvider>
                     <StatusBar style="light" />
-                    <RootNavigator />
+                    <AppBoot fontsLoaded={fontsLoaded} />
                 </SafeAreaProvider>
             </AuthProvider>
         </ErrorBoundary>
     );
+}
+
+function AppBoot({ fontsLoaded }: { fontsLoaded: boolean }) {
+    const { loading } = useAuth();
+    const [ready, setReady] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!fontsLoaded) return;
+        if (loading) return;
+
+        // Allow 1 frame for layout to mount before hiding native splash
+        const t = setTimeout(() => {
+            ExpoSplashScreen.hideAsync().catch(() => {});
+            setReady(true);
+        }, 120);
+        return () => clearTimeout(t);
+    }, [fontsLoaded, loading]);
+
+    // Show the animated JS splash while bootstrapping (no grey flash)
+    if (!ready) {
+        return <SplashScreen />;
+    }
+
+    return <RootNavigator />;
 }
 
