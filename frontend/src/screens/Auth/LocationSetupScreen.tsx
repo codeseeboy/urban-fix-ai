@@ -360,9 +360,20 @@ const styles = StyleSheet.create({
     actionText: {
         fontFamily: 'Inter_700Bold', color: '#FFF', fontSize: 16, includeFontPadding: false,
     },
-    skipBtn: { marginBottom: 32 },
+    skipBtn: {
+        marginBottom: 28,
+        alignSelf: 'center',
+        backgroundColor: 'rgba(255,255,255,0.07)',
+        borderRadius: radius.lg,
+        paddingVertical: 12,
+        paddingHorizontal: 18,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
+    },
     skipText: {
-        fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.3)', fontSize: 14,
+        fontFamily: 'Inter_600SemiBold',
+        color: 'rgba(255,255,255,0.55)',
+        fontSize: 15,
         includeFontPadding: false,
     },
     features: { width: '100%', gap: 10 },

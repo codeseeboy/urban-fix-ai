@@ -29,7 +29,8 @@ const ICONS: Record<string, { name: string; color: string }> = {
     resolved: { name: 'checkmark-circle', color: colors.success },
 };
 
-const POLL_INTERVAL = 30000; // 30s auto-refresh (only when focused)
+    const POLL_INTERVAL = 30000; // 30s auto-refresh (only when focused)
+    const TIMEAGO_REFRESH_MS = 300000; // Update relative time every 5 minutes (performance)
 
 /* ── Swipeable notification card ── */
 function SwipeableNotifCard({ item, onDelete, onTap }: {
@@ -213,7 +214,7 @@ export default function NotificationsScreen() {
         return () => clearInterval(interval);
     }, [isFocused, fetchNotifs]);
 
-    // Refresh time-ago text every minute
+    // Refresh time-ago text every 5 minutes (performance)
     useEffect(() => {
         if (!isFocused) return;
         const interval = setInterval(() => {
@@ -221,7 +222,7 @@ export default function NotificationsScreen() {
                 ...n,
                 timeAgo: getTimeAgo(n.createdAt),
             })));
-        }, 60000);
+        }, TIMEAGO_REFRESH_MS);
         return () => clearInterval(interval);
     }, [isFocused]);
 

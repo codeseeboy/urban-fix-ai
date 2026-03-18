@@ -257,6 +257,43 @@ async function getIssueDownvotes(issueId) {
     return (result.data || []).map(u => u.user_id);
 }
 
+// Fetch upvoter/downvoter usernames (for "liked by" list UI)
+async function getIssueUpvoterUsernames(issueId) {
+    const userIds = await getIssueUpvotes(issueId);
+    if (!Array.isArray(userIds) || userIds.length === 0) return [];
+
+    // Avoid duplicates if junction table got inconsistent.
+    const uniqueIds = Array.from(new Set(userIds));
+
+    const { data } = await supabase
+        .from('users')
+        .select('id, username')
+        .in('id', uniqueIds);
+
+    const rows = data || [];
+    const byId = new Map(rows.map((u) => [u.id, u.username]));
+
+    // Keep stable order matching the junction rows we already have
+    return uniqueIds.map((id) => byId.get(id)).filter(Boolean);
+}
+
+async function getIssueDownvoterUsernames(issueId) {
+    const userIds = await getIssueDownvotes(issueId);
+    if (!Array.isArray(userIds) || userIds.length === 0) return [];
+
+    const uniqueIds = Array.from(new Set(userIds));
+
+    const { data } = await supabase
+        .from('users')
+        .select('id, username')
+        .in('id', uniqueIds);
+
+    const rows = data || [];
+    const byId = new Map(rows.map((u) => [u.id, u.username]));
+
+    return uniqueIds.map((id) => byId.get(id)).filter(Boolean);
+}
+
 async function toggleDownvote(issueId, userId) {
     const { data: existing } = await supabase
         .from('issue_downvotes')
@@ -356,6 +393,96 @@ async function createComment(commentData) {
     return withRetry(async () => {
         const result = await supabase.from('comments').insert(commentData).select('*').single();
         return handleError(result, 'createComment');
+    });
+}
+
+// ── Issue Reports (Group / Multi-reporter model) ──────────────────────────
+
+async function createIssueReport(reportData) {
+    return withRetry(async () => {
+        try {
+            const result = await supabase.from('issue_reports').insert(reportData).select('*').single();
+            return handleError(result, 'createIssueReport');
+        } catch (err) {
+            const msg = String(err?.message || err || '');
+            if (
+                msg.includes('issue_reports') ||
+                msg.includes('relation') ||
+                msg.includes('schema cache') ||
+                msg.includes('does not exist')
+            ) {
+                console.warn('createIssueReport fallback: table missing; skipping insert', msg);
+                return null;
+            }
+            throw err;
+        }
+    });
+}
+
+async function getIssueReports(groupIssueId) {
+    return withRetry(async () => {
+        try {
+            const result = await supabase
+                .from('issue_reports')
+                .select('*')
+                .eq('group_issue_id', groupIssueId)
+                .order('created_at', { ascending: false });
+
+            const reports = handleError(result, 'getIssueReports') || [];
+
+            // Enrich each report with reporter probity/impact score so the UI can show it.
+            const reporterIds = Array.from(
+                new Set(
+                    (reports || [])
+                        .map((r) => r.reporter_user_id)
+                        .filter(Boolean)
+                )
+            );
+
+            if (!reporterIds.length) return reports;
+
+            const { data: users } = await supabase
+                .from('users')
+                .select('id, name, role, points, impact_score')
+                .in('id', reporterIds);
+
+            const userById = new Map((users || []).map((u) => [u.id, u]));
+
+            return (reports || []).map((r) => {
+                const u = r.reporter_user_id ? userById.get(r.reporter_user_id) : null;
+                return {
+                    ...r,
+                    reporter_points: u?.points ?? null,
+                    reporter_impact_score: u?.impact_score ?? null,
+                    reporter_name: u?.name ?? null,
+                    reporter_role: u?.role ?? null,
+                };
+            });
+        } catch (err) {
+            // If migration wasn't applied and the table is missing,
+            // avoid crashing the whole Issue Details screen.
+            const msg = String(err?.message || err || '');
+            if (
+                msg.includes('issue_reports') ||
+                msg.includes('relation') ||
+                msg.includes('schema cache') ||
+                msg.includes('does not exist')
+            ) {
+                console.warn('getIssueReports fallback: table missing; returning empty', msg);
+                return [];
+            }
+            throw err;
+        }
+    });
+}
+
+async function getIssueReportsCount(groupIssueId) {
+    return withRetry(async () => {
+        const result = await supabase
+            .from('issue_reports')
+            .select('id', { count: 'exact', head: true })
+            .eq('group_issue_id', groupIssueId);
+        return result.count || 0;
     });
 }
 
@@ -738,6 +865,8 @@ module.exports = {
     getIssues, getIssueById, createIssue, updateIssue,
     getIssueUpvotes, toggleUpvote,
     getIssueDownvotes, toggleDownvote,
+    getIssueUpvoterUsernames, getIssueDownvoterUsernames,
+    createIssueReport, getIssueReports, getIssueReportsCount,
     getIssueFollowers, toggleIssueFollow,
     addStatusTimeline, getStatusTimeline,
     setResolutionProof, getResolutionProof,

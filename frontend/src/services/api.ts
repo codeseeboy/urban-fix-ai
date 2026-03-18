@@ -23,7 +23,7 @@ import logger from '../utils/logger';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ← CHANGE THIS to your PC's LAN IP if using a physical device
-const LAN_IP = '192.168.0.107'; // ← Your PC's LAN IP (auto-detected)
+const LAN_IP = '192.168.0.104'; // ← Your PC's LAN IP (auto-detected)
 const PROD_URL = 'https://urban-fix-ai.onrender.com';
 const USE_LOCAL_IN_PROD = false; // Set true if you want APK to hit local LAN IP
 const USE_PROD_ON_WEB = true;
@@ -155,6 +155,14 @@ export const issuesAPI = {
     api.post(`/issues/${id}/seen`),
   getById: (id: string) =>
     api.get(`/issues/${id}`),
+  getReports: (id: string) =>
+    api.get(`/issues/${id}/reports`),
+  getUpvoters: (id: string) =>
+    api.get(`/issues/${id}/upvoters`),
+  getDownvoters: (id: string) =>
+    api.get(`/issues/${id}/downvoters`),
+  duplicateCheck: (data: { title: string; description?: string; category?: string; emergency?: boolean; anonymous?: boolean; location: any }) =>
+    api.post('/issues/duplicate-check', data),
   create: async (data: { title: string; description?: string; image?: string; video?: string; location?: any; category?: string; anonymous?: boolean; emergency?: boolean }) => {
     const formData = new FormData();
     formData.append('title', data.title);
@@ -183,6 +191,39 @@ export const issuesAPI = {
     }
 
     return api.post('/issues', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  addReport: async (id: string, data: { title: string; description?: string; image?: string; video?: string; location?: any; category?: string; anonymous?: boolean; emergency?: boolean }) => {
+    const formData = new FormData();
+    formData.append('title', data.title);
+    if (data.description) formData.append('description', data.description);
+    if (data.category) formData.append('category', data.category);
+    if (data.anonymous !== undefined) formData.append('anonymous', String(data.anonymous));
+    if (data.emergency !== undefined) formData.append('emergency', String(data.emergency));
+    if (data.location) formData.append('location', JSON.stringify(data.location));
+
+    if (data.image) {
+      // @ts-ignore
+      formData.append('image', {
+        uri: data.image,
+        name: 'issue_image.jpg',
+        type: 'image/jpeg',
+      });
+    }
+
+    if (data.video) {
+      // @ts-ignore
+      formData.append('video', {
+        uri: data.video,
+        name: 'issue_video.mp4',
+        type: 'video/mp4',
+      });
+    }
+
+    return api.post(`/issues/${id}/add-report`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

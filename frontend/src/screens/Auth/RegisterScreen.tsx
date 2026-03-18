@@ -65,7 +65,7 @@ export default function RegisterScreen({ navigation }: any) {
                     <Text style={styles.logoText}>U</Text>
                 </LinearGradient>
                 <Text style={styles.title}>Create Account</Text>
-                <Text style={styles.subtitle}>Start reporting smarter with UrbanFix AI</Text>
+                <Text style={styles.subtitle}>Create your account to report and track updates.</Text>
 
                 <View style={styles.formCard}>
                     <View style={styles.inputWrap}>

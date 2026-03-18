@@ -16,22 +16,22 @@ const slides = [
     {
         id: '1',
         icon: 'camera-outline' as const,
-        title: 'Snap & Report',
-        subtitle: 'See a pothole, broken light, or garbage pile?\nJust snap a photo and our AI handles the rest.',
+        title: 'Report in seconds',
+        subtitle: 'Spot a pothole, broken light, or garbage pile?\nShare it in a few taps—done.',
         accent: '#007AFF',
     },
     {
         id: '2',
         icon: 'sparkles-outline' as const,
-        title: 'AI-Powered Analysis',
-        subtitle: 'Instant severity scoring, smart duplicate\ndetection and automatic department routing.',
+        title: 'Smarter routing',
+        subtitle: 'Updates are organized and routed to the right\nplace—so things move faster.',
         accent: '#FF6B35',
     },
     {
         id: '3',
         icon: 'business-outline' as const,
-        title: 'Direct to Authorities',
-        subtitle: 'Reports go straight to the right municipal\ndepartment. No middlemen, no delays.',
+        title: 'Direct to the right team',
+        subtitle: 'Reports go straight to the right municipal\ndepartment—no extra steps.',
         accent: '#30D158',
     },
     {
@@ -44,8 +44,8 @@ const slides = [
     {
         id: '5',
         icon: 'heart-outline' as const,
-        title: 'Build Smart Cities',
-        subtitle: 'Join thousands of citizens making their\nneighborhoods cleaner, safer and better.',
+        title: 'Make your area better',
+        subtitle: 'Join your community to keep neighborhoods\ncleaner, safer, and better.',
         accent: '#AF52DE',
     },
 ];
@@ -95,7 +95,7 @@ export default function OnboardingScreen({ navigation }: any) {
             {/* Skip */}
             <TouchableOpacity
                 onPress={handleSkip}
-                style={[styles.skipBtn, { top: insets.top + 12 }]}
+                style={[styles.skipBtn, { top: insets.top + 8 }]}
                 activeOpacity={0.7}
             >
                 <Text style={styles.skipText} allowFontScaling={false}>Skip</Text>
@@ -264,13 +264,16 @@ const styles = StyleSheet.create({
     // Skip button
     skipBtn: {
         position: 'absolute', right: 20, zIndex: 10,
-        paddingVertical: 8, paddingHorizontal: 16,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.06)',
+        paddingVertical: 10,
+        paddingHorizontal: 18,
+        borderRadius: 24,
+        backgroundColor: 'rgba(255,255,255,0.08)',
     },
     skipText: {
-        fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.4)',
-        fontSize: 14, includeFontPadding: false,
+        fontFamily: 'Inter_600SemiBold',
+        color: 'rgba(255,255,255,0.62)',
+        fontSize: 15,
+        includeFontPadding: false,
     },
 
     // Slide
