@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert, Dimensions, Platform, Animated, Easing } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
 import MapView, { Marker, Circle } from '../../components/map/MapView';
 import type { Region } from '../../components/map/MapView';
 import { Ionicons } from '@expo/vector-icons';
@@ -175,6 +176,7 @@ const shimmerStyles = StyleSheet.create({
 
 export default function MapScreen({ navigation }: any) {
     const insets = useSafeAreaInsets();
+    const isFocused = useIsFocused();
     const mapRef = useRef<MapView>(null);
     const [issues, setIssues] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -186,6 +188,7 @@ export default function MapScreen({ navigation }: any) {
     const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
     const hasCacheRef = useRef(false);
+    const lastFocusRefreshAtRef = useRef(0);
 
     const fetchIssuesWithRetry = useCallback(async () => {
         for (let attempt = 0; attempt <= MAP_RETRY_DELAYS.length; attempt++) {
@@ -306,22 +309,37 @@ export default function MapScreen({ navigation }: any) {
         setLoading(false);
     }, [fetchIssuesWithRetry, resolveUserCoords]);
 
+    // When user switches back to the Map tab, refresh so new issues appear.
+    useEffect(() => {
+        if (!isFocused) return;
+        const now = Date.now();
+        if (now - lastFocusRefreshAtRef.current < 15000) return;
+        lastFocusRefreshAtRef.current = now;
+        initMap().catch(() => {});
+    }, [isFocused, initMap]);
+
     // Filter issues: only show those NEAR the user's GPS (within 50km)
-    const filteredIssues = useMemo(() => issues.filter((i) => {
+    const baseFilteredIssues = useMemo(() => issues.filter((i) => {
         if (!i?.location?.coordinates) return false;
         const catMatch = activeCategory === 'all' || i.category === activeCategory;
         const statusMatch = activeStatus === 'all' || i.status === activeStatus;
-        if (!catMatch || !statusMatch) return false;
+        return catMatch && statusMatch;
+    }), [issues, activeCategory, activeStatus]);
 
+    const nearbyFilteredIssues = useMemo(() => {
         // If we have user location, only show nearby issues
-        if (userLocation) {
+        if (!userLocation) return baseFilteredIssues;
+        return baseFilteredIssues.filter((i) => {
             const issueLat = i.location.coordinates[1];
             const issueLon = i.location.coordinates[0];
             const dist = getDistanceKm(userLocation.latitude, userLocation.longitude, issueLat, issueLon);
             return dist <= NEARBY_RADIUS_KM;
-        }
-        return true; // No GPS, show all
-    }), [issues, activeCategory, activeStatus, userLocation]);
+        });
+    }, [baseFilteredIssues, userLocation]);
+
+    // If nearby filter hides everything, fall back to show all filtered issues.
+    // This prevents “newly created issue not showing on map” due to stale GPS cache.
+    const filteredIssues = nearbyFilteredIssues.length > 0 ? nearbyFilteredIssues : baseFilteredIssues;
 
     const handleLocateMe = useCallback(async () => {
         try {
@@ -436,6 +454,7 @@ export default function MapScreen({ navigation }: any) {
                         ref={mapRef}
                         style={styles.map}
                         initialRegion={userLocation ? { ...userLocation, latitudeDelta: 0.02, longitudeDelta: 0.02 } : { latitude: 28.6139, longitude: 77.209, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
+                        mapType="satellite"
                         showsUserLocation={true}
                         showsMyLocationButton={false}
                         showsCompass={false}

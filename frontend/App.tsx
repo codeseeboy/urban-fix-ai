@@ -12,6 +12,8 @@ import ErrorBoundary from './src/components/ui/ErrorBoundary';
 
 import * as Notifications from 'expo-notifications';
 import * as ExpoSplashScreen from 'expo-splash-screen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { navigationRef } from './src/navigation/navigationRef';
 
 // Keep native splash visible until app is ready (prevents grey flash)
 ExpoSplashScreen.preventAutoHideAsync().catch(() => {});
@@ -53,6 +55,37 @@ export default function App() {
     const notificationListener = React.useRef<any>(null);
     const responseListener = React.useRef<any>(null);
 
+    const handleNotificationResponse = React.useCallback(async (response: any) => {
+        try {
+            const data = response?.notification?.request?.content?.data || {};
+            const navigationTarget = data.navigationTarget || data.actionUrl || data.target || null;
+            const issueId = data.issueId || data.issueID || data.id || null;
+
+            const payload = {
+                navigationTarget,
+                issueId,
+                raw: data,
+            };
+
+            await AsyncStorage.setItem('pending:pushNav', JSON.stringify(payload));
+
+            // If navigation stack is already ready, try navigating right away.
+            // Otherwise, AppBoot will handle it when auth/setup is ready.
+            const target = String(navigationTarget || '');
+            if (navigationRef.isReady()) {
+                if (target === 'IssueDetails' || target === 'IssueDetail') {
+                    if (issueId) navigationRef.navigate('IssueDetail', { issueId: String(issueId) });
+                } else if (target === 'HomeFeed') {
+                    navigationRef.navigate('MainTabs', { screen: 'Feed' });
+                } else if (target) {
+                    navigationRef.navigate('MainTabs', { screen: 'Feed' });
+                }
+            }
+        } catch (e) {
+            console.log('Push navigation parse error:', e);
+        }
+    }, []);
+
     React.useEffect(() => {
         // Listen for incoming notifications (foreground)
         try {
@@ -63,8 +96,7 @@ export default function App() {
             // Listen for interaction (tap)
             responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
                 console.log('🖱️ Notification tapped:', response);
-                const data = response.notification.request.content.data;
-                // Handle navigation based on data
+                handleNotificationResponse(response);
             });
         } catch (e) {
             console.log('Notification listener setup error:', e);
@@ -78,7 +110,21 @@ export default function App() {
                 // Cleanup errors are non-critical
             }
         };
-    }, []);
+    }, [handleNotificationResponse]);
+
+    // Handle cold start from notification tap (app was killed)
+    React.useEffect(() => {
+        (async () => {
+            try {
+                const lastResponse = await Notifications.getLastNotificationResponseAsync();
+                if (lastResponse) {
+                    await handleNotificationResponse(lastResponse);
+                }
+            } catch {
+                // Non-critical (method may differ by platform/version)
+            }
+        })();
+    }, [handleNotificationResponse]);
 
     return (
         <ErrorBoundary>
@@ -93,7 +139,7 @@ export default function App() {
 }
 
 function AppBoot({ fontsLoaded }: { fontsLoaded: boolean }) {
-    const { loading } = useAuth();
+    const { loading, user, needsLocationSetup, needsProfileSetup } = useAuth();
     const [ready, setReady] = React.useState(false);
 
     React.useEffect(() => {
@@ -107,6 +153,36 @@ function AppBoot({ fontsLoaded }: { fontsLoaded: boolean }) {
         }, 120);
         return () => clearTimeout(t);
     }, [fontsLoaded, loading]);
+
+    // After auth/setup is ready, process any pending notification tap navigation.
+    React.useEffect(() => {
+        if (!ready) return;
+        if (loading) return;
+        if (!user) return;
+        if (needsLocationSetup || needsProfileSetup) return;
+
+        (async () => {
+            try {
+                const raw = await AsyncStorage.getItem('pending:pushNav');
+                if (!raw) return;
+                await AsyncStorage.removeItem('pending:pushNav');
+
+                const parsed = JSON.parse(raw);
+                const navigationTarget = parsed?.navigationTarget;
+                const issueId = parsed?.issueId;
+                const target = String(navigationTarget || '');
+
+                if (target === 'IssueDetails' || target === 'IssueDetail') {
+                    if (issueId) navigationRef.navigate('IssueDetail', { issueId: String(issueId) });
+                } else {
+                    // Default: go to feed
+                    navigationRef.navigate('MainTabs', { screen: 'Feed' });
+                }
+            } catch (e) {
+                console.log('Pending push nav error:', e);
+            }
+        })();
+    }, [ready, loading, user, needsLocationSetup, needsProfileSetup]);
 
     // Show the animated JS splash while bootstrapping (no grey flash)
     if (!ready) {

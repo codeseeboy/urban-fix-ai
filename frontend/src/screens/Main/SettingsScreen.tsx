@@ -88,7 +88,7 @@ export default function SettingsScreen({ navigation }: any) {
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Delete', style: 'destructive', onPress: () => {
-                        Alert.alert('Contact Support', 'Please email support@urbanfix.ai to request account deletion.');
+                        Alert.alert('Contact Support', 'Please email support@urbanfix.com to request account deletion.');
                     }
                 },
             ]
@@ -102,9 +102,9 @@ export default function SettingsScreen({ navigation }: any) {
         ]);
     }, [logout]);
 
-    const openPrivacyPolicy = useCallback(() => Linking.openURL('https://urbanfix.ai/privacy'), []);
-    const openTerms = useCallback(() => Linking.openURL('https://urbanfix.ai/terms'), []);
-    const openSupport = useCallback(() => Linking.openURL('mailto:support@urbanfix.ai'), []);
+    const openPrivacyPolicy = useCallback(() => Linking.openURL('https://urbanfix.com/privacy'), []);
+    const openTerms = useCallback(() => Linking.openURL('https://urbanfix.com/terms'), []);
+    const openSupport = useCallback(() => Linking.openURL('mailto:support@urbanfix.com'), []);
 
     // ─── MENU SECTIONS ──────────────────────────────────────────────────────
     type MenuItem = {
@@ -181,9 +181,9 @@ export default function SettingsScreen({ navigation }: any) {
                     onPress: openTerms,
                 },
                 {
-                    icon: 'information-circle', label: 'About UrbanFix AI', color: colors.textMuted,
+                    icon: 'information-circle', label: 'About UrbanFix', color: colors.textMuted,
                     subtitle: 'Version 1.0.0 · Build 1',
-                    onPress: () => Alert.alert('UrbanFix AI', 'Version 1.0.0\nBuilt with React Native & Expo\n\n© 2025 UrbanFix AI. All rights reserved.'),
+                    onPress: () => Alert.alert('UrbanFix', 'Version 1.0.0\nBuilt with React Native & Expo\n\n© 2025 UrbanFix. All rights reserved.'),
                 },
             ],
         },
@@ -279,7 +279,7 @@ export default function SettingsScreen({ navigation }: any) {
 
                 {/* Footer */}
                 <Text style={styles.footerText} allowFontScaling={false}>
-                    UrbanFix AI v1.0.0{'\n'}Made with care for smarter cities
+                    UrbanFix v1.0.0{'\n'}Made with care for smarter cities
                 </Text>
             </ScrollView>
             </View>

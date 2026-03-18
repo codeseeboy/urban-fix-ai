@@ -137,7 +137,6 @@ export default function SplashScreen() {
           <Text style={styles.title} allowFontScaling={false}>
             Urban<Text style={styles.titleAccent}>Fix</Text>
           </Text>
-          <Text style={styles.titleAI} allowFontScaling={false}>AI</Text>
         </Animated.View>
 
         {/* Tagline */}

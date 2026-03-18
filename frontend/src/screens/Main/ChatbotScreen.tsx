@@ -48,7 +48,7 @@ export default function ChatbotScreen({ navigation }: any) {
         // Welcome message
         setMessages([{
             id: 'welcome',
-            text: `Hi ${user?.name?.split(' ')[0] || 'there'}! I'm your UrbanFix AI assistant.\n\nI can help you check nearby issues, get status updates, view weekly reports, and more.\n\nTap a quick action below or type your question!`,
+            text: `Hi ${user?.name?.split(' ')[0] || 'there'}! I can help you check nearby issues, get status updates, view weekly reports, and more.\n\nTap a quick action below or type your question!`,
             sender: 'bot',
             timestamp: new Date(),
             actions: ['Check my area', 'Weekly report', 'My reports'],
@@ -204,7 +204,7 @@ export default function ChatbotScreen({ navigation }: any) {
                 </TouchableOpacity>
                 <View style={styles.headerCenter}>
                     <View style={styles.headerDot} />
-                    <Text style={styles.headerTitle}>UrbanFix AI</Text>
+                    <Text style={styles.headerTitle}>Civic Assistant</Text>
                 </View>
                 <View style={{ width: 38 }} />
             </View>

@@ -5,7 +5,7 @@
  */
 import React, { useRef, useEffect, useState, useCallback, memo } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, Dimensions,
+    View, Text, StyleSheet, TouchableOpacity, Dimensions, Modal, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { colors, fonts, radius } from '../../theme/colors';
+import { issuesAPI } from '../../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = 260;
@@ -48,6 +49,10 @@ function FeedPost({
     const isUpvoted = item.upvotes?.includes(userId);
     const isDownvoted = (item.downvotes || []).includes(userId);
     const initials = (item.user?.name || 'U')[0].toUpperCase();
+
+    const [likersOpen, setLikersOpen] = useState(false);
+    const [likersLoading, setLikersLoading] = useState(false);
+    const [likers, setLikers] = useState<string[]>([]);
 
     // ─── Animations ───
     const scale = useSharedValue(0); // For heart icon
@@ -110,6 +115,28 @@ function FeedPost({
         setTimeout(() => {
             blockSingleTapRef.current = false;
         }, 250);
+    }, []);
+
+    const openLikers = useCallback(async () => {
+        if (!userId || !item?._id || likersLoading) return;
+        setLikersOpen(true);
+        setLikersLoading(true);
+        setLikers([]);
+        try {
+            const res = await issuesAPI.getUpvoters(item._id);
+            const usernames = res?.data?.usernames;
+            setLikers(Array.isArray(usernames) ? usernames : []);
+        } catch (e) {
+            console.log('Likers load error:', e);
+        } finally {
+            setLikersLoading(false);
+        }
+    }, [item?._id, likersLoading, userId]);
+
+    const closeLikers = useCallback(() => {
+        setLikersOpen(false);
+        setLikers([]);
+        setLikersLoading(false);
     }, []);
 
     const doubleTap = Gesture.Tap()
@@ -277,22 +304,29 @@ function FeedPost({
                     <View style={styles.actionsBar}>
                         <View style={styles.actionsLeft}>
                             {/* Upvote */}
-                            <TouchableOpacity
-                                style={styles.actionBtn}
-                                onPress={() => runActionWithoutOpening(() => onUpvote(item._id))}
-                                activeOpacity={0.7}
-                            >
-                                <Ionicons
-                                    name={isUpvoted ? 'heart' : 'heart-outline'}
-                                    size={24}
-                                    color={isUpvoted ? '#FF003C' : colors.textSecondary}
-                                />
+                            <View style={styles.actionBtn}>
+                                <TouchableOpacity
+                                    onPress={() => runActionWithoutOpening(() => onUpvote(item._id))}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons
+                                        name={isUpvoted ? 'heart' : 'heart-outline'}
+                                        size={24}
+                                        color={isUpvoted ? '#FF003C' : colors.textSecondary}
+                                    />
+                                </TouchableOpacity>
                                 {(item.upvotes?.length > 0) && (
-                                    <Text style={[styles.actionCount, isUpvoted && { color: '#FF003C' }]}>
-                                        {item.upvotes?.length}
-                                    </Text>
+                                    <TouchableOpacity
+                                        onPress={() => runActionWithoutOpening(() => openLikers())}
+                                        activeOpacity={0.7}
+                                        hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                                    >
+                                        <Text style={[styles.actionCount, isUpvoted && { color: '#FF003C' }]}>
+                                            {item.upvotes?.length}
+                                        </Text>
+                                    </TouchableOpacity>
                                 )}
-                            </TouchableOpacity>
+                            </View>
 
                             {/* Comment */}
                             <TouchableOpacity
@@ -324,13 +358,54 @@ function FeedPost({
 
                     {(item.upvotes?.length > 0 || item.commentCount > 0) && (
                         <View style={styles.engagementRow}>
-                            <Text style={styles.engagementText}>
-                                {item.upvotes?.length} likes
-                            </Text>
+                            {item.upvotes?.length > 0 ? (
+                                <TouchableOpacity onPress={() => runActionWithoutOpening(() => openLikers())} activeOpacity={0.7}>
+                                    <Text style={styles.engagementText}>
+                                        {item.upvotes?.length} likes
+                                    </Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <Text style={styles.engagementText}>
+                                    {item.upvotes?.length} likes
+                                </Text>
+                            )}
                         </View>
                     )}
                 </View>
             </GestureDetector>
+
+            {/* Vote list modal */}
+            <Modal visible={likersOpen} transparent animationType="fade" onRequestClose={closeLikers}>
+                <View style={styles.likersOverlay}>
+                    <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={closeLikers} />
+                    <View style={styles.likersCard}>
+                        <View style={styles.likersHeader}>
+                            <Text style={styles.likersTitle}>Liked by</Text>
+                            <TouchableOpacity onPress={closeLikers} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                <Ionicons name="close" size={20} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+                        {likersLoading ? (
+                            <View style={{ paddingVertical: 22 }}>
+                                <ActivityIndicator color={colors.primary} />
+                            </View>
+                        ) : likers.length === 0 ? (
+                            <Text style={styles.likersEmpty}>No users yet.</Text>
+                        ) : (
+                            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                                {likers.map((u, idx) => (
+                                    <View key={`${u}-${idx}`} style={styles.likersRow}>
+                                        <View style={styles.likersAvatar} />
+                                        <Text style={styles.likersName}>
+                                            {u ? (u.startsWith('@') ? u : `@${u}`) : '@user'}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </ScrollView>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </Animated.View>
     );
 }
@@ -411,4 +486,13 @@ const styles = StyleSheet.create({
     actionCount: { fontFamily: fonts.medium, color: colors.text, fontSize: 14 },
     engagementRow: { paddingHorizontal: 16, paddingBottom: 12 },
     engagementText: { fontFamily: fonts.bold, color: colors.text, fontSize: 13 },
+    // Likes modal
+    likersOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 16 },
+    likersCard: { width: '100%', backgroundColor: colors.surface, borderRadius: radius.xl, padding: 16, borderWidth: 1, borderColor: colors.border },
+    likersHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+    likersTitle: { fontFamily: fonts.bold, color: colors.text, fontSize: 16 },
+    likersEmpty: { fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', paddingVertical: 18 },
+    likersRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border + '40' },
+    likersAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primary + '20', borderWidth: 1, borderColor: colors.primary + '40' },
+    likersName: { fontFamily: fonts.semibold, color: colors.text, fontSize: 14 },
 });
