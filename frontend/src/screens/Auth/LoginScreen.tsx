@@ -62,8 +62,8 @@ export default function LoginScreen({ navigation }: any) {
                 <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.logo}>
                     <Text style={styles.logoText}>U</Text>
                 </LinearGradient>
-                <Text style={styles.title}>UrbanFix AI</Text>
-                <Text style={styles.subtitle}>Welcome back. Continue your civic impact.</Text>
+                <Text style={styles.title}>UrbanFix</Text>
+                <Text style={styles.subtitle}>Welcome back. Pick up where you left off.</Text>
 
                 {/* Form */}
                 <View style={styles.formCard}>

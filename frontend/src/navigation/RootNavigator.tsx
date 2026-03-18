@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
+import { navigationRef } from './navigationRef';
 
 import OnboardingScreen from '../screens/Auth/OnboardingScreen';
 import LoginScreen from '../screens/Auth/LoginScreen';
@@ -37,7 +38,7 @@ export default function RootNavigator() {
     };
 
     return (
-        <NavigationContainer>
+        <NavigationContainer ref={navigationRef}>
             <Stack.Navigator id="root" screenOptions={{ headerShown: false, cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS }}>
                 {!user ? (
                     <>
@@ -55,9 +56,9 @@ export default function RootNavigator() {
                     <>
                         <Stack.Screen name="MainTabs" component={getMainScreen()!} />
                         <Stack.Screen name="IssueDetail" component={IssueDetailScreen}
-                            options={{ cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS }} />
+                            options={{ cardStyleInterpolator: CardStyleInterpolators.forVerticalIOS }} />
                         <Stack.Screen name="ReportIssue" component={ReportIssueScreen}
-                            options={{ cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS }} />
+                            options={{ cardStyleInterpolator: CardStyleInterpolators.forVerticalIOS }} />
                         <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
                         <Stack.Screen name="Settings" component={SettingsScreen} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />

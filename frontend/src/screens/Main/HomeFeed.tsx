@@ -68,7 +68,7 @@ const SECTION_TABS = [
 // No hardcoded municipal stories; this will be populated from real municipal pages only (via backend)
 const MUNICIPAL_STORIES: any[] = [];
 
-export default function HomeFeed({ navigation }: any) {
+export default function HomeFeed({ navigation, route }: any) {
     const insets = useSafeAreaInsets();
     const { user } = useAuth();
     const greeting = getGreeting();
@@ -97,12 +97,16 @@ export default function HomeFeed({ navigation }: any) {
     const initialLoadDoneRef = useRef(false);
     const cacheFreshRef = useRef(false);
     const queueProcessingRef = useRef(false);
+    const skipQueueAutoRefreshOnceRef = useRef(false);
     const fetchInProgressRef = useRef(false);
     const refreshFeedRef = useRef<() => Promise<void>>(() => Promise.resolve());
     const processFeedActionQueueRef = useRef<() => Promise<void>>(() => Promise.resolve());
     const endReachedCalledRef = useRef(false);
     const lastLoadMoreAtRef = useRef(0);
     const lastNetworkRefreshAtRef = useRef(0);
+
+    const focusIssueId = route?.params?.focusIssueId as string | undefined;
+    const focusNonce = route?.params?.focusNonce as string | number | undefined;
 
     // Scroll animation for header collapse
     const scrollY = useRef(new Animated.Value(0)).current;
@@ -195,13 +199,16 @@ export default function HomeFeed({ navigation }: any) {
             if (!queue.length) return;
 
             const remaining: QueuedFeedAction[] = [];
+            let anyProcessed = false;
 
             for (const action of queue) {
                 try {
                     if (action.type === 'upvote') {
                         await issuesAPI.upvote(action.issueId);
+                        anyProcessed = true;
                     } else {
                         await issuesAPI.downvote(action.issueId);
+                        anyProcessed = true;
                     }
                 } catch (error) {
                     if (isTransientNetworkError(error) && action.retries < 5) {
@@ -211,6 +218,11 @@ export default function HomeFeed({ navigation }: any) {
             }
 
             await writeActionQueue(remaining);
+            // If queued vote actions succeeded and we're past first load,
+            // refresh the feed so counts + heart state never drift.
+            if (anyProcessed && initialLoadDoneRef.current && !skipQueueAutoRefreshOnceRef.current) {
+                refreshFeedRef.current();
+            }
         } finally {
             queueProcessingRef.current = false;
         }
@@ -394,6 +406,40 @@ export default function HomeFeed({ navigation }: any) {
     useEffect(() => { refreshFeedRef.current = refreshFeed; }, [refreshFeed]);
     useEffect(() => { processFeedActionQueueRef.current = processFeedActionQueue; }, [processFeedActionQueue]);
 
+    // When returning from “create / join / reject duplicate”, keep the selected issue visible.
+    useEffect(() => {
+        if (!focusIssueId) return;
+        if (!focusNonce) return;
+
+        let cancelled = false;
+        (async () => {
+            // Default landing: Community + Posts.
+            setFeedMode('community');
+            setActiveSection('posts');
+            setActiveFilter('all');
+
+            // Allow state updates + refreshed callbacks to settle.
+            await new Promise((r) => setTimeout(r, 50));
+
+            await refreshFeedRef.current();
+            if (cancelled) return;
+
+            const list = issuesRef.current || [];
+            const match = list.find((it) => it?._id === focusIssueId);
+            if (!match) return;
+
+            const rest = list.filter((it) => it?._id !== focusIssueId);
+            const reordered = [match, ...rest];
+            issuesRef.current = reordered;
+            setIssues(reordered);
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [focusIssueId, focusNonce]);
+
     const fetchStats = useCallback(async () => {
         try {
             const { data } = await gamificationAPI.getStats();
@@ -453,7 +499,13 @@ export default function HomeFeed({ navigation }: any) {
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        await processFeedActionQueue();
+        // Avoid double refresh: onRefresh already calls refreshFeed() below.
+        skipQueueAutoRefreshOnceRef.current = true;
+        try {
+            await processFeedActionQueue();
+        } finally {
+            skipQueueAutoRefreshOnceRef.current = false;
+        }
         await Promise.all([refreshFeed(), fetchStats()]);
         setRefreshing(false);
     }, [processFeedActionQueue, refreshFeed, fetchStats]);
@@ -510,7 +562,23 @@ export default function HomeFeed({ navigation }: any) {
             if (shouldRemoveDownvote) {
                 await issuesAPI.downvote(issueId);
             }
-            await issuesAPI.upvote(issueId);
+            const { data } = await issuesAPI.upvote(issueId);
+            // Reconcile with server state to avoid "count drift" vs heart/outline.
+            setIssues(prev =>
+                prev.map(i => {
+                    if (i._id !== issueId) return i;
+                    const currentDownvotes = Array.isArray(i.downvotes) ? i.downvotes : [];
+                    const nextDownvotes = data?.upvoted
+                        ? currentDownvotes.filter((u: string) => u !== user._id)
+                        : currentDownvotes;
+                    return {
+                        ...i,
+                        upvotes: Array.isArray(data?.upvotes) ? data.upvotes : [],
+                        downvotes: nextDownvotes,
+                        priorityScore: typeof data?.priorityScore === 'number' ? data.priorityScore : i.priorityScore,
+                    };
+                })
+            );
         } catch (e) {
             if (isTransientNetworkError(e)) {
                 await enqueueFeedAction('upvote', issueId);
@@ -558,7 +626,23 @@ export default function HomeFeed({ navigation }: any) {
             if (shouldRemoveUpvote) {
                 await issuesAPI.upvote(issueId);
             }
-            await issuesAPI.downvote(issueId);
+            const { data } = await issuesAPI.downvote(issueId);
+            // Reconcile with server state to avoid "count drift" vs up/down icon.
+            setIssues(prev =>
+                prev.map(i => {
+                    if (i._id !== issueId) return i;
+                    const currentUpvotes = Array.isArray(i.upvotes) ? i.upvotes : [];
+                    const nextUpvotes = data?.downvoted
+                        ? currentUpvotes.filter((u: string) => u !== user._id)
+                        : currentUpvotes;
+                    return {
+                        ...i,
+                        downvotes: Array.isArray(data?.downvotes) ? data.downvotes : [],
+                        upvotes: nextUpvotes,
+                        priorityScore: typeof data?.priorityScore === 'number' ? data.priorityScore : i.priorityScore,
+                    };
+                })
+            );
         } catch (e) {
             if (isTransientNetworkError(e)) {
                 await enqueueFeedAction('downvote', issueId);
@@ -576,7 +660,7 @@ export default function HomeFeed({ navigation }: any) {
         try {
             await Share.share({
                 title: item.title,
-                message: `🚨 ${item.title}\n📍 ${item.location?.address || 'Unknown'}\n\nReported on UrbanFix AI\n#UrbanFixAI #CivicEngagement`,
+                message: `🚨 ${item.title}\n📍 ${item.location?.address || 'Unknown'}\n\nReported on UrbanFix\n\nHelp make our city better!`,
             });
         } catch (e) { console.log('Share error:', e); }
     }, []);
@@ -662,7 +746,6 @@ export default function HomeFeed({ navigation }: any) {
             <View style={styles.brandTextWrap}>
                 <Text style={styles.brandTextUrban}>Urban</Text>
                 <Text style={styles.brandTextFix}>Fix</Text>
-                <Text style={styles.brandTextAI}> AI</Text>
                 <View style={styles.brandShineDot} />
             </View>
             <LinearGradient
@@ -753,9 +836,22 @@ export default function HomeFeed({ navigation }: any) {
     const listEmptyComponent = useMemo(() => {
         if (loading) {
             return (
-                <View style={styles.loadWrap}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={styles.loadText}>Loading feed...</Text>
+                <View style={styles.skeletonWrap}>
+                    {[0, 1, 2, 3, 4].map((k) => (
+                        <View key={k} style={styles.skeletonCard}>
+                            <View style={styles.skelHeader}>
+                                <View style={styles.skelAvatar} />
+                                <View style={{ flex: 1 }}>
+                                    <View style={styles.skelLineShort} />
+                                    <View style={styles.skelLineTiny} />
+                                </View>
+                            </View>
+                            <View style={styles.skelLine} />
+                            <View style={styles.skelLine} />
+                            <View style={styles.skelMedia} />
+                            <View style={styles.skelFooter} />
+                        </View>
+                    ))}
                 </View>
             );
         }
@@ -919,7 +1015,6 @@ export default function HomeFeed({ navigation }: any) {
                         >
                             <Text style={styles.stickyBrandUrban}>Urban</Text>
                             <Text style={styles.stickyBrandFix}>Fix</Text>
-                            <Text style={styles.stickyBrandAI}> AI</Text>
                             <View style={styles.stickyBrandShine} />
                         </Animated.View>
 
@@ -1225,6 +1320,59 @@ const styles = StyleSheet.create({
         fontFamily: fonts.medium,
         color: colors.textMuted,
         fontSize: 13,
+    },
+
+    /* ─── Skeleton (Feed) ─── */
+    skeletonWrap: {
+        paddingTop: 12,
+        paddingHorizontal: 14,
+        paddingBottom: 120,
+        gap: 12,
+    },
+    skeletonCard: {
+        backgroundColor: 'rgba(255,255,255,0.02)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.06)',
+        borderRadius: radius.xl,
+        padding: 14,
+        overflow: 'hidden',
+    },
+    skelHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+    skelAvatar: {
+        width: 34, height: 34, borderRadius: 17,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+    },
+    skelLine: {
+        height: 10,
+        borderRadius: 6,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        marginBottom: 8,
+    },
+    skelLineShort: {
+        height: 10,
+        width: '52%',
+        borderRadius: 6,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        marginBottom: 8,
+    },
+    skelLineTiny: {
+        height: 8,
+        width: '34%',
+        borderRadius: 6,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },
+    skelMedia: {
+        marginTop: 6,
+        height: 180,
+        borderRadius: radius.lg,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },
+    skelFooter: {
+        marginTop: 12,
+        height: 12,
+        width: '60%',
+        borderRadius: 6,
+        backgroundColor: 'rgba(255,255,255,0.05)',
     },
 
     /* ─── Empty State ─── */

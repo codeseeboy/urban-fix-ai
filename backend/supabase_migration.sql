@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
 -- ── LEVELS (static reference) ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS levels (
@@ -99,6 +99,8 @@ CREATE TABLE IF NOT EXISTS issues (
     location_coords GEOGRAPHY(Point, 4326),
     location_longitude DOUBLE PRECISION,
     location_latitude DOUBLE PRECISION,
+    location_accuracy_meters DOUBLE PRECISION,
+    location_source TEXT,
     department_tag TEXT DEFAULT 'General',
     status TEXT NOT NULL DEFAULT 'Submitted'
         CHECK (status IN ('Submitted', 'Acknowledged', 'InProgress', 'Resolved', 'Rejected')),
@@ -116,12 +118,12 @@ CREATE TABLE IF NOT EXISTS issues (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_issues_status ON issues(status);
-CREATE INDEX idx_issues_severity ON issues(ai_severity);
-CREATE INDEX idx_issues_user ON issues(user_id);
-CREATE INDEX idx_issues_status_severity ON issues(status, ai_severity);
-CREATE INDEX idx_issues_created ON issues(created_at DESC);
-CREATE INDEX idx_issues_location ON issues USING GIST(location_coords);
+CREATE INDEX IF NOT EXISTS idx_issues_status ON issues(status);
+CREATE INDEX IF NOT EXISTS idx_issues_severity ON issues(ai_severity);
+CREATE INDEX IF NOT EXISTS idx_issues_user ON issues(user_id);
+CREATE INDEX IF NOT EXISTS idx_issues_status_severity ON issues(status, ai_severity);
+CREATE INDEX IF NOT EXISTS idx_issues_created ON issues(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_issues_location ON issues USING GIST(location_coords);
 
 -- ── ISSUE UPVOTES ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS issue_upvotes (
@@ -158,7 +160,7 @@ CREATE TABLE IF NOT EXISTS status_timeline (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_timeline_issue ON status_timeline(issue_id);
+CREATE INDEX IF NOT EXISTS idx_timeline_issue ON status_timeline(issue_id);
 
 -- ── RESOLUTION PROOFS ───────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS resolution_proofs (
@@ -181,7 +183,36 @@ CREATE TABLE IF NOT EXISTS comments (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_comments_issue ON comments(issue_id);
+CREATE INDEX IF NOT EXISTS idx_comments_issue ON comments(issue_id);
+
+-- ── ISSUE REPORTS (Group / Multi-reporter model) ───────────────────────────
+-- Used for "merge" of community reports into a single group gallery issue.
+CREATE TABLE IF NOT EXISTS issue_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_issue_id UUID NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+    reporter_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    reporter_username TEXT,
+    reporter_anonymous BOOLEAN NOT NULL DEFAULT false,
+
+    -- Snapshot fields for showing per-reporter details
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    image TEXT,
+    video TEXT,
+
+    -- Exact location where reporter captured the issue
+    location_address TEXT,
+    location_longitude DOUBLE PRECISION,
+    location_latitude DOUBLE PRECISION,
+    location_accuracy_meters DOUBLE PRECISION,
+    location_source TEXT,
+
+    ai_tags TEXT[] DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_issue_reports_group ON issue_reports(group_issue_id);
+CREATE INDEX IF NOT EXISTS idx_issue_reports_reporter ON issue_reports(reporter_user_id);
 
 -- ── NOTIFICATIONS ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS notifications (
@@ -195,8 +226,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_notifications_user ON notifications(user_id);
-CREATE INDEX idx_notifications_user_read ON notifications(user_id, read);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read);
 
 -- ── FOLLOWS (User → MunicipalPage) ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS follows (
@@ -237,6 +268,10 @@ CREATE OR REPLACE TRIGGER update_issues_updated_at
 CREATE OR REPLACE TRIGGER update_municipal_pages_updated_at
     BEFORE UPDATE ON municipal_pages
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- If issues table already exists from previous migrations, ensure trust columns exist.
+ALTER TABLE issues ADD COLUMN IF NOT EXISTS location_accuracy_meters DOUBLE PRECISION;
+ALTER TABLE issues ADD COLUMN IF NOT EXISTS location_source TEXT;
 
 -- ============================================================================
 -- Migration complete! Now run the seed script:  node data/seed.js
