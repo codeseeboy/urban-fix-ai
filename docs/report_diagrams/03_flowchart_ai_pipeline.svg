@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="900" viewBox="0 0 640 900">
+  <defs>
+    <marker id="fc" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#263238"/>
+    </marker>
+    <style><![CDATA[
+      .title{font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;fill:#0d47a1}
+      .tx{font-family:Arial,Helvetica,sans-serif;font-size:11px;fill:#263238}
+      .ts{font-family:Arial,Helvetica,sans-serif;font-size:9px;fill:#546e7a}
+      .start{fill:#c8e6c9;stroke:#2e7d32;stroke-width:2}
+      .proc{fill:#e3f2fd;stroke:#1565c0;stroke-width:2;rx:6}
+      .dec{fill:#fff3e0;stroke:#ef6c00;stroke-width:2}
+      .end{fill:#ffcdd2;stroke:#c62828;stroke-width:2}
+      .merge{fill:#f3e5f5;stroke:#6a1b9a;stroke-width:2;rx:6}
+      .flow{stroke:#263238;stroke-width:1.5;fill:none;marker-end:url(#fc)}
+    ]]></style>
+  </defs>
+  <rect width="640" height="900" fill="#fafafa"/>
+  <text x="320" y="26" text-anchor="middle" class="title">Figure 3: Flowchart — AI Analysis Pipeline</text>
+
+  <!-- Vertical flow -->
+  <rect x="220" y="48" width="200" height="36" rx="18" class="start"/>
+  <text x="320" y="70" text-anchor="middle" class="tx">Start: receive image URL</text>
+
+  <rect x="200" y="100" width="240" height="44" class="proc"/>
+  <text x="320" y="122" text-anchor="middle" class="tx">Download image; preprocess</text>
+  <text x="320" y="136" text-anchor="middle" class="ts">resize → NSFW input size</text>
+
+  <path d="M320 136 L320 168" class="flow"/>
+  <polygon points="320,168 400,218 320,268 240,218" class="dec"/>
+  <text x="320" y="212" text-anchor="middle" class="tx">NSFW &gt; τ ?</text>
+  <text x="410" y="210" class="ts">Yes →</text>
+  <path d="M400 218 L480 218" class="flow"/>
+  <rect x="480" y="198" width="130" height="40" class="end"/>
+  <text x="545" y="222" text-anchor="middle" class="tx">Reject</text>
+
+  <path d="M320 268 L320 298" class="flow"/>
+  <text x="335" y="288" class="ts">No</text>
+
+  <rect x="200" y="298" width="240" height="44" class="proc"/>
+  <text x="320" y="320" text-anchor="middle" class="tx">SigLIP router</text>
+  <text x="320" y="334" text-anchor="middle" class="ts">top category + confidence</text>
+
+  <path d="M320 342 L320 368" class="flow"/>
+  <polygon points="320,368 400,418 320,468 240,418" class="dec"/>
+  <text x="320" y="418" text-anchor="middle" class="tx">Off-topic</text>
+  <text x="320" y="432" text-anchor="middle" class="tx">or conf &lt; τ ?</text>
+  <path d="M400 418 L480 418" class="flow"/>
+  <rect x="480" y="398" width="130" height="40" class="end"/>
+  <text x="545" y="422" text-anchor="middle" class="tx">Manual / block</text>
+
+  <path d="M320 468 L320 498" class="flow"/>
+  <text x="335" y="488" class="ts">No</text>
+
+  <rect x="200" y="498" width="240" height="52" class="proc"/>
+  <text x="320" y="520" text-anchor="middle" class="tx">Route to specialist model</text>
+  <text x="320" y="534" text-anchor="middle" class="ts">roads/trash: YOLOv8 | water: flood clf. | lighting/parks: YOLO-World</text>
+  <text x="320" y="546" text-anchor="middle" class="ts">other: SigLIP router score</text>
+
+  <path d="M320 550 L320 580" class="flow"/>
+
+  <rect x="200" y="580" width="240" height="48" class="merge"/>
+  <text x="320" y="602" text-anchor="middle" class="tx">Compute priority score</text>
+  <text x="320" y="616" text-anchor="middle" class="ts">severity bands: Low / Med / High / Critical</text>
+
+  <path d="M320 628 L320 658" class="flow"/>
+
+  <rect x="200" y="658" width="240" height="44" class="proc"/>
+  <text x="320" y="680" text-anchor="middle" class="tx">Build JSON response</text>
+  <text x="320" y="694" text-anchor="middle" class="ts">category, conf, severity, priority, debug</text>
+
+  <path d="M320 702 L320 732" class="flow"/>
+
+  <rect x="210" y="732" width="220" height="36" rx="18" class="start"/>
+  <text x="320" y="754" text-anchor="middle" class="tx">End: return to API</text>
+
+  <!-- Note -->
+  <rect x="40" y="800" width="560" height="80" fill="#fff" stroke="#e0e0e0" rx="4"/>
+  <text x="50" y="822" class="ts">τ = tuned threshold per gate. Rejected paths short-circuit to keep the mobile UX safe.</text>
+  <text x="50" y="840" class="ts">Backend may fall back to rule-based analysis if the AI service is unavailable.</text>
+</svg>

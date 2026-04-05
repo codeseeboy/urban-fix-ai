@@ -42,6 +42,7 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/municipal', require('./routes/municipal'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/chatbot', require('./routes/chatbotRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

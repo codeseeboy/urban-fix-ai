@@ -54,6 +54,9 @@ export const authAPI = {
 export const issuesAPI = {
   getFeed: (params?: Record<string, unknown>) => api.get("/issues", { params }),
   getById: (id: string) => api.get(`/issues/${id}`),
+  getReports: (id: string) => api.get(`/issues/${id}/reports`),
+  getUpvoters: (id: string) => api.get(`/issues/${id}/upvoters`),
+  getDownvoters: (id: string) => api.get(`/issues/${id}/downvoters`),
   updateStatus: (id: string, status: string, comment?: string) =>
     api.put(`/workflows/${id}/status`, { status, comment }),
   assign: (

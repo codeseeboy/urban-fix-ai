@@ -13,20 +13,56 @@ export default function IssueDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const [issue, setIssue] = useState<any>(null);
+  const [reports, setReports] = useState<any[]>([]);
+  const [upvoters, setUpvoters] = useState<string[]>([]);
+  const [downvoters, setDownvoters] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusUpdate, setStatusUpdate] = useState("");
   const [statusComment, setStatusComment] = useState("");
   const [deptAssign, setDeptAssign] = useState("");
   const [updating, setUpdating] = useState(false);
 
+  const loadIssueData = async (issueId: string) => {
+    const [issueRes, reportsRes, upvotersRes, downvotersRes] = await Promise.allSettled([
+      issuesAPI.getById(issueId),
+      issuesAPI.getReports(issueId),
+      issuesAPI.getUpvoters(issueId),
+      issuesAPI.getDownvoters(issueId),
+    ]);
+
+    if (issueRes.status !== "fulfilled") {
+      throw new Error("Failed to load issue");
+    }
+
+    const issueData = issueRes.value.data;
+    setIssue(issueData);
+    setDeptAssign(issueData.departmentTag || "");
+
+    if (reportsRes.status === "fulfilled") {
+      const reportRows = reportsRes.value.data?.reports;
+      setReports(Array.isArray(reportRows) ? reportRows : []);
+    } else {
+      setReports([]);
+    }
+
+    if (upvotersRes.status === "fulfilled") {
+      const usernames = upvotersRes.value.data?.usernames;
+      setUpvoters(Array.isArray(usernames) ? usernames : []);
+    } else {
+      setUpvoters([]);
+    }
+
+    if (downvotersRes.status === "fulfilled") {
+      const usernames = downvotersRes.value.data?.usernames;
+      setDownvoters(Array.isArray(usernames) ? usernames : []);
+    } else {
+      setDownvoters([]);
+    }
+  };
+
   useEffect(() => {
     if (!id) return;
-    issuesAPI
-      .getById(id as string)
-      .then(({ data }) => {
-        setIssue(data);
-        setDeptAssign(data.departmentTag || "");
-      })
+    loadIssueData(id as string)
       .catch(() => router.replace("/issues"))
       .finally(() => setLoading(false));
   }, [id, router]);
@@ -36,8 +72,7 @@ export default function IssueDetailPage() {
     setUpdating(true);
     try {
       await issuesAPI.updateStatus(id as string, statusUpdate, statusComment || undefined);
-      const { data } = await issuesAPI.getById(id as string);
-      setIssue(data);
+      await loadIssueData(id as string);
       setStatusUpdate("");
       setStatusComment("");
     } catch (e) {
@@ -51,8 +86,7 @@ export default function IssueDetailPage() {
     setUpdating(true);
     try {
       await issuesAPI.assign(id as string, { departmentTag: deptAssign });
-      const { data } = await issuesAPI.getById(id as string);
-      setIssue(data);
+      await loadIssueData(id as string);
     } catch (e) {
       console.error(e);
     }
@@ -131,7 +165,7 @@ export default function IssueDetailPage() {
                 { label: "Category", value: issue.category || "—" },
                 { label: "Department", value: issue.departmentTag || "—" },
                 { label: "Priority Score", value: `${issue.priorityScore || 0}/100` },
-                { label: "Upvotes", value: issue.upvotes?.length || 0 },
+                { label: "Community Reports", value: reports.length },
               ].map((m) => (
                 <div key={m.label} className="bg-white/[0.03] rounded-lg p-3">
                   <p className="text-[10px] text-white/30 mb-0.5">{m.label}</p>
@@ -140,6 +174,39 @@ export default function IssueDetailPage() {
               ))}
             </div>
           </div>
+
+          {/* Community Reports */}
+          {reports.length > 0 && (
+            <div className="glass-card p-3 sm:p-5">
+              <h2 className="text-sm font-semibold text-white mb-4">
+                Community Evidence ({reports.length})
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {reports.slice(0, 8).map((r: any, i: number) => (
+                  <div key={r.id || r._id || i} className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="text-[11px] font-semibold text-white/75 truncate">
+                        {r.reporter_username || "anonymous"}
+                      </span>
+                      <span className="text-[10px] text-white/30">
+                        {r.created_at ? formatDate(r.created_at) : ""}
+                      </span>
+                    </div>
+                    {r.image && (
+                      <img
+                        src={r.image}
+                        alt="Community evidence"
+                        className="w-full h-28 rounded-md object-cover border border-white/[0.06] mb-2"
+                      />
+                    )}
+                    <p className="text-[11px] text-white/45 line-clamp-2">
+                      {r.description || "No additional description"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Timeline */}
           {issue.statusTimeline?.length > 0 && (
@@ -154,6 +221,12 @@ export default function IssueDetailPage() {
                     </div>
                     <div className="pb-4">
                       <p className="text-xs font-semibold text-white/80">{s.status}</p>
+                      {s.updatedByUser?.name && (
+                        <p className="text-[10px] text-white/35 mt-0.5">
+                          Updated by {s.updatedByUser.name}
+                          {s.updatedByUser.role ? ` (${s.updatedByUser.role})` : ""}
+                        </p>
+                      )}
                       {s.comment && <p className="text-[11px] text-white/40 mt-0.5">{s.comment}</p>}
                       <p className="text-[10px] text-white/20 mt-1">{formatDate(s.timestamp)}</p>
                     </div>
@@ -254,13 +327,35 @@ export default function IssueDetailPage() {
               { label: "Anonymous", value: issue.anonymous ? "Yes" : "No" },
               { label: "Emergency", value: issue.emergency ? "Yes" : "No" },
               { label: "Followers", value: issue.followers?.length || 0 },
+              { label: "Upvotes", value: issue.upvotes?.length || 0 },
               { label: "Downvotes", value: issue.downvotes?.length || 0 },
+              { label: "Assigned To", value: issue.assignedToUser?.name || "—" },
+              { label: "Resolved By", value: issue.resolvedByUser?.name || "—" },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between text-xs">
                 <span className="text-white/40">{item.label}</span>
                 <span className="text-white/70 font-medium">{item.value}</span>
               </div>
             ))}
+
+            {(upvoters.length > 0 || downvoters.length > 0) && (
+              <div className="pt-2 border-t border-white/[0.06] space-y-2">
+                {upvoters.length > 0 && (
+                  <p className="text-[10px] text-white/35">
+                    <span className="text-white/55 font-medium">Upvoters:</span>{" "}
+                    {upvoters.slice(0, 8).join(", ")}
+                    {upvoters.length > 8 ? "..." : ""}
+                  </p>
+                )}
+                {downvoters.length > 0 && (
+                  <p className="text-[10px] text-white/35">
+                    <span className="text-white/55 font-medium">Downvoters:</span>{" "}
+                    {downvoters.slice(0, 8).join(", ")}
+                    {downvoters.length > 8 ? "..." : ""}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
