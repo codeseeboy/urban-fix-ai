@@ -7,7 +7,7 @@ frontend/.gradle/
 frontend/build/
 .DS_Store
 *.log
-colab/
+
 
 # Secrets & local env (never commit)
 .env
@@ -30,7 +30,7 @@ __pycache__/
 *.pyc
 
 # Optional local YOLO / PyTorch weights (runtime download in Docker is preferred)
-*.pt
+
 
 # Report binaries (keep Markdown in repo; PDFs optional locally)
 docs/*.pdf

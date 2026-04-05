@@ -19,11 +19,14 @@ services:
 
   - type: web
     name: urbanfix-ai
-    runtime: docker
+    runtime: python
     rootDir: ai-service
-    dockerfilePath: ./Dockerfile
+    buildCommand: pip install --upgrade pip && pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu && pip install --no-cache-dir -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     plan: standard
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: AI_API_KEY
         generateValue: true
       - key: AI_CORS_ORIGINS
