@@ -1,5 +1,12 @@
 services:
   - type: web
+    name: urbanfix-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+
+  - type: web
     name: urbanfix-web
     runtime: static
     rootDir: frontend
@@ -9,3 +16,15 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+
+  - type: web
+    name: urbanfix-ai
+    runtime: docker
+    rootDir: ai-service
+    dockerfilePath: ./Dockerfile
+    plan: standard
+    envVars:
+      - key: AI_API_KEY
+        generateValue: true
+      - key: AI_CORS_ORIGINS
+        value: https://urban-fix-ai.onrender.com,https://urbanfix-web.onrender.com,https://urbanfix-api.onrender.com
