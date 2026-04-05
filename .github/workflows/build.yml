@@ -36,6 +36,19 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm install
 
+      # google-services.json is gitignored locally; CI needs it for expo prebuild.
+      # Set repo secret GOOGLE_SERVICES_JSON to the full JSON (same as local file).
+      - name: Write google-services.json for Android prebuild
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" > frontend/google-services.json
+          else
+            echo "::warning::GOOGLE_SERVICES_JSON secret not set; using example (set secret for real Firebase builds)"
+            cp frontend/google-services.json.example frontend/google-services.json
+          fi
+
       - name: Prebuild
         run: cd frontend && npx expo prebuild --platform android --clean --no-install
 
