@@ -1,8 +1,19 @@
 node_modules/
 backend/node_modules/
 frontend/node_modules/
+municipal-admin/node_modules/
 frontend/android/
 frontend/.gradle/
 frontend/build/
 .DS_Store
 *.log
+colab/
+
+# Secrets & local env (never commit)
+.env
+**/.env
+*.pem
+.env.local
+
+# Test / scratch output
+**/test_output.txt
