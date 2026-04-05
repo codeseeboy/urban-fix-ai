@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import MapView, { Marker } from '../../components/map/MapView';
-import { issuesAPI } from '../../services/api';
+import { issuesAPI, llmAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import {
     getCurrentLocation, reverseGeocode, extractExifGps,
@@ -15,6 +15,8 @@ import {
 } from '../../services/locationService';
 import logger from '../../utils/logger';
 import { colors, fonts } from '../../theme/colors';
+import CameraPortal from '../../components/ui/CameraPortal';
+import AIDetectionOverlay from '../../components/ui/AIDetectionOverlay';
 
 const { width } = Dimensions.get('window');
 
@@ -51,6 +53,21 @@ export default function ReportIssueScreen({ navigation }: any) {
     const [video, setVideo] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [locationLocked, setLocationLocked] = useState(true);
+
+    // Camera-first flow state
+    const [showCameraPortal, setShowCameraPortal] = useState(true);
+    const [showAIOverlay, setShowAIOverlay] = useState(false);
+    const [portalImages, setPortalImages] = useState<string[]>([]);
+    const [flowCompleted, setFlowCompleted] = useState(false);
+
+    // AI auto-detection state
+    const [aiResult, setAiResult] = useState<any | null>(null);
+    const [aiAnalyzing, setAiAnalyzing] = useState(false);
+    const [aiConfirmed, setAiConfirmed] = useState(false);
+    const [aiError, setAiError] = useState<string | null>(null);
+    const [llmRefining, setLlmRefining] = useState(false);
+    const [llmExplaining, setLlmExplaining] = useState(false);
+    const [llmExplainText, setLlmExplainText] = useState<string | null>(null);
 
     // Duplicate (same issue) join/reject flow
     const [dupModalOpen, setDupModalOpen] = useState(false);
@@ -144,6 +161,148 @@ export default function ReportIssueScreen({ navigation }: any) {
         setDetectingLocation(false);
     }, [userLocation]);
 
+    // ─── AI ANALYSIS ──────────────────────────────────────────────────────
+    const TITLE_TEMPLATES: Record<string, (main: string) => string> = {
+        roads: (m) => `Road Damage — ${m}`,
+        trash: (m) => `Garbage/Waste — ${m}`,
+        lighting: (m) => `Street Lighting — ${m}`,
+        water: (m) => `Water/Drainage — ${m}`,
+        parks: (m) => `Parks Issue — ${m}`,
+        other: (m) => `Civic Issue — ${m}`,
+    };
+
+    const DESC_TEMPLATES: Record<string, (r: any) => string> = {
+        roads: (r) => `AI detected ${r.issue_count} road damage issue(s). Main: ${r.main_issue}. Severity: ${r.ai_severity}. Model: ${r.model_used || 'YOLO'}.`,
+        trash: (r) => `AI detected ${r.issue_count} waste/trash issue(s). Main: ${r.main_issue}. Severity: ${r.ai_severity}.`,
+        lighting: (r) => `AI detected ${r.issue_count} lighting issue(s). Main: ${r.main_issue}. Severity: ${r.ai_severity}.`,
+        water: (r) => `AI detected ${r.issue_count} water/drainage issue(s). Main: ${r.main_issue}. Severity: ${r.ai_severity}.`,
+        parks: (r) => `AI detected ${r.issue_count} parks/green-space issue(s). Main: ${r.main_issue}. Severity: ${r.ai_severity}.`,
+        other: (r) => `AI detected: ${r.main_issue}. Severity: ${r.ai_severity}. Category confidence: ${(r.category_confidence * 100).toFixed(0)}%.`,
+    };
+
+    const analyzeWithAI = useCallback(async (imageUri: string) => {
+        if (aiAnalyzing) return;
+        setAiAnalyzing(true);
+        setAiError(null);
+        setAiResult(null);
+        setAiConfirmed(false);
+        logger.info('ReportIssue', 'Starting AI analysis...');
+
+        try {
+            const { data } = await issuesAPI.analyzeImage(imageUri);
+            logger.success('ReportIssue', 'AI analysis complete', {
+                category: data.category,
+                severity: data.ai_severity,
+                issues: data.issue_count,
+            });
+
+            setAiResult(data);
+
+            if (data.is_valid === false) {
+                setAiError(data.note || 'This image does not appear to show a civic issue.');
+                setAiAnalyzing(false);
+                return;
+            }
+
+            // Auto-fill category
+            const detectedCat = data.category || 'other';
+            const matchedCat = CATEGORIES.find(c => c.id === detectedCat);
+            if (matchedCat) {
+                setCategory(matchedCat.id);
+            }
+
+            // Auto-fill title
+            const mainIssue = data.main_issue || 'Issue detected';
+            const titleFn = TITLE_TEMPLATES[detectedCat] || TITLE_TEMPLATES.other;
+            setTitle(titleFn(mainIssue));
+
+            // Auto-fill description
+            const descFn = DESC_TEMPLATES[detectedCat] || DESC_TEMPLATES.other;
+            setDescription(descFn(data));
+
+            // Auto-set emergency if Critical
+            if (data.ai_severity === 'Critical') {
+                setEmergency(true);
+            }
+        } catch (err: any) {
+            const msg = err.response?.data?.message || err.message || 'AI analysis failed';
+            logger.error('ReportIssue', 'AI analysis error', msg);
+            setAiError(msg);
+        }
+        setAiAnalyzing(false);
+    }, [aiAnalyzing]);
+
+    const refineTextWithLLM = useCallback(async () => {
+        if (!aiResult || llmRefining || llmExplaining) return;
+
+        setLlmRefining(true);
+        try {
+            const { data } = await llmAPI.refineIssue({
+                detected_issue: aiResult.main_issue || 'civic issue',
+                category: aiResult.category || category || 'other',
+                user_title: title || 'Issue report',
+                user_description: description || 'Civic issue reported by citizen.',
+            });
+
+            const refined = data?.data;
+            if (!refined) throw new Error('No structured output returned by AI');
+
+            if (refined.title) setTitle(refined.title);
+            if (refined.description) setDescription(refined.description);
+            if (refined.severity_reason) {
+                setLlmExplainText(`Severity reason: ${refined.severity_reason}`);
+            }
+
+            if (typeof refined.matched === 'boolean' && !refined.matched) {
+                Alert.alert(
+                    'Review Suggested',
+                    'AI thinks your text may not fully match the detected issue. Please verify before submitting.'
+                );
+            }
+
+            setAiConfirmed(true);
+        } catch (err: any) {
+            Alert.alert('Refine failed', err?.response?.data?.error || err?.message || 'Could not refine issue text');
+        } finally {
+            setLlmRefining(false);
+        }
+    }, [aiResult, category, title, description, llmRefining, llmExplaining]);
+
+    const explainSeverityWithLLM = useCallback(async () => {
+        if (!aiResult || llmRefining || llmExplaining) return;
+
+        setLlmExplaining(true);
+        try {
+            const { data } = await llmAPI.explainIssue({
+                category: aiResult.category || category || 'other',
+                label: aiResult.main_issue || 'civic issue',
+                severity: aiResult.ai_severity || 'Medium',
+                location: capturedLocation?.address || 'reported location',
+                status: 'Submitted',
+            });
+
+            const explained = data?.data;
+            if (!explained) throw new Error('No structured output returned by AI');
+
+            const explainBlock = [
+                `Why this is serious: ${explained.severity_reason}`,
+                `AI explanation: ${explained.explanation}`,
+                `Recommended next step: ${explained.next_step}`,
+            ].join('\n');
+
+            setLlmExplainText(explainBlock);
+
+            setDescription((prev) => {
+                const cleaned = (prev || '').replace(/\n\nWhy this is serious:[\s\S]*$/m, '').trim();
+                return `${cleaned}\n\n${explainBlock}`.trim();
+            });
+        } catch (err: any) {
+            Alert.alert('Explain failed', err?.response?.data?.error || err?.message || 'Could not generate explanation');
+        } finally {
+            setLlmExplaining(false);
+        }
+    }, [aiResult, category, capturedLocation, llmRefining, llmExplaining]);
+
     // ─── IMAGE CAPTURE ────────────────────────────────────────────────────
     const takePhoto = async () => {
         logger.tap('ReportIssue', 'Take Photo');
@@ -154,13 +313,17 @@ export default function ReportIssueScreen({ navigation }: any) {
         }
         const result = await ImagePicker.launchCameraAsync({
             quality: 0.8,
-            exif: true, // Request EXIF data for GPS extraction
+            exif: true,
         });
         if (!result.canceled && result.assets[0]) {
-            setImages(prev => [...prev, result.assets[0].uri]);
-            // Auto-detect location when photo is taken (only if not already detected)
+            const uri = result.assets[0].uri;
+            setImages(prev => [...prev, uri]);
             if (!capturedLocation) {
                 await detectLocationForCapture(result.assets[0].exif);
+            }
+            // Trigger AI analysis on first image
+            if (images.length === 0) {
+                analyzeWithAI(uri);
             }
         }
     };
@@ -173,9 +336,14 @@ export default function ReportIssueScreen({ navigation }: any) {
             exif: true,
         });
         if (!result.canceled && result.assets[0]) {
-            setImages(prev => [...prev, result.assets[0].uri]);
+            const uri = result.assets[0].uri;
+            setImages(prev => [...prev, uri]);
             if (!capturedLocation) {
                 await detectLocationForCapture(result.assets[0].exif);
+            }
+            // Trigger AI analysis on first image
+            if (images.length === 0) {
+                analyzeWithAI(uri);
             }
         }
     };
@@ -206,6 +374,140 @@ export default function ReportIssueScreen({ navigation }: any) {
         await detectLocationForCapture();
     };
 
+    // ─── CAMERA PORTAL HANDLERS ──────────────────────────────────────────
+
+    const takePortalPhoto = async () => {
+        logger.tap('ReportIssue', 'Portal: Take Photo');
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (perm.status !== 'granted') {
+            Alert.alert('Permission Required', 'Camera access is needed to capture photos.');
+            return;
+        }
+        const result = await ImagePicker.launchCameraAsync({
+            quality: 0.8,
+            exif: true,
+        });
+        if (!result.canceled && result.assets[0]) {
+            const uri = result.assets[0].uri;
+            setPortalImages(prev => [...prev, uri]);
+            // Also detect location from first photo's EXIF
+            if (!capturedLocation) {
+                await detectLocationForCapture(result.assets[0].exif);
+            }
+        }
+    };
+
+    const pickPortalGallery = async () => {
+        logger.tap('ReportIssue', 'Portal: Pick Gallery');
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.8,
+            exif: true,
+        });
+        if (!result.canceled && result.assets[0]) {
+            const uri = result.assets[0].uri;
+            setPortalImages(prev => [...prev, uri]);
+            if (!capturedLocation) {
+                await detectLocationForCapture(result.assets[0].exif);
+            }
+        }
+    };
+
+    const handlePortalConfirm = () => {
+        if (portalImages.length === 0) return;
+        logger.tap('ReportIssue', 'Portal: Confirm & Analyze', { imageCount: portalImages.length });
+        setShowCameraPortal(false);
+        setShowAIOverlay(true);
+    };
+
+    const handlePortalClose = () => {
+        logger.tap('ReportIssue', 'Portal: Close');
+        setShowCameraPortal(false);
+        navigation.goBack();
+    };
+
+    const handleAIAnalyzeSingle = useCallback(async (uri: string) => {
+        logger.info('ReportIssue', 'AI analyzing image from portal...');
+        const { data } = await issuesAPI.analyzeImage(uri);
+        logger.success('ReportIssue', 'Portal AI analysis done', {
+            category: data.category,
+            severity: data.ai_severity,
+        });
+        return data;
+    }, []);
+
+    const handleAIComplete = useCallback((results: any[]) => {
+        logger.success('ReportIssue', 'All images analyzed successfully', { count: results.length });
+        setShowAIOverlay(false);
+        setFlowCompleted(true);
+
+        // Transfer portal images to form images
+        setImages(portalImages);
+
+        // Merge AI results: use first valid result as primary, combine tags
+        const primary = results[0];
+        if (!primary) return;
+
+        // Auto-fill category
+        const detectedCat = primary.category || 'other';
+        const matchedCat = CATEGORIES.find(c => c.id === detectedCat);
+        if (matchedCat) setCategory(matchedCat.id);
+
+        // Auto-fill title
+        const mainIssue = primary.main_issue || 'Issue detected';
+        const titleFn = TITLE_TEMPLATES[detectedCat] || TITLE_TEMPLATES.other;
+        setTitle(titleFn(mainIssue));
+
+        // Auto-fill description
+        const descFn = DESC_TEMPLATES[detectedCat] || DESC_TEMPLATES.other;
+        setDescription(descFn(primary));
+
+        // Use highest severity across all images
+        const severityOrder = ['Low', 'Medium', 'High', 'Critical'];
+        let maxSev = primary.ai_severity || 'Low';
+        for (const r of results) {
+            if (severityOrder.indexOf(r.ai_severity || '') > severityOrder.indexOf(maxSev)) {
+                maxSev = r.ai_severity;
+            }
+        }
+
+        // Auto-set emergency if any image is Critical
+        if (maxSev === 'Critical') setEmergency(true);
+
+        // Store merged result for display
+        setAiResult({
+            ...primary,
+            ai_severity: maxSev,
+            issue_count: results.reduce((sum, r) => sum + (r.issue_count || 0), 0),
+            ai_tags: [...new Set(results.flatMap(r => r.ai_tags || []))],
+        });
+        setAiConfirmed(true);
+
+        // Animate form entrance
+        pageEntranceAnim.setValue(0);
+        Animated.spring(pageEntranceAnim, {
+            toValue: 1,
+            stiffness: 120,
+            damping: 16,
+            mass: 0.9,
+            useNativeDriver: true,
+        }).start();
+    }, [portalImages]);
+
+    const handleAIRejected = useCallback((reason: string) => {
+        logger.warn('ReportIssue', 'Image rejected by AI', { reason });
+        setShowAIOverlay(false);
+        setShowCameraPortal(false);
+
+        // Navigate back to the home feed with rejection info
+        navigation.replace('MainTabs', {
+            screen: 'Feed',
+            params: {
+                rejectionReason: reason,
+                rejectionNonce: Date.now(),
+            },
+        });
+    }, [navigation]);
 
     // ─── SUBMIT ───────────────────────────────────────────────────────────
     const handleSubmit = async () => {
@@ -430,6 +732,126 @@ export default function ReportIssueScreen({ navigation }: any) {
                             </View>
                         )}
                     </View>
+
+                    {/* AI Detection Banner */}
+                    {aiAnalyzing && (
+                        <View style={styles.aiBanner}>
+                            <ActivityIndicator size="small" color="#FFD60A" />
+                            <View style={{ flex: 1, marginLeft: 12 }}>
+                                <Text style={styles.aiBannerTitle} allowFontScaling={false}>🤖 UrbanFix AI Analyzing...</Text>
+                                <Text style={styles.aiBannerSub} allowFontScaling={false}>Detecting issue type, severity & category</Text>
+                            </View>
+                        </View>
+                    )}
+
+                    {aiError && !aiAnalyzing && (
+                        <View style={[styles.aiBanner, { borderColor: '#FF453A' }]}>
+                            <Ionicons name="warning" size={20} color="#FF453A" />
+                            <View style={{ flex: 1, marginLeft: 12 }}>
+                                <Text style={[styles.aiBannerTitle, { color: '#FF453A' }]} allowFontScaling={false}>AI Detection Issue</Text>
+                                <Text style={styles.aiBannerSub} numberOfLines={2} allowFontScaling={false}>{aiError}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => { setAiError(null); setAiResult(null); }} style={{ padding: 4 }}>
+                                <Ionicons name="close" size={18} color="#8E8E93" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {aiResult && aiResult.is_valid !== false && !aiAnalyzing && !aiConfirmed && (
+                        <View style={[styles.aiBanner, { borderColor: '#30D158' }]}>
+                            <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                    <Text style={styles.aiBannerTitle} allowFontScaling={false}>🤖 AI Detection Result</Text>
+                                    <View style={[styles.severityBadge, {
+                                        backgroundColor: aiResult.ai_severity === 'Critical' ? '#FF003C'
+                                            : aiResult.ai_severity === 'High' ? '#FF9500'
+                                            : aiResult.ai_severity === 'Medium' ? '#FFD60A'
+                                            : '#30D158'
+                                    }]}>
+                                        <Text style={styles.severityText} allowFontScaling={false}>{aiResult.ai_severity}</Text>
+                                    </View>
+                                </View>
+                                <Text style={styles.aiBannerSub} allowFontScaling={false}>
+                                    Category: {(aiResult.category || 'other').toUpperCase()} ({(aiResult.category_confidence * 100).toFixed(0)}%)
+                                </Text>
+                                <Text style={styles.aiBannerSub} allowFontScaling={false}>
+                                    Main Issue: {aiResult.main_issue} • {aiResult.issue_count} detected
+                                </Text>
+                                {aiResult.ai_tags?.length > 0 && (
+                                    <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                                        {aiResult.ai_tags.map((tag: string, i: number) => (
+                                            <View key={i} style={styles.aiTag}>
+                                                <Text style={styles.aiTagText} allowFontScaling={false}>{tag}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
+                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                    <TouchableOpacity
+                                        style={[styles.aiConfirmBtn, { backgroundColor: '#30D158' }]}
+                                        onPress={() => setAiConfirmed(true)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons name="checkmark" size={16} color="#FFF" />
+                                        <Text style={styles.aiConfirmText} allowFontScaling={false}>Confirm</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.aiConfirmBtn, { backgroundColor: '#2C2C2E' }]}
+                                        onPress={() => { setAiConfirmed(true); /* just dismiss, fields are editable */ }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons name="create-outline" size={16} color="#FFF" />
+                                        <Text style={styles.aiConfirmText} allowFontScaling={false}>Edit</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                                    <TouchableOpacity
+                                        style={[styles.aiActionBtn, (llmRefining || llmExplaining) && styles.aiActionBtnDisabled]}
+                                        onPress={refineTextWithLLM}
+                                        disabled={llmRefining || llmExplaining}
+                                        activeOpacity={0.75}
+                                    >
+                                        {llmRefining ? (
+                                            <ActivityIndicator size="small" color="#FFF" />
+                                        ) : (
+                                            <Ionicons name="sparkles-outline" size={15} color="#FFF" />
+                                        )}
+                                        <Text style={styles.aiActionText} allowFontScaling={false}>Refine Text</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.aiActionBtn, (llmRefining || llmExplaining) && styles.aiActionBtnDisabled]}
+                                        onPress={explainSeverityWithLLM}
+                                        disabled={llmRefining || llmExplaining}
+                                        activeOpacity={0.75}
+                                    >
+                                        {llmExplaining ? (
+                                            <ActivityIndicator size="small" color="#FFF" />
+                                        ) : (
+                                            <Ionicons name="information-circle-outline" size={15} color="#FFF" />
+                                        )}
+                                        <Text style={styles.aiActionText} allowFontScaling={false}>Explain</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {llmExplainText ? (
+                                    <View style={styles.aiExplainBox}>
+                                        <Text style={styles.aiExplainText} allowFontScaling={false}>{llmExplainText}</Text>
+                                    </View>
+                                ) : null}
+                            </View>
+                        </View>
+                    )}
+
+                    {aiConfirmed && aiResult && aiResult.is_valid !== false && (
+                        <View style={[styles.aiBanner, { borderColor: '#30D158', paddingVertical: 10 }]}>
+                            <Ionicons name="checkmark-circle" size={18} color="#30D158" />
+                            <Text style={[styles.aiBannerTitle, { marginLeft: 8, color: '#30D158', fontSize: 13 }]} allowFontScaling={false}>
+                                AI Detection Confirmed — {(aiResult.category || '').toUpperCase()} • {aiResult.ai_severity}
+                            </Text>
+                        </View>
+                    )}
 
 
                     {/* Issue Details */}
@@ -681,6 +1103,26 @@ export default function ReportIssueScreen({ navigation }: any) {
                     </View>
                 </View>
             </Modal>
+
+            {/* Camera-First Portal */}
+            <CameraPortal
+                visible={showCameraPortal}
+                images={portalImages}
+                onTakePhoto={takePortalPhoto}
+                onPickGallery={pickPortalGallery}
+                onRemoveImage={(i) => setPortalImages(prev => prev.filter((_, j) => j !== i))}
+                onConfirm={handlePortalConfirm}
+                onClose={handlePortalClose}
+            />
+
+            {/* AI Detection Animation Overlay */}
+            <AIDetectionOverlay
+                visible={showAIOverlay}
+                images={portalImages}
+                onAnalyzeImage={handleAIAnalyzeSingle}
+                onComplete={handleAIComplete}
+                onRejected={handleAIRejected}
+            />
         </View>
     );
 }
@@ -1083,5 +1525,99 @@ const styles = StyleSheet.create({
         color: colors.textMuted,
         fontSize: 12,
         lineHeight: 16,
+    },
+
+    // AI Detection Banner
+    aiBanner: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#1C1C1E',
+        borderRadius: 14,
+        padding: 14,
+        marginTop: 16,
+        borderWidth: 1,
+        borderColor: '#FFD60A',
+    },
+    aiBannerTitle: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
+        color: '#FFD60A',
+        includeFontPadding: false,
+    },
+    aiBannerSub: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 12,
+        color: '#AEAEB2',
+        marginTop: 3,
+        includeFontPadding: false,
+    },
+    severityBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+    },
+    severityText: {
+        fontFamily: 'Inter_700Bold',
+        fontSize: 10,
+        color: '#FFF',
+        includeFontPadding: false,
+    },
+    aiTag: {
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 8,
+    },
+    aiTagText: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 10,
+        color: '#AEAEB2',
+        includeFontPadding: false,
+    },
+    aiConfirmBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 10,
+    },
+    aiConfirmText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 13,
+        color: '#FFF',
+        includeFontPadding: false,
+    },
+    aiActionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
+        backgroundColor: '#2C2C2E',
+    },
+    aiActionBtnDisabled: {
+        opacity: 0.6,
+    },
+    aiActionText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 12,
+        color: '#FFF',
+        includeFontPadding: false,
+    },
+    aiExplainBox: {
+        marginTop: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },
+    aiExplainText: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 11,
+        lineHeight: 16,
+        color: '#C7C7CC',
+        includeFontPadding: false,
     },
 });

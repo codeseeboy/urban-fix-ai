@@ -23,7 +23,7 @@ import logger from '../utils/logger';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ← CHANGE THIS to your PC's LAN IP if using a physical device
-const LAN_IP = '192.168.0.104'; // ← Your PC's LAN IP (auto-detected)
+const LAN_IP = '192.168.0.102'; // ← Your PC's LAN IP (auto-detected)
 const PROD_URL = 'https://urban-fix-ai.onrender.com';
 const USE_LOCAL_IN_PROD = false; // Set true if you want APK to hit local LAN IP
 const USE_PROD_ON_WEB = true;
@@ -229,6 +229,19 @@ export const issuesAPI = {
       },
     });
   },
+  analyzeImage: async (imageUri: string) => {
+    const formData = new FormData();
+    // @ts-ignore — React Native FormData accepts objects with uri/name/type
+    formData.append('image', {
+      uri: imageUri,
+      name: 'capture.jpg',
+      type: 'image/jpeg',
+    });
+    return api.post('/issues/analyze-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000, // AI models on CPU can take up to 60s
+    });
+  },
   upvote: (id: string) =>
     api.put(`/issues/${id}/upvote`),
   downvote: (id: string) =>
@@ -293,6 +306,23 @@ export const chatbotAPI = {
   sendMessage: (message: string, location?: { latitude: number; longitude: number }) =>
     api.post('/chatbot/message', { message, location }),
   getQuickActions: () => api.get('/chatbot/quick-actions'),
+};
+
+// ── AI LLM FEATURES ──
+export const llmAPI = {
+  refineIssue: (payload: {
+    detected_issue: string;
+    category: string;
+    user_title: string;
+    user_description: string;
+  }) => api.post('/ai/refine', payload),
+  explainIssue: (payload: {
+    category: string;
+    label: string;
+    severity: string;
+    location: string;
+    status: string;
+  }) => api.post('/ai/explain', payload),
 };
 
 export default api;

@@ -24,6 +24,7 @@ import StoriesRow from '../../components/feed/StoriesRow';
 import ReelsTab from '../../components/feed/ReelsTab';
 import FilterDrawer from '../../components/feed/FilterDrawer';
 import FeedPost from '../../components/feed/FeedPost';
+import RejectionToast from '../../components/ui/RejectionToast';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const FEED_PAGE_SIZE = 30;
@@ -107,6 +108,20 @@ export default function HomeFeed({ navigation, route }: any) {
 
     const focusIssueId = route?.params?.focusIssueId as string | undefined;
     const focusNonce = route?.params?.focusNonce as string | number | undefined;
+    const rejectionReason = route?.params?.rejectionReason as string | undefined;
+    const rejectionNonce = route?.params?.rejectionNonce as number | undefined;
+
+    // Rejection toast state
+    const [showRejectionToast, setShowRejectionToast] = useState(false);
+    const [rejectionMsg, setRejectionMsg] = useState('');
+
+    // Show rejection toast when navigated back with rejection params
+    useEffect(() => {
+        if (rejectionReason && rejectionNonce) {
+            setRejectionMsg(rejectionReason);
+            setShowRejectionToast(true);
+        }
+    }, [rejectionReason, rejectionNonce]);
 
     // Scroll animation for header collapse
     const scrollY = useRef(new Animated.Value(0)).current;
@@ -1064,6 +1079,14 @@ export default function HomeFeed({ navigation, route }: any) {
                 activeFilter={activeFilter}
                 onSelectFilter={handleFilterSelect}
                 filters={FILTER_CATEGORIES}
+            />
+
+            {/* ─── AI Rejection Toast ─── */}
+            <RejectionToast
+                visible={showRejectionToast}
+                title="Photo Rejected by AI"
+                reason={rejectionMsg || 'The image does not show a valid civic issue. Please upload a clear photo.'}
+                onDismiss={() => setShowRejectionToast(false)}
             />
         </View>
     );

@@ -412,6 +412,31 @@ router.get('/:id/downvoters', protect, async (req, res) => {
     }
 });
 
+// POST /api/issues/analyze-image — AI detection from photo (used by the app before submitting)
+router.post('/analyze-image', protect, upload.fields([{ name: 'image', maxCount: 1 }]), async (req, res) => {
+    try {
+        const imageFile = req.files?.image?.[0] || null;
+        if (!imageFile || !imageFile.buffer) {
+            return res.status(400).json({ message: 'Image is required' });
+        }
+
+        const aiService = require('../services/ai');
+        const result = await aiService.callFastAPIAnalyze(imageFile.buffer, imageFile.originalname);
+
+        if (!result) {
+            return res.status(503).json({
+                message: 'AI service unavailable — please try again or fill manually',
+                fallback: true,
+            });
+        }
+
+        res.json(result);
+    } catch (error) {
+        console.error('POST /analyze-image error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // POST /api/issues/duplicate-check — detect existing same-type unresolved issue (User-only)
 router.post('/duplicate-check', protect, async (req, res) => {
     try {
@@ -794,6 +819,7 @@ router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name:
             return res.status(400).json({ message: 'Location accuracy is required for reliable reports' });
         }
 
+        const imageFile = req.files?.image?.[0] || null;
         const aiResult = await aiService.analyzeIssue({
             category: category || 'other',
             description: description || '',
@@ -802,6 +828,8 @@ router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name:
             imageUrl: imagePath,
             latitude: lat,
             longitude: lon,
+            imageBuffer: imageFile?.buffer || null,
+            filename: imageFile?.originalname || null,
         });
 
         const anonymousBool = anonymous === 'true' || anonymous === true;

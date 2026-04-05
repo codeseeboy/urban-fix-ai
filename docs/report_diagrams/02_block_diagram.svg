@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="520" viewBox="0 0 880 520">
+  <defs>
+    <marker id="ab" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <polygon points="0 0,9 3,0 6" fill="#37474f"/>
+    </marker>
+    <style><![CDATA[
+      .t{font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;fill:#0d47a1}
+      .h{font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;fill:#1565c0}
+      .b{font-family:Arial,Helvetica,sans-serif;font-size:10px;fill:#37474f}
+      .box{fill:#e3f2fd;stroke:#1565c0;stroke-width:2;rx:8}
+      .sub{fill:#fff;stroke:#90caf9;stroke-width:1.2;rx:4}
+      .line{stroke:#37474f;stroke-width:1.8;fill:none;marker-end:url(#ab)}
+      .dash{stroke:#78909c;stroke-width:1.5;fill:none;stroke-dasharray:6 4;marker-end:url(#ab)}
+    ]]></style>
+  </defs>
+  <rect width="880" height="520" fill="#fafafa"/>
+  <text x="440" y="28" text-anchor="middle" class="t">Figure 2: System Block Diagram - UrbanFix.AI Architecture</text>
+
+  <!-- Client -->
+  <rect x="60" y="70" width="200" height="180" class="box"/>
+  <text x="160" y="95" text-anchor="middle" class="h">Presentation Layer</text>
+  <text x="160" y="112" text-anchor="middle" class="b">React Native (Expo)</text>
+  <rect x="75" y="125" width="170" height="28" class="sub"/>
+  <text x="160" y="143" text-anchor="middle" class="b">Screens: Home, Report, Map, Detail</text>
+  <rect x="75" y="160" width="170" height="28" class="sub"/>
+  <text x="160" y="178" text-anchor="middle" class="b">Navigation &amp; State (Context)</text>
+  <rect x="75" y="195" width="170" height="28" class="sub"/>
+  <text x="160" y="213" text-anchor="middle" class="b">API Client (HTTPS + JWT)</text>
+
+  <!-- Backend -->
+  <rect x="310" y="70" width="240" height="200" class="box"/>
+  <text x="430" y="95" text-anchor="middle" class="h">Application / API Layer</text>
+  <text x="430" y="112" text-anchor="middle" class="b">Node.js + Express</text>
+  <rect x="325" y="125" width="210" height="26" class="sub"/>
+  <text x="430" y="142" text-anchor="middle" class="b">Routes: auth, issues, users, notifications</text>
+  <rect x="325" y="157" width="210" height="26" class="sub"/>
+  <text x="430" y="174" text-anchor="middle" class="b">Middleware: auth, multer, logging</text>
+  <rect x="325" y="189" width="210" height="26" class="sub"/>
+  <text x="430" y="206" text-anchor="middle" class="b">Business logic &amp; AI service adapter</text>
+  <rect x="325" y="221" width="210" height="26" class="sub"/>
+  <text x="430" y="238" text-anchor="middle" class="b">Duplicate check, gamification, workflows</text>
+
+  <!-- AI -->
+  <rect x="600" y="70" width="220" height="200" class="box"/>
+  <text x="710" y="95" text-anchor="middle" class="h">AI Inference Service</text>
+  <text x="710" y="112" text-anchor="middle" class="b">Python + FastAPI (GPU)</text>
+  <rect x="615" y="125" width="190" height="26" class="sub"/>
+  <text x="710" y="142" text-anchor="middle" class="b">NSFW gate to SigLIP router</text>
+  <rect x="615" y="157" width="190" height="26" class="sub"/>
+  <text x="710" y="174" text-anchor="middle" class="b">YOLOv8 + YOLO-World + flood classifier</text>
+  <rect x="615" y="189" width="190" height="26" class="sub"/>
+  <text x="710" y="206" text-anchor="middle" class="b">Priority &amp; severity scoring</text>
+  <rect x="615" y="221" width="190" height="26" class="sub"/>
+  <text x="710" y="238" text-anchor="middle" class="b">POST /analyze (internal API)</text>
+
+  <!-- Data -->
+  <rect x="180" y="320" width="520" height="150" class="box"/>
+  <text x="440" y="348" text-anchor="middle" class="h">Data &amp; Infrastructure Layer</text>
+  <rect x="200" y="360" width="150" height="90" class="sub"/>
+  <text x="275" y="382" text-anchor="middle" class="b">PostgreSQL</text>
+  <text x="275" y="398" text-anchor="middle" class="b">+ PostGIS</text>
+  <text x="275" y="418" text-anchor="middle" class="b">(Supabase)</text>
+  <rect x="365" y="360" width="150" height="90" class="sub"/>
+  <text x="440" y="382" text-anchor="middle" class="b">Object Storage</text>
+  <text x="440" y="400" text-anchor="middle" class="b">Images / Video</text>
+  <text x="440" y="418" text-anchor="middle" class="b">(Supabase)</text>
+  <rect x="530" y="360" width="150" height="90" class="sub"/>
+  <text x="605" y="382" text-anchor="middle" class="b">Firebase</text>
+  <text x="605" y="400" text-anchor="middle" class="b">Cloud Messaging</text>
+  <text x="605" y="418" text-anchor="middle" class="b">(Push)</text>
+
+  <!-- Arrows -->
+  <path d="M260 175 L310 175" class="line"/>
+  <text x="275" y="168" text-anchor="middle" class="b" style="font-size:9px">REST / JSON</text>
+  <path d="M550 175 L600 175" class="dash"/>
+  <text x="575" y="168" text-anchor="middle" class="b" style="font-size:9px">HTTP / analyze</text>
+  <path d="M430 270 L430 320" class="line"/>
+  <text x="445" y="298" class="b" style="font-size:9px">SQL / SDK</text>
+  <path d="M710 270 L605 320" class="line"/>
+  <path d="M430 270 L275 360" class="line"/>
+</svg>

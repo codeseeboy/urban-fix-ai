@@ -1,0 +1,27 @@
+# UrbanFix AI Service — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+python-multipart>=0.0.18
+
+# ML / Deep Learning
+torch>=2.2.0
+torchvision>=0.17.0
+transformers>=4.44.0
+ultralytics>=8.3.0
+huggingface_hub>=0.25.0
+
+# Image processing
+Pillow>=10.4.0
+
+# SigLIP tokenizer
+sentencepiece>=0.2.0
+protobuf>=5.26.0
+
+# Utilities
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+numpy>=1.26.0
+scipy>=1.14.0

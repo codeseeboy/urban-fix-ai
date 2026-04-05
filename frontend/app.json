@@ -18,6 +18,7 @@
       "bundleIdentifier": "com.urbanfix.ai"
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.urbanfix.ai",
       "googleServicesFile": "./google-services.json",
       "config": {

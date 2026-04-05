@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="560" viewBox="0 0 920 560">
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#2d3436"/>
+    </marker>
+    <style><![CDATA[
+      .t{font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;fill:#1a1a2e}
+      .l{font-family:Arial,Helvetica,sans-serif;font-size:11px;fill:#2d3436}
+      .s{font-family:Arial,Helvetica,sans-serif;font-size:9px;fill:#636e72}
+      .E{fill:#e3f2fd;stroke:#1565c0;stroke-width:2;rx:4}
+      .P{fill:#fff;stroke:#1565c0;stroke-width:2;rx:6}
+      .D{fill:#f5f9ff;stroke:#1565c0;stroke-width:2}
+      .flow{stroke:#2d3436;stroke-width:1.5;fill:none;marker-end:url(#a)}
+    ]]></style>
+  </defs>
+  <rect width="920" height="560" fill="#fafafa"/>
+  <text x="460" y="26" text-anchor="middle" class="t">Figure 1: Data Flow Diagram (Level 1) — UrbanFix.AI</text>
+
+  <!-- External -->
+  <rect x="40" y="200" width="110" height="70" class="E"/>
+  <text x="95" y="228" text-anchor="middle" class="l">Citizen</text>
+  <text x="95" y="242" text-anchor="middle" class="s">(Mobile App)</text>
+
+  <rect x="770" y="120" width="110" height="55" class="E"/>
+  <text x="825" y="150" text-anchor="middle" class="l">Municipal Admin</text>
+
+  <rect x="770" y="280" width="110" height="55" class="E"/>
+  <text x="825" y="310" text-anchor="middle" class="l">Field Worker</text>
+
+  <!-- Processes -->
+  <rect x="210" y="70" width="130" height="50" class="P"/>
+  <text x="275" y="98" text-anchor="middle" class="l">1.0 Authentication</text>
+
+  <rect x="210" y="150" width="130" height="50" class="P"/>
+  <text x="275" y="178" text-anchor="middle" class="l">2.0 Create Issue</text>
+
+  <rect x="210" y="230" width="130" height="50" class="P"/>
+  <text x="275" y="258" text-anchor="middle" class="l">3.0 AI Analysis</text>
+
+  <rect x="210" y="310" width="130" height="50" class="P"/>
+  <text x="275" y="338" text-anchor="middle" class="l">4.0 Duplicate Check</text>
+
+  <rect x="210" y="390" width="130" height="50" class="P"/>
+  <text x="275" y="418" text-anchor="middle" class="l">5.0 Community</text>
+
+  <rect x="400" y="230" width="130" height="50" class="P"/>
+  <text x="465" y="258" text-anchor="middle" class="l">6.0 Notifications</text>
+
+  <rect x="400" y="350" width="130" height="50" class="P"/>
+  <text x="465" y="378" text-anchor="middle" class="l">7.0 Admin / Assign</text>
+
+  <!-- Data stores -->
+  <g transform="translate(600,80)">
+    <path d="M0 0 L0 40 L30 40 L30 0" class="D"/>
+    <line x1="0" y1="0" x2="30" y2="0" stroke="#1565c0" stroke-width="2"/>
+    <text x="40" y="26" class="l">D1 Users</text>
+  </g>
+  <g transform="translate(600,160)">
+    <path d="M0 0 L0 40 L30 40 L30 0" class="D"/>
+    <line x1="0" y1="0" x2="30" y2="0" stroke="#1565c0" stroke-width="2"/>
+    <text x="40" y="26" class="l">D2 Issues</text>
+  </g>
+  <g transform="translate(600,240)">
+    <path d="M0 0 L0 40 L30 40 L30 0" class="D"/>
+    <line x1="0" y1="0" x2="30" y2="0" stroke="#1565c0" stroke-width="2"/>
+    <text x="40" y="26" class="l">D3 Media</text>
+  </g>
+  <g transform="translate(600,320)">
+    <path d="M0 0 L0 40 L30 40 L30 0" class="D"/>
+    <line x1="0" y1="0" x2="30" y2="0" stroke="#1565c0" stroke-width="2"/>
+    <text x="40" y="26" class="l">D4 Notif.</text>
+  </g>
+
+  <!-- Flows -->
+  <path d="M150 235 L210 95" class="flow"/>
+  <text x="165" y="155" class="s">login / register</text>
+  <path d="M150 235 L210 175" class="flow"/>
+  <text x="155" y="205" class="s">photo, GPS, meta</text>
+  <path d="M340 175 L210 255" class="flow"/>
+  <text x="360" y="210" class="s">image URL</text>
+  <path d="M340 255 L400 255" class="flow"/>
+  <text x="355" y="245" class="s">AI result</text>
+  <path d="M340 335 L360 255" class="flow"/>
+  <text x="330" y="300" class="s">coords</text>
+  <path d="M340 415 L430 280" class="flow"/>
+  <path d="M530 255 L770 148" class="flow"/>
+  <text x="620" y="190" class="s">issue list</text>
+  <path d="M530 375 L770 308" class="flow"/>
+  <text x="620" y="350" class="s">tasks</text>
+
+  <path d="M340 95 L600 100" class="flow"/>
+  <path d="M340 175 L600 180" class="flow"/>
+  <path d="M340 255 L580 180" class="flow"/>
+  <path d="M530 255 L600 340" class="flow"/>
+
+  <!-- Legend -->
+  <rect x="40" y="480" width="840" height="68" fill="#fff" stroke="#e0e0e0" rx="4"/>
+  <text x="55" y="505" class="l">Legend:</text>
+  <rect x="120" y="492" width="28" height="18" class="E"/>
+  <text x="155" y="505" class="s">External entity</text>
+  <rect x="280" y="492" width="28" height="18" class="P"/>
+  <text x="315" y="505" class="s">Process</text>
+  <g transform="translate(420,492)">
+    <path d="M0 0 L0 18 L22 18 L22 0" fill="#f5f9ff" stroke="#1565c0" stroke-width="2"/>
+    <line x1="0" y1="0" x2="22" y2="0" stroke="#1565c0" stroke-width="2"/>
+  </g>
+  <text x="450" y="505" class="s">Data store</text>
+  <line x1="540" y1="501" x2="600" y2="501" class="flow"/>
+  <text x="605" y="505" class="s">Data flow</text>
+</svg>
