@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UrbanFix AI — local test upload</title>
+  <style>
+    :root {
+      font-family: system-ui, Segoe UI, Roboto, sans-serif;
+      --bg: #0f1419;
+      --card: #1a2332;
+      --text: #e7edf4;
+      --muted: #8b9cb3;
+      --accent: #3b82f6;
+      --ok: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      padding: 1.5rem; line-height: 1.5;
+    }
+    h1 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.5rem; }
+    p.muted { color: var(--muted); font-size: 0.9rem; margin: 0 0 1rem; }
+    .card {
+      background: var(--card); border-radius: 12px; padding: 1.25rem;
+      max-width: 720px; margin: 0 auto;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }
+    input[type="text"], input[type="file"] {
+      width: 100%; padding: 0.5rem 0.65rem; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.12); background: #0d1117; color: var(--text);
+      margin-bottom: 0.9rem;
+    }
+    .row { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.9rem; }
+    .row label { margin: 0; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+    button {
+      background: var(--accent); color: #fff; border: none; padding: 0.6rem 1.2rem;
+      border-radius: 8px; font-weight: 600; cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button:hover:not(:disabled) { filter: brightness(1.08); }
+    pre {
+      background: #0d1117; padding: 1rem; border-radius: 8px; overflow: auto;
+      font-size: 0.8rem; border: 1px solid rgba(255,255,255,.08); max-height: 70vh;
+    }
+    .preview { max-width: 100%; max-height: 220px; border-radius: 8px; margin-top: 0.5rem; }
+    .err { color: #f87171; font-size: 0.9rem; margin-top: 0.5rem; }
+    .meta { font-size: 0.8rem; color: var(--ok); margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>UrbanFix AI — image test</h1>
+    <p class="muted">
+      Local dev only. Start the service: <code>uvicorn app.main:app --reload --app-dir .</code> from the <code>ai-service</code> folder.
+      Set <code>AI_ROAD_WEIGHTS_PATH</code> to your <code>colab/best.pt</code> to test your road model.
+    </p>
+
+    <label for="baseUrl">API base URL</label>
+    <input id="baseUrl" type="text" value="http://127.0.0.1:8000" autocomplete="off" />
+
+    <label for="apiKey">API key (must match <code>AI_API_KEY</code> in <code>.env</code>)</label>
+    <input id="apiKey" type="text" placeholder="Bearer token value" autocomplete="off" />
+
+    <div class="row">
+      <label><input type="checkbox" id="skipValidation" /> Skip validation (Stage 0)</label>
+    </div>
+
+    <label for="file">Image</label>
+    <input id="file" type="file" accept="image/*" />
+
+    <img id="preview" class="preview" alt="" hidden />
+
+    <p style="margin-top: 1rem;">
+      <button type="button" id="runBtn">Run /analyze</button>
+    </p>
+    <div id="err" class="err"></div>
+    <div id="meta" class="meta"></div>
+    <pre id="out">{}</pre>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const baseUrl = () => $("baseUrl").value.replace(/\/$/, "");
+    const apiKey = () => $("apiKey").value.trim();
+
+    $("file").addEventListener("change", () => {
+      const f = $("file").files[0];
+      const img = $("preview");
+      if (!f) { img.hidden = true; return; }
+      img.src = URL.createObjectURL(f);
+      img.hidden = false;
+    });
+
+    $("runBtn").addEventListener("click", async () => {
+      const file = $("file").files[0];
+      $("err").textContent = "";
+      $("meta").textContent = "";
+      $("out").textContent = "…loading";
+
+      if (!file) {
+        $("err").textContent = "Choose an image first.";
+        $("out").textContent = "{}";
+        return;
+      }
+
+      const fd = new FormData();
+      fd.append("file", file);
+
+      let url = new URL(baseUrl() + "/analyze");
+      if ($("skipValidation").checked) url.searchParams.set("skip_validation", "true");
+
+      const headers = {};
+      const key = apiKey();
+      if (key) headers["Authorization"] = "Bearer " + key;
+
+      $("runBtn").disabled = true;
+      const t0 = performance.now();
+
+      try {
+        const res = await fetch(url.toString(), { method: "POST", headers, body: fd });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+        if (!res.ok) {
+          $("err").textContent = res.status + " " + res.statusText + (data.detail ? ": " + JSON.stringify(data.detail) : "");
+          $("out").textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+
+        $("meta").textContent = "OK in " + Math.round(performance.now() - t0) + " ms";
+        $("out").textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        $("err").textContent = String(e.message || e);
+        $("out").textContent = "{}";
+      } finally {
+        $("runBtn").disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

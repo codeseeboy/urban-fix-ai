@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
-    FlatList, KeyboardAvoidingView, Platform, Animated,
-    Dimensions, ActivityIndicator,
+    FlatList, Platform, Animated,
+    Dimensions, ActivityIndicator, Keyboard, KeyboardEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { chatbotAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { colors, fonts, radius } from '../../theme/colors';
+import { colors } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +21,12 @@ interface ChatMessage {
     actions?: string[];
     issues?: Array<{ id: string; title: string; status?: string; severity?: string }>;
     loading?: boolean;
+    llmMeta?: {
+        provider?: string;
+        model?: string;
+        cacheHit?: boolean;
+        latencyMs?: number;
+    };
 }
 
 const QUICK_ACTIONS = [
@@ -38,6 +44,8 @@ export default function ChatbotScreen({ navigation }: any) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [sending, setSending] = useState(false);
+    const [loadingText, setLoadingText] = useState('Thinking...');
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
     const flatListRef = useRef<FlatList>(null);
     const inputRef = useRef<TextInput>(null);
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -59,6 +67,25 @@ export default function ChatbotScreen({ navigation }: any) {
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     }, []);
 
+    useEffect(() => {
+        const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+        const onShow = (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height);
+        const onHide = () => setKeyboardHeight(0);
+        const subShow = Keyboard.addListener(showEvt, onShow);
+        const subHide = Keyboard.addListener(hideEvt, onHide);
+        return () => {
+            subShow.remove();
+            subHide.remove();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (keyboardHeight > 0) {
+            scrollToEnd();
+        }
+    }, [keyboardHeight, scrollToEnd]);
+
     const sendMessage = useCallback(async (text: string) => {
         if (!text.trim() || sending) return;
 
@@ -77,6 +104,20 @@ export default function ChatbotScreen({ navigation }: any) {
             loading: true,
         };
 
+        const startedAt = Date.now();
+        setLoadingText('Thinking...');
+
+        const phaseInterval = setInterval(() => {
+            const elapsed = Date.now() - startedAt;
+            if (elapsed > 2200) {
+                setLoadingText('Deep reasoning...');
+            } else if (elapsed > 1000) {
+                setLoadingText('Analyzing context...');
+            } else {
+                setLoadingText('Thinking...');
+            }
+        }, 350);
+
         setMessages(prev => [...prev, userMsg, loadingMsg]);
         setInput('');
         setSending(true);
@@ -90,6 +131,13 @@ export default function ChatbotScreen({ navigation }: any) {
 
             const { data } = await chatbotAPI.sendMessage(text.trim(), location);
 
+            const typingHintMs = Number(data?.typingHintMs || 0);
+            const elapsedMs = Date.now() - startedAt;
+            const remainingMs = Math.max(0, typingHintMs - elapsedMs);
+            if (remainingMs > 0) {
+                await new Promise((resolve) => setTimeout(resolve, remainingMs));
+            }
+
             const botMsg: ChatMessage = {
                 id: `bot-${Date.now()}`,
                 text: data.text,
@@ -97,6 +145,12 @@ export default function ChatbotScreen({ navigation }: any) {
                 timestamp: new Date(),
                 actions: data.actions,
                 issues: data.issues,
+                llmMeta: {
+                    provider: data.llm,
+                    model: data.llmModel,
+                    cacheHit: data.llmCacheHit,
+                    latencyMs: data.llmLatencyMs,
+                },
             };
 
             setMessages(prev => prev.filter(m => !m.loading).concat(botMsg));
@@ -109,6 +163,9 @@ export default function ChatbotScreen({ navigation }: any) {
                 actions: ['Try again', 'Help'],
             };
             setMessages(prev => prev.filter(m => !m.loading).concat(errorMsg));
+        } finally {
+            clearInterval(phaseInterval);
+            setLoadingText('Thinking...');
         }
 
         setSending(false);
@@ -135,7 +192,7 @@ export default function ChatbotScreen({ navigation }: any) {
                     <View style={[styles.msgBubble, styles.botBubble]}>
                         <View style={styles.typingDots}>
                             <ActivityIndicator size="small" color="#0A84FF" />
-                            <Text style={styles.typingText}>Thinking...</Text>
+                            <Text style={styles.typingText}>{loadingText}</Text>
                         </View>
                     </View>
                 </View>
@@ -155,6 +212,12 @@ export default function ChatbotScreen({ navigation }: any) {
                             {item.text}
                         </Text>
                     </View>
+
+                    {!isUser && item.llmMeta?.provider && (
+                        <Text style={styles.llmMetaText}>
+                            {`${String(item.llmMeta.provider).toUpperCase()}${item.llmMeta.cacheHit ? ' • cache' : ''}${item.llmMeta.latencyMs ? ` • ${item.llmMeta.latencyMs}ms` : ''}`}
+                        </Text>
+                    )}
 
                     {/* Issue chips */}
                     {item.issues && item.issues.length > 0 && (
@@ -193,7 +256,7 @@ export default function ChatbotScreen({ navigation }: any) {
                 </View>
             </View>
         );
-    }, [handleQuickAction, handleIssuePress]);
+    }, [handleQuickAction, handleIssuePress, loadingText]);
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -209,7 +272,7 @@ export default function ChatbotScreen({ navigation }: any) {
                 <View style={{ width: 38 }} />
             </View>
 
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={{ flex: 1 }}>
                 {/* Quick actions strip */}
                 {messages.length <= 1 && (
                     <Animated.View style={[styles.quickActionsWrap, { opacity: fadeAnim }]}>
@@ -243,11 +306,20 @@ export default function ChatbotScreen({ navigation }: any) {
                     keyExtractor={i => i.id}
                     contentContainerStyle={styles.messagesList}
                     showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                     onContentSizeChange={scrollToEnd}
                 />
 
-                {/* Input */}
-                <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 8) + 4 }]}>
+                {/* Input — offset by keyboard height so the field stays visible (Android + iOS) */}
+                <View
+                    style={[
+                        styles.inputBar,
+                        {
+                            paddingBottom:
+                                (keyboardHeight > 0 ? 10 : Math.max(insets.bottom, 8) + 4) + keyboardHeight,
+                        },
+                    ]}
+                >
                     <View style={styles.inputWrap}>
                         <TextInput
                             ref={inputRef}
@@ -278,7 +350,7 @@ export default function ChatbotScreen({ navigation }: any) {
                         </TouchableOpacity>
                     </View>
                 </View>
-            </KeyboardAvoidingView>
+            </View>
         </View>
     );
 }
@@ -365,6 +437,13 @@ const styles = StyleSheet.create({
     typingText: {
         fontFamily: 'Inter_400Regular', fontSize: 13,
         color: colors.textMuted,
+    },
+    llmMetaText: {
+        marginTop: 4,
+        marginLeft: 36,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.28)',
     },
 
     // Issue chips

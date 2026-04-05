@@ -2,30 +2,8 @@
  * AI/ML Service Abstraction Layer
  * 
  * Provides a unified interface for all AI/ML capabilities.
- * Currently uses rule-based logic. When real models are ready,
- * swap the implementation in each method without changing the interface.
- * 
- * INTEGRATION GUIDE FOR DEVELOPERS:
- * 
- * 1. Image Classification (detectIssue):
- *    - Replace with: TensorFlow Serving, AWS Rekognition, or OpenAI Vision API
- *    - Input: image URL/buffer → Output: { isValid, category, confidence, tags }
- * 
- * 2. Severity Scoring (calculateSeverity):
- *    - Replace with: Custom ML model (XGBoost/Random Forest) or LLM
- *    - Input: { category, description, imageAnalysis, location } → Output: severity string
- * 
- * 3. Duplicate Detection (checkDuplicate):
- *    - Replace with: Vector similarity (pgvector/Pinecone) + geospatial
- *    - Input: { location, category, description } → Output: { isDuplicate, matchId, similarity }
- * 
- * 4. NLP / Chat (processChat):
- *    - Replace with: OpenAI GPT, AWS Bedrock, or custom fine-tuned model
- *    - Input: message + context → Output: response text
- * 
- * 5. Priority Scoring (calculatePriority):
- *    - Replace with: ML ranking model trained on resolution data
- *    - Input: issue data → Output: 0-100 score
+ * When AI_SERVICE_URL is set, calls the FastAPI Python service
+ * for real CV-based detection. Falls back to rule-based logic.
  */
 
 const store = require('../../data/store');
@@ -34,7 +12,10 @@ const supabase = require('../../config/supabase');
 // ─── Configuration ──────────────────────────────────────────────────────────
 
 const AI_CONFIG = {
-    provider: process.env.AI_PROVIDER || 'rules',     // 'rules' | 'openai' | 'aws' | 'custom'
+    provider: process.env.AI_PROVIDER || 'rules',     // 'rules' | 'fastapi' | 'openai' | 'aws'
+    serviceUrl: process.env.AI_SERVICE_URL || null,    // e.g. https://urbanfix-ai.onrender.com
+    // Support both names to avoid deploy-time env mismatch.
+    serviceApiKey: process.env.AI_SERVICE_API_KEY || process.env.AI_API_KEY || '',
     openaiKey: process.env.OPENAI_API_KEY || null,
     awsRegion: process.env.AWS_REGION || 'ap-south-1',
     modelEndpoint: process.env.AI_MODEL_ENDPOINT || null,
@@ -47,29 +28,95 @@ function log(context, message, data) {
     }
 }
 
+// ─── FastAPI Integration ─────────────────────────────────────────────────────
+
+/**
+ * Call the FastAPI AI service to analyze an image.
+ * Sends the image as multipart/form-data, receives full pipeline results.
+ * @param {Buffer} imageBuffer - raw image bytes
+ * @param {string} filename - original filename
+ * @returns {object|null} - FastAPI analysis result or null on failure
+ */
+async function callFastAPIAnalyze(imageBuffer, filename) {
+    if (!AI_CONFIG.serviceUrl) return null;
+
+    try {
+        const FormData = (await import('form-data')).default;
+        const form = new FormData();
+
+        // Detect content-type from filename extension
+        const ext = (filename || '').split('.').pop().toLowerCase();
+        const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', bmp: 'image/bmp' };
+        const contentType = mimeMap[ext] || 'image/jpeg';
+
+        form.append('file', imageBuffer, {
+            filename: filename || 'image.jpg',
+            contentType,
+        });
+
+        const formBuffer = form.getBuffer();
+        const headers = { ...form.getHeaders(), 'Content-Length': formBuffer.length };
+        if (AI_CONFIG.serviceApiKey) {
+            headers['Authorization'] = `Bearer ${AI_CONFIG.serviceApiKey}`;
+        }
+
+        const response = await fetch(`${AI_CONFIG.serviceUrl}/analyze`, {
+            method: 'POST',
+            headers,
+            body: formBuffer,
+            signal: AbortSignal.timeout(60000),
+        });
+
+        if (!response.ok) {
+            log('fastapi', `HTTP ${response.status}: ${response.statusText}`);
+            return null;
+        }
+
+        const result = await response.json();
+        log('fastapi', 'Analysis complete', {
+            category: result.category,
+            severity: result.ai_severity,
+            priority: result.priority_score,
+            issues: result.issue_count,
+        });
+        return result;
+    } catch (err) {
+        log('fastapi', `Call failed: ${err.message}`);
+        return null;
+    }
+}
+
 // ─── 1. Image Classification ────────────────────────────────────────────────
 
-async function detectIssueInImage(imageUrl) {
+async function detectIssueInImage(imageUrl, imageBuffer, filename) {
     log('detectIssue', 'Analyzing image', { imageUrl: imageUrl?.substring(0, 80) });
 
-    if (AI_CONFIG.provider === 'openai' && AI_CONFIG.openaiKey) {
-        // FUTURE: OpenAI Vision API integration
-        // const response = await openai.chat.completions.create({
-        //     model: 'gpt-4-vision-preview',
-        //     messages: [{ role: 'user', content: [{ type: 'image_url', image_url: { url: imageUrl } }] }]
-        // });
-        // return parseVisionResponse(response);
+    // Try FastAPI service first (real CV models)
+    if ((AI_CONFIG.provider === 'fastapi' || AI_CONFIG.serviceUrl) && imageBuffer) {
+        const fastResult = await callFastAPIAnalyze(imageBuffer, filename);
+        if (fastResult) {
+            return {
+                isValid: fastResult.is_valid,
+                validationReason: fastResult.validation_reason,
+                detectedCategory: fastResult.category,
+                confidence: fastResult.category_confidence,
+                tags: fastResult.ai_tags || [],
+                detectedIssues: fastResult.detected_issues || [],
+                mainIssue: fastResult.main_issue,
+                aiSeverity: fastResult.ai_severity,
+                priorityScore: fastResult.priority_score,
+                departmentTag: fastResult.department_tag,
+                size: fastResult.size,
+                issueCount: fastResult.issue_count,
+                needsUserConfirmation: fastResult.needs_user_confirmation,
+                floodScore: fastResult.flood_score,
+                note: fastResult.note,
+                provider: 'fastapi',
+            };
+        }
     }
 
-    if (AI_CONFIG.provider === 'aws') {
-        // FUTURE: AWS Rekognition integration
-        // const { RekognitionClient, DetectLabelsCommand } = require('@aws-sdk/client-rekognition');
-        // const client = new RekognitionClient({ region: AI_CONFIG.awsRegion });
-        // const result = await client.send(new DetectLabelsCommand({ Image: { S3Object: { ... } } }));
-        // return mapLabelsToCategory(result.Labels);
-    }
-
-    // Rule-based fallback (current behavior)
+    // Rule-based fallback
     return {
         isValid: true,
         detectedCategory: null,
@@ -204,7 +251,45 @@ async function generateTags({ category, description, title }) {
 
 // ─── Unified analyze function (called during issue creation) ────────────────
 
-async function analyzeIssue({ category, description, title, emergency, imageUrl, latitude, longitude }) {
+async function analyzeIssue({ category, description, title, emergency, imageUrl, latitude, longitude, imageBuffer, filename }) {
+    // If FastAPI service is available AND we have an image buffer, get full CV results
+    if ((AI_CONFIG.provider === 'fastapi' || AI_CONFIG.serviceUrl) && imageBuffer) {
+        const cvResult = await callFastAPIAnalyze(imageBuffer, filename);
+        if (cvResult && cvResult.is_valid !== false) {
+            const duplicateCheck = await checkDuplicate({
+                latitude, longitude,
+                category: cvResult.category || category,
+                description,
+            });
+
+            return {
+                aiSeverity: cvResult.ai_severity || 'Medium',
+                departmentTag: cvResult.department_tag || DEPT_MAP[category] || 'General',
+                aiTags: cvResult.ai_tags || [category],
+                priorityScore: cvResult.priority_score || 0,
+                duplicate: duplicateCheck,
+                detectedIssues: cvResult.detected_issues || [],
+                mainIssue: cvResult.main_issue,
+                isValid: cvResult.is_valid,
+                needsUserConfirmation: cvResult.needs_user_confirmation,
+                provider: 'fastapi',
+            };
+        } else if (cvResult && cvResult.is_valid === false) {
+            return {
+                aiSeverity: 'Low',
+                departmentTag: 'General',
+                aiTags: ['rejected'],
+                priorityScore: 0,
+                duplicate: { isDuplicate: false, potentialMatches: [] },
+                isValid: false,
+                validationReason: cvResult.validation_reason || cvResult.note,
+                provider: 'fastapi',
+            };
+        }
+        // If FastAPI call failed, fall through to rules
+    }
+
+    // Rule-based fallback
     const [severity, department, tags, duplicateCheck] = await Promise.all([
         calculateSeverity({ category, description, emergency }),
         routeToDepartment(category),
@@ -228,6 +313,7 @@ async function analyzeIssue({ category, description, title, emergency, imageUrl,
 
 module.exports = {
     detectIssueInImage,
+    callFastAPIAnalyze,
     calculateSeverity,
     calculatePriority,
     checkDuplicate,

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="640" viewBox="0 0 920 640">
+  <defs>
+    <style><![CDATA[
+      .title{font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;fill:#0d47a1}
+      .uc{font-family:Arial,Helvetica,sans-serif;font-size:10px;fill:#263238}
+      .act{font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;fill:#1565c0}
+      .sys{font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;fill:#37474f}
+      .box{fill:none;stroke:#1565c0;stroke-width:2;stroke-dasharray:8 4;rx:12}
+    ]]></style>
+  </defs>
+  <rect width="920" height="640" fill="#fafafa"/>
+  <text x="460" y="28" text-anchor="middle" class="title">Figure 4: UML Use Case Diagram - UrbanFix.AI (simplified)</text>
+
+  <!-- System boundary -->
+  <rect x="280" y="60" width="560" height="540" class="box"/>
+  <text x="560" y="85" text-anchor="middle" class="sys">UrbanFix.AI System</text>
+
+  <!-- Actors (stick simplified) -->
+  <g id="actor1">
+    <circle cx="120" cy="140" r="14" fill="none" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="154" x2="120" y2="200" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="170" x2="90" y2="190" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="170" x2="150" y2="190" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="200" x2="95" y2="235" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="200" x2="145" y2="235" stroke="#1565c0" stroke-width="2"/>
+    <text x="120" y="255" text-anchor="middle" class="act">Citizen</text>
+  </g>
+
+  <g transform="translate(0,200)">
+    <circle cx="120" cy="140" r="14" fill="none" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="154" x2="120" y2="200" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="170" x2="90" y2="190" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="170" x2="150" y2="190" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="200" x2="95" y2="235" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="200" x2="145" y2="235" stroke="#1565c0" stroke-width="2"/>
+    <text x="120" y="255" text-anchor="middle" class="act">Admin</text>
+  </g>
+
+  <g transform="translate(0,400)">
+    <circle cx="120" cy="140" r="14" fill="none" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="154" x2="120" y2="200" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="170" x2="90" y2="190" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="170" x2="150" y2="190" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="200" x2="95" y2="235" stroke="#1565c0" stroke-width="2"/>
+    <line x1="120" y1="200" x2="145" y2="235" stroke="#1565c0" stroke-width="2"/>
+    <text x="120" y="255" text-anchor="middle" class="act">Field Worker</text>
+  </g>
+
+  <!-- Use case ovals -->
+  <ellipse cx="420" cy="130" rx="95" ry="28" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="420" y="134" text-anchor="middle" class="uc">Register / Login</text>
+
+  <ellipse cx="620" cy="130" rx="105" ry="28" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="620" y="134" text-anchor="middle" class="uc">Report civic issue</text>
+
+  <ellipse cx="420" cy="210" rx="100" ry="28" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="420" y="214" text-anchor="middle" class="uc">View feed &amp; map</text>
+
+  <ellipse cx="620" cy="210" rx="95" ry="28" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="620" y="214" text-anchor="middle" class="uc">Issue detail</text>
+
+  <ellipse cx="520" cy="290" rx="110" ry="28" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="520" y="294" text-anchor="middle" class="uc">Upvote / comment / follow</text>
+
+  <ellipse cx="520" cy="370" rx="105" ry="28" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="520" y="374" text-anchor="middle" class="uc">Duplicate merge flow</text>
+
+  <ellipse cx="720" cy="250" rx="95" ry="28" fill="#fff3e0" stroke="#ef6c00" stroke-width="1.5"/>
+  <text x="720" y="254" text-anchor="middle" class="uc">Analyze image (AI)</text>
+
+  <ellipse cx="420" cy="480" rx="115" ry="28" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="420" y="484" text-anchor="middle" class="uc">Admin dashboard</text>
+
+  <ellipse cx="620" cy="480" rx="115" ry="28" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="620" y="484" text-anchor="middle" class="uc">Assign &amp; update status</text>
+
+  <ellipse cx="520" cy="560" rx="105" ry="28" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="520" y="564" text-anchor="middle" class="uc">Receive notifications</text>
+
+  <!-- Lines citizen to use cases -->
+  <line x1="150" y1="140" x2="325" y2="130" stroke="#546e7a" stroke-width="1.2"/>
+  <line x1="150" y1="140" x2="515" y2="130" stroke="#546e7a" stroke-width="1.2"/>
+  <line x1="150" y1="140" x2="320" y2="210" stroke="#546e7a" stroke-width="1.2"/>
+  <line x1="150" y1="140" x2="525" y2="210" stroke="#546e7a" stroke-width="1.2"/>
+  <line x1="150" y1="140" x2="410" y2="290" stroke="#546e7a" stroke-width="1.2"/>
+  <line x1="150" y1="140" x2="410" y2="370" stroke="#546e7a" stroke-width="1.2"/>
+  <line x1="150" y1="140" x2="415" y2="560" stroke="#546e7a" stroke-width="1.2"/>
+
+  <!-- Report includes AI -->
+  <line x1="720" y1="222" x2="720" y2="178" stroke="#ef6c00" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="735" y="200" class="uc" style="font-size:8px">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Admin -->
+  <line x1="150" y1="340" x2="305" y2="480" stroke="#546e7a" stroke-width="1.2"/>
+  <line x1="150" y1="340" x2="505" y2="480" stroke="#546e7a" stroke-width="1.2"/>
+
+  <!-- Field worker -->
+  <line x1="150" y1="540" x2="505" y2="480" stroke="#546e7a" stroke-width="1.2"/>
+
+  <!-- Connect report to AI -->
+  <line x1="620" y1="158" x2="720" y2="222" stroke="#546e7a" stroke-width="1.2"/>
+</svg>

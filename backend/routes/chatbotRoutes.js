@@ -3,6 +3,20 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const supabase = require('../config/supabase');
 const store = require('../data/store');
+const { polishUrbanFixReply } = require('../services/llm/polishReply');
+
+function sanitizeChatInput(input, maxLen = 500) {
+    if (typeof input !== 'string') return '';
+    return input
+        .trim()
+        .replace(/[\u0000-\u001F\u007F]/g, ' ')
+        .replace(/```+/g, ' ')
+        .replace(/<\/?script\b[^>]*>/gi, ' ')
+        .replace(/<\|.*?\|>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .slice(0, maxLen)
+        .trim();
+}
 
 // ─── Intent Detection (rule-based, swap with NLP model later) ───────────────
 
@@ -396,13 +410,43 @@ router.post('/message', protect, async (req, res) => {
     try {
         const { message, location } = req.body;
         const userId = req.user?._id || req.user?.id;
+        const cleanMessage = sanitizeChatInput(message, 500);
 
-        if (!message || !message.trim()) {
+        if (!cleanMessage) {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        const intent = detectIntent(message);
-        const response = await generateResponse(intent, message, userId, location);
+        const intent = detectIntent(cleanMessage);
+        let response = await generateResponse(intent, cleanMessage, userId, location);
+
+        const llmStartedAt = Date.now();
+        const polished = await polishUrbanFixReply({
+            userMessage: cleanMessage,
+            intent,
+            draftText: response.text,
+        });
+        const llmLatencyMs = Date.now() - llmStartedAt;
+
+        if (polished?.text) {
+            const typingHintMs = polished.llmCacheHit
+                ? 250
+                : Math.max(700, Math.min(1800, Math.round(llmLatencyMs * 0.7)));
+
+            response = {
+                ...response,
+                text: polished.text,
+                llm: polished.llmProvider,
+                llmModel: polished.llmModel,
+                llmCacheHit: polished.llmCacheHit,
+                llmLatencyMs,
+                typingHintMs,
+            };
+        } else {
+            response = {
+                ...response,
+                typingHintMs: 300,
+            };
+        }
 
         res.json({
             intent,
