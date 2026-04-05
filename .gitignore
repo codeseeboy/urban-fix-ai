@@ -17,3 +17,24 @@ colab/
 
 # Test / scratch output
 **/test_output.txt
+backend/scripts/test_output.txt
+ai-service/test_results.json
+
+# User uploads (runtime files; folder kept via .gitkeep)
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Optional local YOLO / PyTorch weights (runtime download in Docker is preferred)
+*.pt
+
+# Report binaries (keep Markdown in repo; PDFs optional locally)
+docs/*.pdf
+docs/*.docx
+
+# Firebase Android config contains API keys — copy from example after clone
+frontend/google-services.json
