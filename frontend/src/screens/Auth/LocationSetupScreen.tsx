@@ -17,8 +17,9 @@ const { width } = Dimensions.get('window');
 
 type DetectionState = 'idle' | 'detecting' | 'success' | 'error';
 
-export default function LocationSetupScreen() {
+export default function LocationSetupScreen({ navigation, route }: any) {
     const { completeLocationSetup, user } = useAuth();
+    const isUpdate = route?.params?.mode === 'update';
     const insets = useSafeAreaInsets();
     const [state, setState] = useState<DetectionState>('idle');
     const [location, setLocation] = useState<UserLocation | null>(null);
@@ -93,6 +94,9 @@ export default function LocationSetupScreen() {
         } else {
             await completeLocationSetup();
         }
+        if (isUpdate && navigation?.canGoBack?.()) {
+            navigation.goBack();
+        }
     };
 
     const spinInterpolate = radarSpin.interpolate({
@@ -105,6 +109,16 @@ export default function LocationSetupScreen() {
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <AuthCanvas />
+
+            {isUpdate ? (
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    style={[styles.backBtn, { top: insets.top + 8 }]}
+                    activeOpacity={0.7}
+                >
+                    <Ionicons name="arrow-back" size={20} color={colors.text} />
+                </TouchableOpacity>
+            ) : null}
 
             {/* Subtle glow */}
             <View style={styles.bgGlow} />
@@ -267,6 +281,19 @@ export default function LocationSetupScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    backBtn: {
+        position: 'absolute',
+        left: 16,
+        zIndex: 20,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(20,20,32,0.8)',
+        borderWidth: 1,
+        borderColor: colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     bgGlow: {
         position: 'absolute',
         top: '10%', left: '10%',

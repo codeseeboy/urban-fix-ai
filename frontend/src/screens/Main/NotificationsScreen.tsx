@@ -15,6 +15,7 @@ import * as Notifications from 'expo-notifications';
 import { notificationsAPI } from '../../services/api';
 import { colors, fonts, radius } from '../../theme/colors';
 import AuthCanvas from '../../components/auth/AuthCanvas';
+import EmptyState from '../../components/ui/EmptyState';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = -80;
@@ -134,7 +135,7 @@ function getTimeAgo(dateStr: string) {
     return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export default function NotificationsScreen() {
+export default function NotificationsScreen({ navigation }: any) {
     const insets = useSafeAreaInsets();
     const isFocused = useIsFocused();
     const [notifications, setNotifications] = useState<any[]>([]);
@@ -259,6 +260,14 @@ export default function NotificationsScreen() {
     }, [notifications, unreadCount]);
 
     const handleTap = useCallback(async (item: any) => {
+        const issueId = item.issueId || item.issue_id || item.data?.issueId || item.related_id
+            || (typeof item.actionUrl === 'string' && item.actionUrl.includes(':')
+                ? item.actionUrl.split(':')[1]
+                : null);
+        if (issueId && navigation?.navigate) {
+            navigation.navigate('IssueDetail', { issueId: String(issueId) });
+        }
+
         if (item.read || pendingMarkReadRef.current.has(item._id)) return;
 
         pendingMarkReadRef.current.add(item._id);
@@ -430,13 +439,11 @@ export default function NotificationsScreen() {
                         />
                     }
                     ListEmptyComponent={
-                        <View style={styles.emptyWrap}>
-                            <View style={styles.emptyIconCircle}>
-                                <Ionicons name="notifications-off-outline" size={40} color={colors.textMuted} />
-                            </View>
-                            <Text style={styles.emptyTitle}>All caught up!</Text>
-                            <Text style={styles.emptyText}>No notifications to show</Text>
-                        </View>
+                        <EmptyState
+                            image={require('../../../assets/empty-alerts.png')}
+                            title="You're caught up"
+                            subtitle="Status changes, comments, and nearby reports will land here."
+                        />
                     }
                 />
             )}

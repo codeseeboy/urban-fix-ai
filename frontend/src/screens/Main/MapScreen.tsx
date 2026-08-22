@@ -126,7 +126,7 @@ const shimmerStyles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     mapBg: {
         flex: 1,
-        backgroundColor: '#1a1a2e',
+        backgroundColor: '#E8EEF5',
         overflow: 'hidden',
     },
     shimmerBar: {
@@ -632,7 +632,7 @@ export default function MapScreen({ navigation }: any) {
                 onPress={() => navigation.navigate('Chatbot')}
                 activeOpacity={0.85}
             >
-                <LinearGradient colors={['#0A84FF', '#0055CC']} style={styles.chatFabGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <LinearGradient colors={colors.gradient.primary as [string, string]} style={styles.chatFabGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                     <Ionicons name="chatbubble-ellipses" size={22} color="#FFF" />
                 </LinearGradient>
             </TouchableOpacity>
@@ -710,16 +710,16 @@ const styles = StyleSheet.create({
     legend: {
         position: 'absolute', bottom: 12, left: 12, right: 12,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
-        backgroundColor: 'rgba(10,10,15,0.88)',
+        backgroundColor: colors.surface,
         borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 8,
         borderWidth: 1, borderColor: colors.border,
     },
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     legendDot: { width: 8, height: 8, borderRadius: 4 },
-    legendText: { fontFamily: 'Inter_500Medium', color: '#CCC', fontSize: 10 },
+    legendText: { fontFamily: 'Inter_500Medium', color: colors.textSecondary, fontSize: 10 },
     countBadge: {
         position: 'absolute', top: 12, right: 12,
-        backgroundColor: 'rgba(10,10,15,0.88)', borderRadius: radius.md,
+        backgroundColor: colors.surface, borderRadius: radius.md,
         paddingHorizontal: 10, paddingVertical: 4, alignItems: 'center',
         borderWidth: 1, borderColor: colors.border,
     },
@@ -728,7 +728,7 @@ const styles = StyleSheet.create({
     refreshingBanner: {
         position: 'absolute', top: 10, alignSelf: 'center',
         flexDirection: 'row', alignItems: 'center', gap: 6,
-        backgroundColor: 'rgba(10,10,15,0.85)', borderRadius: 16,
+        backgroundColor: colors.surface, borderRadius: 16,
         paddingHorizontal: 12, paddingVertical: 6,
         borderWidth: 1, borderColor: colors.border,
     },

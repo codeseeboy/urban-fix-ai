@@ -4,9 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
+import { confirmAction } from '../../utils/confirm';
 import { gamificationAPI } from '../../services/api';
 import { colors, fonts, radius } from '../../theme/colors';
 import AuthCanvas from '../../components/auth/AuthCanvas';
+import UserAvatar from '../../components/ui/UserAvatar';
 
 const { width } = Dimensions.get('window');
 
@@ -62,11 +64,9 @@ export default function ProfileScreen({ navigation }: any) {
         setRefreshing(false);
     }, [refreshProfile, fetchBadges]);
 
-    const handleLogout = useCallback(() => {
-        Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign Out', style: 'destructive', onPress: logout },
-        ]);
+    const handleLogout = useCallback(async () => {
+        const ok = await confirmAction('Sign Out', 'Are you sure you want to sign out?', 'Sign Out');
+        if (ok) await logout();
     }, [logout]);
 
     const role = ROLE_CONFIG[user?.role || 'citizen'];
@@ -108,11 +108,7 @@ export default function ProfileScreen({ navigation }: any) {
 
                         {/* Avatar */}
                         <View style={styles.avatarRing}>
-                            <LinearGradient colors={[colors.primary, '#4facfe']} style={styles.avatar}>
-                                <Text style={styles.avatarText} allowFontScaling={false}>
-                                    {(user?.name || 'U')[0].toUpperCase()}
-                                </Text>
-                            </LinearGradient>
+                            <UserAvatar name={user?.name} uri={user?.avatar} size={86} />
                             <View style={[styles.levelPill, { backgroundColor: role.color }]}>
                                 <Text style={styles.levelPillText} allowFontScaling={false}>Lvl {level}</Text>
                             </View>
@@ -225,6 +221,13 @@ export default function ProfileScreen({ navigation }: any) {
 
                 {/* ─── QUICK ACTIONS ─────────────────────────────────────────── */}
                 <View style={styles.actionsSection}>
+                    <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('EditProfile')} activeOpacity={0.7}>
+                        <View style={[styles.actionIconWrap, { backgroundColor: colors.primary + '15' }]}>
+                            <Ionicons name="create" size={18} color={colors.primary} />
+                        </View>
+                        <Text style={styles.actionText} allowFontScaling={false}>Edit Profile</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
                     <TouchableOpacity style={styles.actionRow} onPress={() => navigation.navigate('Leaderboard')} activeOpacity={0.7}>
                         <View style={[styles.actionIconWrap, { backgroundColor: '#FFD60A15' }]}>
                             <Ionicons name="trophy" size={18} color="#FFD60A" />

@@ -27,6 +27,9 @@ router.get('/', protect, async (req, res) => {
             desc: n.description,
             read: n.read,
             actionUrl: n.action_url,
+            issueId: typeof n.action_url === 'string' && n.action_url.includes(':')
+                ? n.action_url.split(':')[1]
+                : null,
             createdAt: n.created_at,
         }));
         res.json({ notifications: mapped, unreadCount });

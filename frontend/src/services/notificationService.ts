@@ -1,7 +1,7 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { userAPI } from './api';
 import logger from '../utils/logger';
 
@@ -19,12 +19,24 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotificationsAsync() {
   let token;
 
+  const pref = await AsyncStorage.getItem('setting_notifications');
+  if (pref === 'false') {
+    logger.info('Notifications', 'Push disabled in app settings — skip register');
+    return;
+  }
+
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
+    await Notifications.setNotificationChannelAsync('civic', {
+      name: 'Issue updates',
+      importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
+      lightColor: '#007AFF',
+    });
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'UrbanFix',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#007AFF',
     });
   }
 
@@ -65,4 +77,30 @@ export async function registerForPushNotificationsAsync() {
   }
 
   return token;
+}
+
+export async function unregisterPushNotificationsAsync() {
+  try {
+    if (Platform.OS === 'web') {
+      await userAPI.removePushToken().catch(() => {});
+      return;
+    }
+    if (!Device.isDevice) return;
+
+    const timed = Promise.race([
+      Notifications.getDevicePushTokenAsync(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('push token timeout')), 2000)),
+    ]);
+
+    try {
+      const tokenResponse = await timed;
+      const token = tokenResponse?.data;
+      await userAPI.removePushToken(typeof token === 'string' ? token : undefined);
+    } catch {
+      await userAPI.removePushToken().catch(() => {});
+    }
+    logger.info('Notifications', 'Push token removed from server');
+  } catch (e) {
+    logger.error('Notifications', `Error removing push token: ${e}`);
+  }
 }

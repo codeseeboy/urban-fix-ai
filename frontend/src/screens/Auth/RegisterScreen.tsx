@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Animated } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Animated, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
@@ -30,8 +30,8 @@ export default function RegisterScreen({ navigation }: any) {
             Alert.alert('Required', 'All fields are required');
             return;
         }
-        if (password.length < 4) {
-            Alert.alert('Weak Password', 'Password must be at least 4 characters');
+        if (password.length < 8) {
+            Alert.alert('Weak Password', 'Use at least 8 characters');
             return;
         }
         setLoading(true);
@@ -61,11 +61,9 @@ export default function RegisterScreen({ navigation }: any) {
         <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <AuthCanvas />
             <Animated.View style={[styles.inner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-                <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.logo}>
-                    <Text style={styles.logoText}>U</Text>
-                </LinearGradient>
+                <Image source={require('../../../assets/logo2.png')} style={styles.logoImage} />
                 <Text style={styles.title}>Create Account</Text>
-                <Text style={styles.subtitle}>Create your account to report and track updates.</Text>
+                <Text style={styles.subtitle}>Join your city. Report real issues. Track the fix.</Text>
 
                 <View style={styles.formCard}>
                     <View style={styles.inputWrap}>
@@ -130,6 +128,10 @@ export default function RegisterScreen({ navigation }: any) {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, justifyContent: 'center' },
     inner: { paddingHorizontal: 28 },
+    logoImage: {
+        width: 72, height: 72, borderRadius: 20, alignSelf: 'center', marginBottom: 16,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    },
     logo: {
         width: 64, height: 64, borderRadius: 18, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 16,
         shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,

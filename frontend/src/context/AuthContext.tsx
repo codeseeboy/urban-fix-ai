@@ -4,11 +4,11 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
-import { authAPI, setApiAuthToken } from '../services/api';
+import { authAPI, setApiAuthToken, userAPI } from '../services/api';
 import { supabase } from '../services/supabaseClient';
 import { UserLocation, getStoredLocation, saveLocation, clearStoredLocation } from '../services/locationService';
 import logger from '../utils/logger';
-import { registerForPushNotificationsAsync } from '../services/notificationService';
+import { registerForPushNotificationsAsync, unregisterPushNotificationsAsync } from '../services/notificationService';
 
 // Ensure WebBrowser finishes its work
 WebBrowser.maybeCompleteAuthSession();
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
             } else if (event === 'SIGNED_OUT') {
                 logger.info('Auth', 'Supabase SIGNED_OUT event');
-                if (userRef.current) { // Only logout if we think we are logged in
+                if (userRef.current && !isLoggingOut.current) {
                     await logoutRef.current();
                 }
             }
@@ -444,25 +444,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isLoggingOut.current) return;
         isLoggingOut.current = true;
 
-        logger.action('Auth', `Logout: ${user?.email}`);
+        logger.action('Auth', `Logout: ${userRef.current?.email || user?.email}`);
 
         try {
-            await supabase.auth.signOut(); // Clear Supabase session
-            await AsyncStorage.multiRemove(['token', 'user', 'locationSetupDone', 'profileSetupDone', 'onboardingDone']);
-            await clearStoredLocation();
             setApiAuthToken(null);
             setUser(null);
             setNeedsLocationSetup(false);
             setNeedsProfileSetup(false);
             setUserLocationState(null);
+
+            await AsyncStorage.multiRemove(['token', 'user', 'locationSetupDone', 'profileSetupDone']);
+            await clearStoredLocation();
+
+            unregisterPushNotificationsAsync().catch(() => {});
+            supabase.auth.signOut().catch(() => {});
         } catch (error: any) {
             logger.error('Auth', 'Logout failed', error);
-            // Force local clear anyway
+            setApiAuthToken(null);
             setUser(null);
         } finally {
             isLoggingOut.current = false;
         }
-    }, []);
+    }, [user?.email]);
 
     const updateUserLocation = useCallback(async (location: UserLocation) => {
         setUserLocationState(location);
@@ -470,7 +473,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const completeLocationSetup = useCallback(async (location?: UserLocation) => {
-        if (location) await updateUserLocation(location);
+        if (location) {
+            await updateUserLocation(location);
+            try {
+                await userAPI.updateProfile({
+                    city: location.city,
+                    ward: location.ward,
+                    region: location.city || location.address,
+                });
+                setUser((prev) => {
+                    if (!prev) return prev;
+                    const next = {
+                        ...prev,
+                        city: location.city || prev.city,
+                        ward: location.ward || prev.ward,
+                        region: location.city || location.address || prev.region,
+                    };
+                    AsyncStorage.setItem('user', JSON.stringify(next)).catch(() => {});
+                    return next;
+                });
+            } catch (e) {
+                logger.error('Auth', 'Failed to persist location on profile', e);
+            }
+        }
         await AsyncStorage.setItem('locationSetupDone', 'true');
         setNeedsLocationSetup(false);
         // Only show profile setup for new users (old users already have complete profile)
@@ -495,7 +520,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const refreshProfile = useCallback(async () => {
-        // Implement profile refresh logic here
+        try {
+            const { data } = await userAPI.getProfile();
+            setUser((prev) => {
+                if (!prev) return prev;
+                const next = { ...prev, ...data, token: prev.token, _id: data._id || prev._id };
+                AsyncStorage.setItem('user', JSON.stringify(next)).catch(() => {});
+                return next;
+            });
+        } catch (e) {
+            logger.error('Auth', 'Profile refresh failed', e);
+        }
     }, []);
 
     // Keep logoutRef updated (defined here to be after logout declaration)

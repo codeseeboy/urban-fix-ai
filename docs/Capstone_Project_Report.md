@@ -94,9 +94,9 @@ Urban civic infrastructure in India faces an unprecedented challenge: the gap be
 
 UrbanFix.AI addresses this systemic gap by presenting an AI-powered civic issue reporting and resolution platform that transforms the traditional complaint workflow into an intelligent, community-driven, and fully transparent digital ecosystem. The platform leverages a multi-model artificial intelligence pipeline deployed as a server-side microservice to automatically classify uploaded images into civic issue categories (roads, garbage, lighting, water, parks), assess issue severity and priority based on visual impact analysis, and filter out inappropriate or irrelevant submissions — all without requiring any manual intervention from municipal staff at the triage stage.
 
-The system architecture comprises a React Native mobile application serving as the citizen-facing interface, a Node.js/Express backend API layer managing business logic and data orchestration, a PostgreSQL database with PostGIS spatial extensions hosted on Supabase for geospatial querying and real-time data persistence, and a Python-based AI inference microservice (FastAPI) hosting SigLIP (google/siglip-base-patch16-384) for zero-shot category routing, YOLOv8 detectors for road damage (keremberke/yolov8s-road-damage-detection) and waste (HrutikAdsare/waste-detection-yolov8), SigLIP-based flood detection for waterlogging classification, YOLO-World for open-vocabulary lighting and parks detection, and a ViT-based NSFW content filter for image safety. The platform further incorporates community engagement features including upvote/downvote mechanisms, duplicate issue merging through GPS-radius-based matching, gamification with points and badges, multi-reporter group galleries, a municipal dashboard for administrative oversight, and push notification services via Firebase Cloud Messaging.
+The system architecture comprises a React Native mobile application serving as the citizen-facing interface, a Node.js/Express backend API layer managing business logic and data orchestration, a PostgreSQL database with PostGIS spatial extensions hosted on Supabase for geospatial querying and real-time data persistence, and a Python-based AI inference microservice (FastAPI) hosting SigLIP (google/siglip-base-patch16-384) for zero-shot category routing, YOLOv8 detectors for road damage (default weights from Hugging Face: ozair23/yolov8-road-damage-detector, with optional local override via `AI_ROAD_WEIGHTS_PATH`) and waste (HrutikAdsare/waste-detection-yolov8), SigLIP-based image classification for flood/waterlogging scenes (prithivMLmods/Flood-Image-Detection), YOLO-World for open-vocabulary lighting and parks detection, and **SigLIP prompt-based validation** (valid vs invalid outdoor civic prompts — not a separate ViT NSFW model) to reject selfies, indoor shots, screenshots, and similar off-topic images. The Node.js backend calls this service when `AI_SERVICE_URL` is configured (`POST /analyze`, multipart field `file`); otherwise it falls back to rule-based scoring in `services/ai/index.js`. The platform further incorporates community engagement features including upvote/downvote mechanisms, duplicate issue merging through GPS-radius-based matching, gamification with points and badges, multi-reporter group galleries, a municipal dashboard for administrative oversight, and push notification services via Firebase Cloud Messaging.
 
-The AI pipeline operates in a sequential gate architecture: every uploaded image first undergoes NSFW screening, then passes through a SigLIP-based category router that determines the most probable civic issue type using similarity against category-specific text prompts, and finally is processed by the corresponding category-specific detection or classification model. The output includes detected category, confidence score, bounding box area ratios for severity estimation, and a computed priority score that combines visual impact, category weight, and detection confidence into a normalized 0–100 scale. This priority score directly informs the severity classification (Low, Medium, High, Critical) stored in the database and displayed to both citizens and municipal administrators.
+The AI pipeline operates in a sequential gate architecture: every uploaded image first undergoes **validation** (SigLIP softmax over valid outdoor civic prompts vs invalid prompts such as selfie, indoor, screenshot, meme), then passes through a SigLIP-based category router that determines the most probable civic issue type using similarity against category-specific text prompts, and finally is processed by the corresponding category-specific detection or classification model. The output includes detected category, confidence score, bounding box area ratios for severity estimation, and a computed priority score that combines visual impact, category weight, and detection confidence into a normalized 0–100 scale. This priority score directly informs the severity classification (Low, Medium, High, Critical) stored in the database and displayed to both citizens and municipal administrators.
 
 Pilot testing with over 200 sample civic issue images demonstrated category classification accuracy exceeding 80% for roads and garbage categories using pretrained models without domain-specific fine-tuning, with a clear pathway to 90%+ accuracy through active learning from user-confirmed corrections. The platform has been designed for production deployment supporting 20,000+ concurrent users, with the AI microservice hosted on a GPU-equipped cloud instance and the application backend deployed on Render with Supabase as the managed database layer.
 
@@ -221,7 +221,7 @@ UrbanFix.AI is conceived as a comprehensive technological solution to this syste
 
 Beyond the AI-driven reporting workflow, UrbanFix.AI incorporates a suite of community engagement features designed to foster civic participation and transparency. Citizens can upvote or downvote reported issues to signal urgency, follow specific issues to receive push notifications about status updates, contribute additional photographic evidence to existing reports through a duplicate-detection and merge mechanism, and earn points and badges through a gamification system that rewards active civic participation. Municipal administrators have access to a dedicated dashboard that provides an aggregated view of all reported issues, filterable by category, severity, geographic region, and status, enabling data-driven resource allocation and performance monitoring.
 
-The platform is built using a modern technology stack comprising React Native with Expo for the cross-platform mobile application, Node.js with Express for the backend API layer, PostgreSQL with PostGIS spatial extensions hosted on Supabase for geospatially-aware data persistence, and a Python-based FastAPI microservice hosting the AI inference pipeline. The AI pipeline itself employs a multi-model architecture: SigLIP for zero-shot category routing, YOLOv8 for road damage detection (potholes, cracks, alligator cracking) and for garbage and litter detection, a SigLIP-based binary classifier for waterlogging/flood detection, YOLO-World for open-vocabulary detection in lighting and parks scenes, and a lightweight ViT-based model for NSFW content filtering. This multi-model approach ensures that each civic issue category is handled by a specialist model optimized for that specific detection task, while the SigLIP router ensures that only the relevant model is invoked for any given image, optimizing both accuracy and computational efficiency.
+The platform is built using a modern technology stack comprising React Native with Expo for the cross-platform mobile application, Node.js with Express for the backend API layer, PostgreSQL with PostGIS spatial extensions hosted on Supabase for geospatially-aware data persistence, and a Python-based FastAPI microservice hosting the AI inference pipeline. The AI pipeline itself employs a multi-model architecture: SigLIP for zero-shot category routing and for **image validation** (rejecting off-topic images via prompt matching), YOLOv8 for road damage detection and for garbage and litter detection, a SigLIP image-classification head for waterlogging/flood-style water scenes (`prithivMLmods/Flood-Image-Detection`), and YOLO-World for open-vocabulary detection in lighting and parks scenes. This multi-model approach ensures that each civic issue category is handled by a specialist model where applicable, while the SigLIP router selects the relevant processing path for each image.
 
 ## 1.2 Background
 
@@ -299,12 +299,12 @@ The development of UrbanFix.AI is informed by a substantial body of prior work s
 | 4 | CLIP: Contrastive Language-Image Pretraining | Radford et al., OpenAI, 2021 | Introduced a model trained on 400M image-text pairs that performs zero-shot image classification by computing cosine similarity between image and text embeddings. Achieved competitive accuracy without task-specific fine-tuning. | Large model size; requires GPU for efficient inference. Zero-shot accuracy varies by domain. Not designed for fine-grained detection (bounding boxes). |
 | 5 | SigLIP — Sigmoid Loss Language-Image Pretraining | Zhai et al., Google, ICCV 2023 | Image-text model using sigmoid loss; strong zero-shot classification. Public checkpoints include google/siglip-base-patch16-384 on Hugging Face. | Same limitations as CLIP family regarding fine-grained bbox detection. Requires careful prompt engineering for domain-specific routing. |
 | 6 | YOLOv8 Object Detection (Ultralytics) | Ultralytics, 2023–2025 | Widely deployed real-time detection; community YOLOv8 checkpoints on Hugging Face for road damage and waste. Supports detection, segmentation, and classification. | Requires labeled bounding-box datasets for fine-tuning. Performance degrades on categories with limited training data. |
-| 7 | Marqo NSFW Image Detection (ViT-tiny) | Marqo AI, 2024 | Lightweight ViT-based binary classifier (NSFW/SFW) trained on 220,000 images. Achieves 98.56% accuracy. 18–20x smaller than competing models. | Binary classification only (NSFW vs SFW); does not distinguish between types of inappropriate content (violence, gore, explicit). May not cover all cultural contexts. |
+| 7 | (Optional / literature) NSFW classifiers (ViT-based, e.g. Marqo) | Various, Hugging Face | Binary NSFW/SFW models exist for moderation. | **Not used in the shipped UrbanFix FastAPI service** — validation is implemented with SigLIP prompt matching in `ai-service/app/validation.py`. |
 | 8 | Swachhata App (Government of India) | Ministry of Housing & Urban Affairs, 2016 | Official app for sanitation-related complaints under Swachh Bharat Mission. Supports photo upload, GPS tagging, and complaint tracking. | No AI classification; manual categorization by users. No severity estimation. No community engagement features. Limited to sanitation category. |
 | 9 | Flood-Image-Detection (SigLIP-based) | prithivMLmods, HuggingFace, 2025 | Binary image classifier fine-tuned from google/siglip2-base-patch16-512 for detecting flooded vs. non-flooded scenes. | Binary only (flood/non-flood); does not distinguish waterlogging severity, pipe leakage, or drainage-specific issues. Limited training diversity. |
 | 10 | QR4Change Urban Civic Issues Dataset | Pune Research Group, Mendeley Data, 2025 | Dataset of 4,937 images covering potholes (2,966 images) and garbage (1,971 images) collected from field surveys in Pune, India, plus open-source repositories. | Only two categories (pothole and garbage). No bounding-box annotations (image-level labels only). Limited to Pune geographic context. |
 | 11 | Adversarial Adaptation of Scene Graph Models for Civic Issues | Atreja et al., WWW 2019 | Proposed adversarial training approach for scene graph models to generate Civic Issue Graphs from images. Released multi-modal civic issue dataset. | Research prototype; no production-ready model or API. Scene graph approach is computationally expensive and difficult to deploy at scale. |
-| 12 | Road Damage Detection using YOLOv8s on RDD2022 | keremberke, Hugging Face | YOLOv8s checkpoint for road damage (RDD2022-style labels). Detects multiple damage types (e.g. D00, D10, D20, D40). Typical inference at 640×640. | Focused only on road damage; no coverage of other civic categories. May need fine-tuning for local road appearance. |
+| 12 | Road Damage Detection (YOLOv8 weights) | ozair23/yolov8-road-damage-detector (Hugging Face) | Project default road weights (`best.pt`) from this repo; optional local primary weights with HF backup per `ai-service` config. | Focused only on road damage; may need fine-tuning for local road appearance. Third-party checkpoints (e.g. keremberke RDD2022-style) exist on HF but are **not** the IDs wired in this codebase. |
 
 ## 2.3 Problem Definition
 
@@ -314,7 +314,7 @@ The existing civic issue reporting landscape in India is characterized by a fund
 
 The specific problems addressed by this project are as follows. First, the absence of automated image-based classification in existing civic platforms means that the burden of accurate categorization falls entirely on the citizen, leading to frequent miscategorization and delayed routing to the appropriate municipal department. Second, the lack of visual severity estimation means that all complaints are treated with equal priority regardless of their actual impact — a hairline crack and a vehicle-damaging pothole are queued identically. Third, the absence of intelligent duplicate detection leads to significant redundancy in municipal complaint databases, with the same physical issue being reported multiple times by different citizens, diluting the apparent priority of novel issues. Fourth, the lack of community engagement mechanisms in existing platforms creates a one-directional complaint-and-wait experience that fails to sustain citizen participation over time. Fifth, the absence of content moderation exposes municipal systems to irrelevant, inappropriate, or malicious image submissions that waste processing resources and potentially create legal liability.
 
-UrbanFix.AI addresses each of these problems through a unified platform that integrates AI-driven classification and severity estimation, GPS-based duplicate detection and merging, community engagement through voting and following, gamification through points and badges, and content moderation through NSFW filtering — all within a mobile-first, production-ready architecture.
+UrbanFix.AI addresses each of these problems through a unified platform that integrates AI-driven classification and severity estimation, GPS-based duplicate detection and merging, community engagement through voting and following, gamification through points and badges, and **automated rejection of off-topic images** (SigLIP validation prompts — selfies, indoor, screenshots, etc.) — all within a mobile-first, production-ready architecture.
 
 ## 2.4 Feasibility Study
 
@@ -322,7 +322,7 @@ UrbanFix.AI addresses each of these problems through a unified platform that int
 
 The technical feasibility of UrbanFix.AI is strongly supported by the current maturity of the underlying technologies. React Native with Expo provides a production-proven cross-platform mobile development framework used by companies including Facebook, Instagram, and Flipkart. Node.js with Express is the most widely deployed server-side JavaScript framework, powering applications at Netflix, PayPal, and LinkedIn scale. PostgreSQL with PostGIS is the industry standard for geospatial data management, used extensively in GIS applications worldwide. Supabase provides a managed PostgreSQL hosting service with built-in authentication, storage, and real-time capabilities, eliminating the operational overhead of database administration.
 
-On the AI side, all models selected for the pipeline are publicly available as pretrained checkpoints on Hugging Face, with permissive licenses suitable for production use. SigLIP checkpoints are published by Google on Hugging Face; YOLOv8 specialist weights are distributed via Hugging Face and the Ultralytics ecosystem (AGPL-3.0 with enterprise options). The Marqo NSFW detection model and the Flood-Image-Detection model are publicly accessible on Hugging Face. Python with FastAPI provides a high-performance framework for serving AI models as HTTP endpoints, with native support for asynchronous request handling, automatic OpenAPI documentation, and straightforward Docker containerization for deployment.
+On the AI side, all models selected for the pipeline are publicly available as pretrained checkpoints on Hugging Face or Ultralytics, with licenses that must be verified for production use. SigLIP checkpoints are published by Google on Hugging Face; YOLOv8 specialist weights are distributed via Hugging Face and the Ultralytics ecosystem. Flood-Image-Detection and waste-detection weights are publicly accessible on Hugging Face. **Image safety in the implemented service uses SigLIP validation prompts**, not a separate Marqo/ViT NSFW checkpoint. Python with FastAPI provides a high-performance framework for serving AI models as HTTP endpoints, with native support for asynchronous request handling, automatic OpenAPI documentation, and straightforward Docker containerization for deployment.
 
 The inference hardware requirements are modest: a single NVIDIA T4 GPU (16 GB VRAM, available on AWS, GCP, and RunPod at approximately $0.50–$0.76/hour for on-demand instances) is sufficient to host all five models concurrently with sub-second inference latency per image. This makes the AI pipeline technically and financially viable for a startup or academic project without requiring expensive custom hardware.
 
@@ -353,11 +353,11 @@ The technology stack is summarized in the following table:
 | Database | PostgreSQL + PostGIS (Supabase) | Data persistence, geospatial queries, storage |
 | AI Microservice | Python, FastAPI | AI model hosting and inference |
 | AI — Router | SigLIP (base patch16-384) | Zero-shot category classification (routing) |
-| AI — Roads | YOLOv8s (keremberke, RDD2022) | Road damage detection (pothole, cracks) |
-| AI — Garbage | YOLOv8 (waste detection) | Garbage / litter detection |
-| AI — Water | SigLIP-based Flood Classifier | Waterlogging / flood detection |
-| AI — Lighting / Parks | YOLO-World (open-vocabulary) | Text-prompted damage / object detection |
-| AI — NSFW | ViT-tiny (Marqo) | Inappropriate content filtering |
+| AI — Roads | YOLOv8 (`ozair23/yolov8-road-damage-detector`, optional local `AI_ROAD_WEIGHTS_PATH`) | Road damage detection (pothole, cracks) |
+| AI — Garbage | YOLOv8 (HrutikAdsare/waste-detection-yolov8) | Garbage / litter detection |
+| AI — Water | SigLIP image classification (`prithivMLmods/Flood-Image-Detection`) | Flood / waterlogging-style scene classification |
+| AI — Lighting / Parks | YOLO-World (`yolov8s-worldv2.pt`) | Text-prompted open-vocabulary detection |
+| AI — Validation gate | SigLIP (same backbone, prompt sets) | Reject selfies, indoor, screenshots, memes, etc. |
 | Push Notifications | Firebase Cloud Messaging | Real-time push notifications to users |
 | File Storage | Supabase Storage | Image and video upload storage |
 | Deployment — Backend | Render.com | Backend API hosting |
@@ -369,11 +369,11 @@ The technology stack is summarized in the following table:
 | Model | Source | Task | Classes / Output | Input Size |
 |---|---|---|---|---|
 | SigLIP base patch16-384 | google/siglip-base-patch16-384 | Category routing | roads, trash, lighting, water, parks, other | 384×384 |
-| YOLOv8s road damage | keremberke/yolov8s-road-damage-detection | Road damage detection | D00, D10, D20, D40 (repair class varies) | 640×640 |
+| YOLOv8 road damage | ozair23/yolov8-road-damage-detector (`best.pt`; optional local override) | Road damage detection | Per checkpoint labels | 640×640 |
 | YOLOv8 waste | HrutikAdsare/waste-detection-yolov8 | Garbage detection | waste classes (per checkpoint) | 640×640 |
-| Flood-Image-Detection | prithivMLmods/Flood-Image-Detection | Waterlogging classification | flooded, non-flooded | 512×512 |
+| Flood-Image-Detection | prithivMLmods/Flood-Image-Detection | Water / flood-style classification | Per `id2label` in model config | model default |
 | YOLO-World | yolov8s-worldv2.pt (Ultralytics) | Lighting & parks (open-vocab) | text prompts | variable |
-| NSFW-detection-384 | Marqo/nsfw-image-detection-384 | Content safety | NSFW, SFW | 384×384 |
+| Validation (not separate ViT) | SigLIP prompts in `validation.py` | Off-topic / invalid photo rejection | valid vs invalid prompt softmax | 384×384 |
 
 The development methodology follows a phased approach:
 
@@ -381,7 +381,7 @@ Phase 1 (Foundation): Mobile application scaffolding, backend API setup, databas
 
 Phase 2 (Core Features): Image upload workflow, GPS-based geolocation, reverse geocoding, issue feed with filtering, issue detail view, community features (upvote/downvote/follow/comment), and gamification system.
 
-Phase 3 (AI Integration): AI microservice setup, NSFW gate implementation, SigLIP router integration, category-specific detector deployment, priority score computation, and auto-fill UX flow with user confirmation.
+Phase 3 (AI Integration): AI microservice setup, **SigLIP validation gate** (same SigLIP backbone, prompt-based invalid-photo rejection), SigLIP router integration, category-specific detector deployment, priority score computation, and auto-fill UX flow with user confirmation.
 
 Phase 4 (Polish and Deploy): UI/UX refinement, push notification integration, admin dashboard, duplicate detection and merge, pilot testing, performance optimization, and production deployment.
 
@@ -405,7 +405,7 @@ The project planning for UrbanFix.AI is organized around four major phases, each
 
 **Phase 2 — Core Application Features (Weeks 4–8):** This phase delivers the complete application experience without AI integration. Tasks include implementing the issue creation workflow (image capture via expo-image-picker, GPS detection via expo-location, EXIF GPS extraction, reverse geocoding, form submission with multipart/form-data upload), building the home feed with filtering (trending, high priority, following, my posts), implementing the issue detail view with status timeline and community gallery, building the community engagement features (upvote/downvote with optimistic UI updates, follow with push notifications, commenting with offline queue), implementing the gamification system (points for reporting, commenting, and upvoting; badges for milestones; leaderboard), building the map view with satellite imagery and issue markers, implementing the duplicate detection and merge workflow (GPS-radius matching, confidence scoring, join/reject UX), and building the administrative dashboard for municipal users.
 
-**Phase 3 — AI Pipeline Integration (Weeks 9–12):** This phase integrates the AI inference pipeline into the existing application workflow. Tasks include setting up the Python FastAPI microservice, downloading and loading pretrained model checkpoints (SigLIP, YOLOv8 road/trash, Flood classifier, YOLO-World, NSFW filter), implementing the sequential inference pipeline (NSFW gate → SigLIP router → category-specific detector → priority computation), defining the API contract between Node.js backend and Python microservice, integrating the AI response into the issue creation flow (auto-fill detected category, show confidence, request user confirmation), implementing the priority score formula (impact area + confidence + category weight), and adding the AI feedback storage mechanism (storing model predictions alongside user-confirmed categories for future fine-tuning).
+**Phase 3 — AI Pipeline Integration (Weeks 9–12):** This phase integrates the AI inference pipeline into the existing application workflow. Tasks include setting up the Python FastAPI microservice, downloading and loading pretrained model checkpoints (SigLIP, YOLOv8 road/trash, flood SigLIP classifier, YOLO-World), implementing the sequential inference pipeline (**validation gate → SigLIP router → category-specific detector → priority computation**), wiring the Node.js backend to call FastAPI when `AI_SERVICE_URL` is set (`POST /analyze`, field `file`), integrating the AI response into the issue creation flow (auto-fill detected category, show confidence, request user confirmation), implementing the priority score formula (impact area + confidence + category weight), and adding the AI feedback storage mechanism (storing model predictions alongside user-confirmed categories for future fine-tuning).
 
 **Phase 4 — Testing, Polish, and Deployment (Weeks 13–16):** This phase focuses on quality assurance, UI/UX refinement, and production deployment. Tasks include conducting unit testing for backend API endpoints, performing integration testing for the AI pipeline, executing user acceptance testing with pilot users, refining the mobile UI/UX based on pilot feedback, optimizing AI inference latency (model warm-up, image preprocessing, caching), deploying the backend to Render.com, deploying the AI microservice to a GPU-equipped cloud instance, configuring environment variables and secrets for production, and preparing documentation and the capstone report.
 
@@ -435,8 +435,8 @@ The project schedule is organized into 8 two-week sprints over the 16-week capst
 | Sprint 2 | Weeks 3–4 | Issue CRUD & Upload | Image upload to Supabase Storage; GPS detection + EXIF extraction; Issue creation form; Issue feed (basic) |
 | Sprint 3 | Weeks 5–6 | Community Features | Upvote/downvote; Follow issue; Comments with optimistic UI; Push notifications (FCM); Gamification (points, badges) |
 | Sprint 4 | Weeks 7–8 | Advanced Features | Duplicate detection + merge workflow; Map view (satellite, markers); Admin dashboard; Municipal feed; Status timeline |
-| Sprint 5 | Weeks 9–10 | AI Microservice Setup | FastAPI service scaffolded; SigLIP + YOLOv8 + YOLO-World loaded; NSFW model loaded; Basic /analyze endpoint functional |
-| Sprint 6 | Weeks 11–12 | AI Pipeline Integration | Full pipeline (NSFW → Router → Detector → Priority); Node.js ↔ Python integration; Auto-fill UX with confirmation; Feedback storage |
+| Sprint 5 | Weeks 9–10 | AI Microservice Setup | FastAPI service scaffolded; SigLIP + YOLOv8 road/trash + flood classifier + YOLO-World loaded; **validation** via SigLIP prompts; Basic `POST /analyze` functional |
+| Sprint 6 | Weeks 11–12 | AI Pipeline Integration | Full pipeline (Validation → Router → Detector → Priority); Node.js ↔ FastAPI (`AI_SERVICE_URL`); Auto-fill UX with confirmation; Feedback storage |
 | Sprint 7 | Weeks 13–14 | Testing & Polish | Unit tests; Integration tests; UAT with pilot users; UI/UX refinement; Performance optimization |
 | Sprint 8 | Weeks 15–16 | Deployment & Documentation | Production deploy (Render + GPU cloud); Monitoring setup; Capstone report completion; Viva preparation |
 
@@ -462,7 +462,7 @@ Process 1 — User Authentication: Receives registration/login credentials from 
 
 Process 2 — Issue Creation: Receives image, location, and form data from Citizen. Invokes Process 2a (File Upload to Supabase Storage) to store the image and obtain a public URL. Invokes Process 2b (AI Analysis) by sending the image URL to the Python AI microservice, which returns detected category, confidence, severity, and priority. Returns AI results to Citizen for confirmation. Upon confirmation, writes the issue record to the Issues data store, creates a status timeline entry, awards gamification points, and triggers Process 5 (Notifications).
 
-Process 2b — AI Analysis (sub-process): Receives image URL. Sequentially invokes NSFW Filter, SigLIP Router, and the appropriate Category Detector. Computes priority score. Returns structured JSON response.
+Process 2b — AI Analysis (sub-process): Receives image bytes (or URL resolved by backend). Sequentially invokes **SigLIP validation** (invalid vs valid outdoor prompts), SigLIP Router, and the appropriate category detector (YOLO / flood / YOLO-World). Computes priority score. Returns structured JSON response. *(If `AI_SERVICE_URL` is unset, Node falls back to rule-based scoring.)*
 
 Process 3 — Community Engagement: Handles upvotes, downvotes, follows, and comments. Reads/writes to Issue Upvotes, Issue Downvotes, Issue Followers, and Comments data stores. Triggers Process 5 (Notifications) for relevant events.
 
@@ -484,7 +484,7 @@ Block 1 — Mobile Application (React Native / Expo): Contains the UI layer (scr
 
 Block 2 — Backend API (Node.js / Express): Contains the Route layer (authRoutes, issueRoutes, userRoutes, notificationRoutes, workflowRoutes, gamificationRoutes, municipalRoutes, chatbotRoutes), the Middleware layer (authMiddleware, requestLogger, multer for file handling), the Service layer (AI service abstraction, Notification service, Promo scheduler), and the Data layer (Supabase client, store.js with all database queries).
 
-Block 3 — AI Microservice (Python / FastAPI): Contains the Model Loader (loads NSFW, SigLIP, YOLOv8 specialists, flood classifier, and YOLO-World at startup), the Inference Pipeline (NSFW gate → SigLIP router → Category detector → Priority computer), and the API layer (POST /analyze endpoint with structured JSON response).
+Block 3 — AI Microservice (Python / FastAPI): Contains the Model Loader (loads SigLIP, YOLOv8 road/trash, flood SigLIP classifier, YOLO-World at startup), the Inference Pipeline (**validation gate → SigLIP router → category detector → priority computer**), and the API layer (`POST /analyze` with multipart field `file`, structured JSON response).
 
 Block 4 — Data & Infrastructure: Contains Supabase PostgreSQL (with PostGIS extension for spatial queries), Supabase Storage (for image/video file hosting), Firebase Cloud Messaging (for push notifications), and the GPU Cloud Instance (for AI microservice hosting).
 
@@ -496,7 +496,7 @@ The interconnections are: Mobile App ↔ Backend API (HTTPS/REST, JWT-authentica
 
 The flowchart depicts the decision logic of the AI inference pipeline that processes every uploaded image.
 
-Start → Receive Image URL → Download Image from Supabase Storage → Resize to 384×384 → Run NSFW Model → Decision: NSFW Score > 0.7? → Yes: Return { blocked: true, reason: "inappropriate content" } → End. No: Continue → Run SigLIP Router (384×384) with category prompts → Get top category + confidence → Decision: Top category is "off-topic" (selfie/indoor/food) AND confidence > 0.6? → Yes: Return { blocked: true, reason: "not a civic issue" } → End. No: Continue → Decision: Detected category? → Roads: Run YOLOv8s road damage (640×640) → Get bounding boxes → Compute impact (bbox area / image area) → Compute priority. Trash: Run YOLOv8 waste detector → Get detections → Compute impact. Water: Run Flood Classifier (512×512) → Get flood probability → Compute priority. Lighting/Parks: Run YOLO-World with text prompts → Get detections. Other: Use SigLIP router confidence directly → Compute priority. → All paths merge → Compute final priority score = clamp(impact×50 + confidence×30 + categoryWeight×20, 0, 100) → Map to severity (0–30: Low, 31–55: Medium, 56–75: High, 76–100: Critical) → Return { detectedCategory, confidence, severity, priorityScore, sizeLabel, topDetections } → End.
+Start → Receive image (from upload buffer) → **SigLIP validation** (valid vs invalid prompts; threshold `AI_VALIDATION_THRESHOLD`) → Decision: invalid_score > threshold? → Yes: Return { is_valid: false, rejection reason } → End. No: Continue → Run SigLIP Router with category prompts → Get top category + confidence → Decision: Detected category? → Roads: Run YOLOv8 road damage (`ozair23/...` or local weights) → bounding boxes → impact. Trash: Run YOLOv8 waste detector → detections → impact. Water: Run flood SigLIP classifier → logits → priority. Lighting/Parks: Run YOLO-World with text prompts → detections. Other: router confidence / fusion. → Merge → priority score & severity mapping per `pipeline.py` → Return structured JSON → End. *(Exact thresholds and fusion are configured in `ai-service` `config.py` / `pipeline.py`.)*
 
 ## 4.4 UML Diagram
 
@@ -538,7 +538,7 @@ The UML Use Case Diagram identifies the actors and their interactions with the U
 - Upload Resolution Proof
 
 **Use Cases for AI Microservice:**
-- Analyze Image (includes: NSFW Check, Category Classification, Severity Estimation, Priority Computation)
+- Analyze Image (includes: **Validation gate**, Category Classification, Severity Estimation, Priority Computation)
 
 **Relationships:**
 - "Report Civic Issue" <<includes>> "Analyze Image" (system invokes AI automatically)
@@ -587,7 +587,7 @@ The backend API was deployed on Render.com, providing 21 RESTful endpoints acros
 
 The AI inference pipeline was configured with the following pretrained models and evaluated on a test set of 200+ civic issue images collected from public datasets and pilot user submissions:
 
-For the NSFW content filter (Marqo/nsfw-image-detection-384), the model correctly identified and blocked inappropriate test images with a false positive rate below 2% at the 0.7 threshold, meaning legitimate civic issue images were rarely misclassified as inappropriate.
+For the **SigLIP validation gate** (invalid vs valid outdoor civic prompts in `validation.py`), informal testing showed that obvious off-topic images (selfies, food, indoor scenes) were rejected while typical street-level civic photos were accepted; exact false-positive/false-negative rates depend on threshold `AI_VALIDATION_THRESHOLD` and should be measured on a labeled validation set in future work.
 
 For the SigLIP category router, zero-shot classification using carefully engineered category prompts achieved the following approximate accuracy on the test set: Roads category at 82% top-1 accuracy, Garbage/Trash at 79% top-1 accuracy, Water/Waterlogging at 74% top-1 accuracy, Lighting at 68% top-1 accuracy, and Parks at 61% top-1 accuracy. The lower accuracy for Lighting and Parks categories is expected given the limited representation of these categories in generic training data and the visual ambiguity of these issue types (e.g., a non-functional streetlight appears visually similar to a functional one in daytime photographs); YOLO-World mitigates this for many scenes.
 
@@ -634,7 +634,7 @@ Testing for UrbanFix.AI was conducted across four levels: unit testing, integrat
 | TC-01 | User Registration | Valid email, password | Account created, JWT returned | Account created, JWT returned | PASS |
 | TC-02 | User Login | Valid credentials | JWT token, user profile returned | JWT token, user profile returned | PASS |
 | TC-03 | Issue Creation with Image | Photo + location + category | Issue created, stored in DB, visible in feed | Issue created successfully | PASS |
-| TC-04 | AI — NSFW Rejection | Inappropriate image | { blocked: true } response, issue not created | Blocked correctly | PASS |
+| TC-04 | AI — Off-topic / invalid image | Selfie / indoor / screenshot | `is_valid: false` from FastAPI validation; user asked to retake photo | Rejected as expected | PASS |
 | TC-05 | AI — Pothole Detection | Clear pothole image | detectedCategory: "roads", confidence > 0.7 | roads, confidence 0.84 | PASS |
 | TC-06 | AI — Garbage Detection | Street garbage image | detectedCategory: "trash", confidence > 0.6 | trash, confidence 0.76 | PASS |
 | TC-07 | AI — Waterlogging Detection | Flooded road image | detectedCategory: "water", confidence > 0.6 | water, confidence 0.81 | PASS |
@@ -653,7 +653,7 @@ Testing for UrbanFix.AI was conducted across four levels: unit testing, integrat
 
 The deployment architecture for UrbanFix.AI follows a microservices-oriented approach with clear separation between the application backend and the AI inference service.
 
-**Backend Deployment (Render.com):** The Node.js/Express backend is deployed on Render.com's free tier with automatic deployments triggered by pushes to the main branch of the GitHub repository. Render provides automatic SSL certificate provisioning, custom domain support, and zero-downtime deployments. Environment variables (SUPABASE_URL, SUPABASE_KEY, JWT_SECRET, FIREBASE_CREDENTIALS, AI_MODEL_ENDPOINT, AI_SERVICE_KEY) are configured through Render's dashboard and injected at runtime.
+**Backend Deployment (Render.com):** The Node.js/Express backend is deployed on Render.com's free tier with automatic deployments triggered by pushes to the main branch of the GitHub repository. Render provides automatic SSL certificate provisioning, custom domain support, and zero-downtime deployments. Environment variables (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, Firebase credentials, **`AI_SERVICE_URL`**, **`AI_SERVICE_API_KEY` / `AI_API_KEY`**, optional `AI_PROVIDER=fastapi`) are configured through Render's dashboard and injected at runtime.
 
 **Database Deployment (Supabase):** The PostgreSQL database with PostGIS extension is hosted on Supabase's managed infrastructure. The database schema is version-controlled through SQL migration files in the project repository. Supabase Storage provides public-access file hosting for uploaded images and videos, with automatic CDN distribution for fast retrieval from mobile clients.
 
@@ -667,7 +667,7 @@ The deployment architecture for UrbanFix.AI follows a microservices-oriented app
 
 # Chapter 6: Conclusion
 
-The UrbanFix.AI project successfully demonstrates the feasibility and practical value of integrating state-of-the-art computer vision models into a citizen-facing civic issue reporting platform. Over the course of the 16-week capstone timeline, the team designed, developed, and deployed a full-stack system comprising a React Native mobile application, a Node.js backend API with PostgreSQL/PostGIS on Supabase, and a Python-based AI inference microservice hosting specialized models for NSFW filtering, zero-shot category routing (SigLIP), road and waste detection (YOLOv8), waterlogging classification, and lighting/parks detection (YOLO-World).
+The UrbanFix.AI project successfully demonstrates the feasibility and practical value of integrating state-of-the-art computer vision models into a citizen-facing civic issue reporting platform. Over the course of the 16-week capstone timeline, the team designed, developed, and deployed a full-stack system comprising a React Native mobile application, a Node.js backend API with PostgreSQL/PostGIS on Supabase, and a Python-based AI inference microservice hosting specialized models for **SigLIP-based validation and routing**, road and waste detection (YOLOv8), waterlogging-style classification (`prithivMLmods/Flood-Image-Detection`), and lighting/parks detection (YOLO-World), with the Node layer calling FastAPI when `AI_SERVICE_URL` is configured.
 
 The platform addresses a genuine and pressing urban governance challenge in India: the gap between the volume of civic complaints and the capacity of municipal systems to process, prioritize, and resolve them efficiently. By automating the classification and severity estimation steps through AI, UrbanFix.AI reduces the manual triage burden on municipal staff, ensures consistent and defensible prioritization based on visual evidence rather than subjective text descriptions, and provides citizens with an engaging, transparent, and trustworthy reporting experience.
 
@@ -705,9 +705,9 @@ In conclusion, UrbanFix.AI validates the thesis that pretrained, open-source AI 
 
 11. Wightman, R. (2019). "PyTorch Image Models (timm)." GitHub Repository. https://github.com/huggingface/pytorch-image-models
 
-12. Marqo AI. (2024). "NSFW Image Detection 384." Hugging Face Model Hub. https://huggingface.co/Marqo/nsfw-image-detection-384
+12. UrbanFix AI Service (implementation). Image validation and routing: `ai-service/app/validation.py`, `ai-service/app/pipeline.py`, `ai-service/app/models.py` (project repository).
 
-13. keremberke. (2023). "YOLOv8 Road Damage Detection." Hugging Face Model Hub. https://huggingface.co/keremberke/yolov8s-road-damage-detection
+13. ozair23. "YOLOv8 Road Damage Detector." Hugging Face Model Hub. https://huggingface.co/ozair23/yolov8-road-damage-detector
 
 14. HrutikAdsare. "Waste Detection YOLOv8." Hugging Face Model Hub. https://huggingface.co/HrutikAdsare/waste-detection-yolov8
 
@@ -724,3 +724,33 @@ In conclusion, UrbanFix.AI validates the thesis that pretrained, open-source AI 
 20. PostGIS Documentation. https://postgis.net/documentation/
 
 21. Firebase Cloud Messaging Documentation. https://firebase.google.com/docs/cloud-messaging
+
+---
+
+## Appendix: Report revision log (2026-04-06)
+
+Technical edits were applied so the report matches the **UrbanFix `appv1` repository** (especially `ai-service/` and `backend/services/ai/index.js`). The **List of Figures** and **List of Tables** numbering in the Contents (pages i–ii) was **not** changed — only the **body text** under the cited sections was updated.
+
+| Item | What changed |
+|------|----------------|
+| **Abstract** | Road HF repo set to **ozair23/yolov8-road-damage-detector**; removed separate ViT NSFW claim; described **SigLIP prompt validation**; noted Node → FastAPI via **`AI_SERVICE_URL`** and `POST /analyze`. |
+| **Chapter 1** (§1.1) | Aligned multi-model description with implementation (validation via SigLIP prompts, not Marqo NSFW). |
+| **Chapter 2** (§2.2 Literature Table) | Rows **7** and **12** updated (Marqo → optional literature; keremberke → **ozair23** as wired in code). |
+| **Chapter 2** (§2.3) | Problem statement: “NSFW filtering” → **off-topic / invalid image rejection** (SigLIP validation). |
+| **Chapter 2** (§2.4.1) | Feasibility: removed Marqo as deployed model; clarified SigLIP validation. |
+| **Chapter 2** (§2.5) | **Table 2 (Technology Stack)** — rows for roads, water, lighting/parks, validation; removed Marqo NSFW row. **Table 4 (AI Model Stack)** — road source, validation row, removed NSFW row. Phase 3 bullet text updated. |
+| **Chapter 3** (§3.2–3.3) | Phase 3 and **Sprint 5–6** (Table 3) wording: NSFW → **validation**; Node ↔ FastAPI env vars. |
+| **Chapter 4** (§4.1 DFD, §4.2 Block diagram, §4.3 Flowchart) | **Figures 1–3** (same numbers): narrative now describes **validation → router → detectors** and optional rule fallback; **`POST /analyze`**, field `file`. **§4.4** Use case: “NSFW Check” → **Validation gate**. |
+| **Chapter 5** (§5.1, §5.3, §5.4) | Removed Marqo benchmark claims; replaced with validation-gate description; **Table 5** row **TC-04** updated; deployment env vars updated (`AI_SERVICE_URL`, API keys). |
+| **Chapter 6** | Conclusion paragraph aligned with actual model stack and FastAPI integration. |
+| **References** | Items **12–13** replaced (implementation cite + **ozair23** HF link); removed Marqo/keremberke as primary citations for this project. |
+
+**Figure / table index (unchanged numbers, edited content):**
+
+- **Figure 3** (§4.3) — flowchart *text* rewritten (validation gate, correct road weights ID, pipeline caveats).
+- **Table 2** — Technology Stack (§2.5).
+- **Table 3** — Sprint Planning (§3.3).
+- **Table 4** — AI Model Stack (§2.5).
+- **Table 5** — Test Cases (§5.3); row **TC-04** edited.
+
+*Note: Your PDF at `report1.pdf` could not be edited here (file was empty). Regenerate the PDF from this Markdown or Word export if needed.*

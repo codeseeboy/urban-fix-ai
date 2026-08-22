@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, Dimensions,
-    FlatList, Animated, NativeScrollEvent, NativeSyntheticEvent,
+    FlatList, Animated, NativeScrollEvent, NativeSyntheticEvent, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,38 +15,31 @@ const { width, height } = Dimensions.get('window');
 const slides = [
     {
         id: '1',
-        icon: 'camera-outline' as const,
-        title: 'Report in seconds',
-        subtitle: 'Spot a pothole, broken light, or garbage pile?\nShare it in a few taps—done.',
+        image: require('../../../assets/onboarding-report.png'),
+        title: 'Snap a civic issue',
+        subtitle: 'Photograph a pothole, dark street, or garbage pile.\nYour report starts with a real photo.',
         accent: '#007AFF',
     },
     {
         id: '2',
-        icon: 'sparkles-outline' as const,
-        title: 'Smarter routing',
-        subtitle: 'Updates are organized and routed to the right\nplace—so things move faster.',
-        accent: '#FF6B35',
+        image: require('../../../assets/onboarding-ai.png'),
+        title: 'AI reads the scene',
+        subtitle: 'Computer vision classifies the issue and severity\nso it reaches the right municipal desk.',
+        accent: '#5AC8FA',
     },
     {
         id: '3',
-        icon: 'business-outline' as const,
-        title: 'Direct to the right team',
-        subtitle: 'Reports go straight to the right municipal\ndepartment—no extra steps.',
+        image: require('../../../assets/onboarding-city.png'),
+        title: 'Routed to the crew',
+        subtitle: 'Field teams see the same photo, location, and status.\nYou can follow the fix in the app.',
         accent: '#30D158',
     },
     {
         id: '4',
-        icon: 'trophy-outline' as const,
-        title: 'Track & Earn Rewards',
-        subtitle: 'Follow your report in real-time. Earn points,\nbadges, and climb the civic leaderboard.',
+        image: require('../../../assets/onboarding-community.png'),
+        title: 'Your neighborhood, live',
+        subtitle: 'Upvote nearby reports, get push alerts when\nstatus changes, and climb the civic board.',
         accent: '#FFD60A',
-    },
-    {
-        id: '5',
-        icon: 'heart-outline' as const,
-        title: 'Make your area better',
-        subtitle: 'Join your community to keep neighborhoods\ncleaner, safer, and better.',
-        accent: '#AF52DE',
     },
 ];
 
@@ -160,14 +153,8 @@ export default function OnboardingScreen({ navigation }: any) {
                                 },
                             ]}>
                                 {/* Glow ring behind image */}
-                                <View style={[styles.imageRing, { borderColor: item.accent + '15' }]}>
-                                    <View style={[styles.imageInnerRing, { backgroundColor: item.accent + '08' }]}>
-                                        <Ionicons
-                                            name={item.icon}
-                                            size={72}
-                                            color={item.accent}
-                                        />
-                                    </View>
+                                <View style={[styles.imageRing, { borderColor: item.accent + '30' }]}>
+                                    <Image source={item.image} style={styles.slideImage} resizeMode="cover" />
                                 </View>
                             </Animated.View>
 
@@ -290,14 +277,15 @@ const styles = StyleSheet.create({
     // Image
     imageWrap: { marginBottom: 48 },
     imageRing: {
-        width: 240, height: 240, borderRadius: 120,
+        width: 260, height: 260, borderRadius: 32,
         borderWidth: 1.5, justifyContent: 'center', alignItems: 'center',
+        overflow: 'hidden', backgroundColor: '#0B1220',
     },
     imageInnerRing: {
         width: 210, height: 210, borderRadius: 105,
         justifyContent: 'center', alignItems: 'center',
     },
-    slideImage: { width: 140, height: 140 },
+    slideImage: { width: 260, height: 260 },
 
     // Text
     textWrap: { alignItems: 'center', paddingHorizontal: 8 },

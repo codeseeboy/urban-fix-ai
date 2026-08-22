@@ -23,14 +23,19 @@ import logger from '../utils/logger';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ← CHANGE THIS to your PC's LAN IP if using a physical device
-const LAN_IP = '192.168.0.102'; // ← Your PC's LAN IP (auto-detected)
+const LAN_IP = '192.168.0.102'; // ← Wi‑Fi IPv4 from ipconfig — must match this PC when using a physical device
+/** If the phone still cannot reach LAN_IP (router “AP isolation”, etc.): USB-connect the device, run `adb reverse tcp:5000 tcp:5000`, set this to true. */
+const USE_ADB_REVERSE_FOR_LOCAL_API = false;
 const PROD_URL = 'https://urban-fix-ai.onrender.com';
 const USE_LOCAL_IN_PROD = false; // Set true if you want APK to hit local LAN IP
 const USE_PROD_ON_WEB = true;
 
 const LOCAL_BASE = Platform.select({
-  android: `http://${LAN_IP}:5000`,   // Physical Android device
-  ios: `http://${LAN_IP}:5000`,       // Physical iOS device
+  android:
+    USE_ADB_REVERSE_FOR_LOCAL_API && __DEV__
+      ? 'http://127.0.0.1:5000'
+      : `http://${LAN_IP}:5000`,
+  ios: `http://${LAN_IP}:5000`,
   default: 'http://localhost:5000',
 });
 
@@ -190,11 +195,8 @@ export const issuesAPI = {
         });
     }
 
-    return api.post('/issues', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    // Let axios set multipart boundary — a bare "multipart/form-data" header breaks file uploads.
+    return api.post('/issues', formData);
   },
   addReport: async (id: string, data: { title: string; description?: string; image?: string; video?: string; location?: any; category?: string; anonymous?: boolean; emergency?: boolean }) => {
     const formData = new FormData();
@@ -223,11 +225,7 @@ export const issuesAPI = {
       });
     }
 
-    return api.post(`/issues/${id}/add-report`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post(`/issues/${id}/add-report`, formData);
   },
   analyzeImage: async (imageUri: string) => {
     const formData = new FormData();
@@ -238,7 +236,6 @@ export const issuesAPI = {
       type: 'image/jpeg',
     });
     return api.post('/issues/analyze-image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000, // AI models on CPU can take up to 60s
     });
   },
@@ -292,6 +289,23 @@ export const userAPI = {
     api.get(`/users/check-username/${encodeURIComponent(username)}`),
   registerPushToken: (token: string, deviceType: string) =>
     api.post('/users/push-token', { token, deviceType }),
+  removePushToken: (token?: string) =>
+    api.delete('/users/push-token', { data: { token } }),
+  uploadAvatar: async (imageUri: string) => {
+    const formData = new FormData();
+    // @ts-ignore — React Native FormData
+    formData.append('avatar', {
+      uri: imageUri,
+      name: 'avatar.jpg',
+      type: 'image/jpeg',
+    });
+    return api.post('/users/avatar', formData);
+  },
+};
+
+export const municipalAPI = {
+  search: (q: string) => api.get('/municipal/search', { params: { q } }),
+  getSuggested: () => api.get('/municipal/suggested'),
 };
 
 // ── GAMIFICATION ──

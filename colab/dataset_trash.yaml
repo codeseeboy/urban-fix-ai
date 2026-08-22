@@ -1,0 +1,11 @@
+path: /content/drive/MyDrive/UrbanFix_AI/datasets/trash_yolo
+train: images/train
+val: images/val
+
+names:
+  0: garbage_bag
+  1: plastic_bottle
+  2: can
+  3: paper_waste
+  4: mixed_litter
+  5: dumpster_overflow

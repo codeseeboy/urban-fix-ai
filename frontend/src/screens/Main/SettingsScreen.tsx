@@ -1,81 +1,75 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
     Switch, Alert, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { colors, fonts, radius } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
+import { confirmAction } from '../../utils/confirm';
 import { clearStoredLocation } from '../../services/locationService';
+import {
+    SETTINGS_KEYS,
+    getBoolSetting,
+    applyNotificationPreference,
+    applyLocationPreference,
+    openSystemAppSettings,
+} from '../../services/settingsService';
 import AuthCanvas from '../../components/auth/AuthCanvas';
+import UserAvatar from '../../components/ui/UserAvatar';
 
-// ─── STORAGE KEYS ───────────────────────────────────────────────────────────
-const KEYS = {
-    DARK_MODE: 'setting_dark_mode',
-    NOTIFICATIONS: 'setting_notifications',
-    LOCATION_UPDATES: 'setting_location_updates',
-};
+const APP_VERSION = Constants.expoConfig?.version || '1.1.0';
 
 export default function SettingsScreen({ navigation }: any) {
     const insets = useSafeAreaInsets();
     const { user, logout } = useAuth();
-
-    // ─── State (persisted via AsyncStorage) ──────────────────────────────────
-    const [darkMode, setDarkMode] = useState(true);
     const [notifications, setNotifications] = useState(true);
     const [locationUpdates, setLocationUpdates] = useState(true);
+    const [busy, setBusy] = useState(false);
 
-    // Load persisted settings
     useEffect(() => {
         (async () => {
-            const entries = await AsyncStorage.multiGet([
-                KEYS.DARK_MODE,
-                KEYS.NOTIFICATIONS,
-                KEYS.LOCATION_UPDATES,
-            ]);
-            const dm = entries.find(([key]) => key === KEYS.DARK_MODE)?.[1] ?? null;
-            const notif = entries.find(([key]) => key === KEYS.NOTIFICATIONS)?.[1] ?? null;
-            const loc = entries.find(([key]) => key === KEYS.LOCATION_UPDATES)?.[1] ?? null;
-            if (dm !== null) setDarkMode(dm === 'true');
-            if (notif !== null) setNotifications(notif === 'true');
-            if (loc !== null) setLocationUpdates(loc === 'true');
+            setNotifications(await getBoolSetting(SETTINGS_KEYS.NOTIFICATIONS, true));
+            setLocationUpdates(await getBoolSetting(SETTINGS_KEYS.LOCATION_UPDATES, true));
         })();
-    }, []);
-
-    // ─── Toggle handlers (persist immediately) ──────────────────────────────
-    const toggleDarkMode = useCallback(async (val: boolean) => {
-        setDarkMode(val);
-        await AsyncStorage.setItem(KEYS.DARK_MODE, String(val));
-        if (!val) {
-            Alert.alert(
-                'Light Mode',
-                'Light mode will be available in a future update. The app currently uses dark theme only.',
-                [{ text: 'OK', onPress: () => { setDarkMode(true); AsyncStorage.setItem(KEYS.DARK_MODE, 'true'); } }]
-            );
-        }
     }, []);
 
     const toggleNotifications = useCallback(async (val: boolean) => {
         setNotifications(val);
-        await AsyncStorage.setItem(KEYS.NOTIFICATIONS, String(val));
+        setBusy(true);
+        const result = await applyNotificationPreference(val);
+        setBusy(false);
+        if (!result.ok) {
+            setNotifications(false);
+            Alert.alert('Notifications', result.message || 'Could not enable alerts.', [
+                { text: 'Not now', style: 'cancel' },
+                { text: 'Open Settings', onPress: openSystemAppSettings },
+            ]);
+        }
     }, []);
 
     const toggleLocationUpdates = useCallback(async (val: boolean) => {
         setLocationUpdates(val);
-        await AsyncStorage.setItem(KEYS.LOCATION_UPDATES, String(val));
+        const result = await applyLocationPreference(val);
+        if (!result.ok) {
+            setLocationUpdates(false);
+            Alert.alert('Location', result.message || 'Permission needed.', [
+                { text: 'Not now', style: 'cancel' },
+                { text: 'Open Settings', onPress: openSystemAppSettings },
+            ]);
+        }
     }, []);
 
-    // ─── Actions ─────────────────────────────────────────────────────────────
     const handleClearCache = useCallback(() => {
-        Alert.alert('Clear Cache', 'This will clear cached location and temporary data.', [
+        Alert.alert('Clear Cache', 'This clears saved map location on this device. Your account stays signed in.', [
             { text: 'Cancel', style: 'cancel' },
             {
                 text: 'Clear', style: 'destructive', onPress: async () => {
                     await clearStoredLocation();
-                    Alert.alert('Done', 'Cache cleared successfully.');
-                }
+                    Alert.alert('Done', 'Cached location cleared.');
+                },
             },
         ]);
     }, []);
@@ -83,30 +77,26 @@ export default function SettingsScreen({ navigation }: any) {
     const handleDeleteAccount = useCallback(() => {
         Alert.alert(
             'Delete Account',
-            'This action is permanent and cannot be undone. All your reports and data will be removed.',
+            'This permanently removes your reports and profile. Email support to confirm deletion.',
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Delete', style: 'destructive', onPress: () => {
-                        Alert.alert('Contact Support', 'Please email support@urbanfix.com to request account deletion.');
-                    }
+                    text: 'Email support',
+                    onPress: () => Linking.openURL('mailto:support@urbanfix.app?subject=Delete%20UrbanFix%20account'),
                 },
-            ]
+            ],
         );
     }, []);
 
-    const handleLogout = useCallback(() => {
-        Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign Out', style: 'destructive', onPress: logout },
-        ]);
+    const handleLogout = useCallback(async () => {
+        const ok = await confirmAction(
+            'Sign Out',
+            'You will stop receiving push alerts on this device.',
+            'Sign Out',
+        );
+        if (ok) await logout();
     }, [logout]);
 
-    const openPrivacyPolicy = useCallback(() => Linking.openURL('https://urbanfix.com/privacy'), []);
-    const openTerms = useCallback(() => Linking.openURL('https://urbanfix.com/terms'), []);
-    const openSupport = useCallback(() => Linking.openURL('mailto:support@urbanfix.com'), []);
-
-    // ─── MENU SECTIONS ──────────────────────────────────────────────────────
     type MenuItem = {
         icon: string;
         label: string;
@@ -118,72 +108,93 @@ export default function SettingsScreen({ navigation }: any) {
         subtitle?: string;
     };
 
+    const locationLabel = user?.city
+        ? `${user.ward || ''}${user.ward && user.city ? ', ' : ''}${user.city}`.trim()
+        : 'Not set — tap to detect';
+
     const sections: { title: string; items: MenuItem[] }[] = [
         {
             title: 'Account',
             items: [
                 {
-                    icon: 'person', label: 'Edit Profile', color: colors.primary,
-                    subtitle: user?.name || 'Update your name and details',
-                    onPress: () => Alert.alert('Edit Profile', 'Profile editing will be available soon.'),
+                    icon: 'person',
+                    label: 'Edit Profile',
+                    color: colors.primary,
+                    subtitle: user?.name || 'Name, photo, username',
+                    onPress: () => navigation.navigate('EditProfile'),
                 },
                 {
-                    icon: 'location', label: 'Default Location', color: '#30D158',
-                    subtitle: user?.city ? `${user.ward || ''}, ${user.city}`.trim().replace(/^,\s*/, '') : 'Not set',
-                    onPress: () => Alert.alert('Location', 'You can update your location from the profile setup.'),
-                },
-            ],
-        },
-        {
-            title: 'Preferences',
-            items: [
-                {
-                    icon: 'notifications', label: 'Push Notifications', color: '#FF9F0A',
-                    toggle: true, value: notifications, onToggle: toggleNotifications,
-                    subtitle: notifications ? 'Enabled' : 'Disabled',
-                },
-                {
-                    icon: 'moon', label: 'Dark Mode', color: '#AF52DE',
-                    toggle: true, value: darkMode, onToggle: toggleDarkMode,
-                    subtitle: 'Currently dark theme only',
-                },
-                {
-                    icon: 'navigate', label: 'Location Updates', color: '#5AC8FA',
-                    toggle: true, value: locationUpdates, onToggle: toggleLocationUpdates,
-                    subtitle: locationUpdates ? 'Background updates on' : 'Background updates off',
+                    icon: 'location',
+                    label: 'Home location',
+                    color: '#30D158',
+                    subtitle: locationLabel,
+                    onPress: () => navigation.navigate('LocationSetup', { mode: 'update' }),
                 },
             ],
         },
         {
-            title: 'Data & Storage',
+            title: 'Alerts & location',
             items: [
                 {
-                    icon: 'trash', label: 'Clear Cache', color: '#FF6B35',
+                    icon: 'notifications',
+                    label: 'Push notifications',
+                    color: '#FF9F0A',
+                    toggle: true,
+                    value: notifications,
+                    onToggle: busy ? undefined : toggleNotifications,
+                    subtitle: notifications ? 'Status, comments, and nearby reports' : 'Off — no live alerts',
+                },
+                {
+                    icon: 'navigate',
+                    label: 'Use device location',
+                    color: '#5AC8FA',
+                    toggle: true,
+                    value: locationUpdates,
+                    onToggle: toggleLocationUpdates,
+                    subtitle: locationUpdates ? 'GPS attached to new reports' : 'Manual location only',
+                },
+            ],
+        },
+        {
+            title: 'Data',
+            items: [
+                {
+                    icon: 'trash',
+                    label: 'Clear cached location',
+                    color: '#FF6B35',
                     onPress: handleClearCache,
-                    subtitle: 'Clear cached location & temp files',
+                    subtitle: 'Does not delete your reports',
                 },
             ],
         },
         {
-            title: 'Support & Legal',
+            title: 'Support & legal',
             items: [
                 {
-                    icon: 'help-circle', label: 'Help & Support', color: '#007AFF',
-                    subtitle: 'Contact us via email',
-                    onPress: openSupport,
+                    icon: 'help-circle',
+                    label: 'Help & Support',
+                    color: '#007AFF',
+                    subtitle: 'support@urbanfix.app',
+                    onPress: () => Linking.openURL('mailto:support@urbanfix.app'),
                 },
                 {
-                    icon: 'shield-checkmark', label: 'Privacy Policy', color: '#30D158',
-                    onPress: openPrivacyPolicy,
+                    icon: 'shield-checkmark',
+                    label: 'Privacy Policy',
+                    color: '#30D158',
+                    onPress: () => navigation.navigate('Legal', { type: 'privacy' }),
                 },
                 {
-                    icon: 'document-text', label: 'Terms of Service', color: '#FF9F0A',
-                    onPress: openTerms,
+                    icon: 'document-text',
+                    label: 'Terms of Use',
+                    color: '#FF9F0A',
+                    onPress: () => navigation.navigate('Legal', { type: 'terms' }),
                 },
                 {
-                    icon: 'information-circle', label: 'About UrbanFix', color: colors.textMuted,
-                    subtitle: 'Version 1.0.0 · Build 1',
-                    onPress: () => Alert.alert('UrbanFix', 'Version 1.0.0\nBuilt with React Native & Expo\n\n© 2025 UrbanFix. All rights reserved.'),
+                    icon: 'information-circle',
+                    label: 'About UrbanFix',
+                    color: colors.textMuted,
+                    subtitle: `Version ${APP_VERSION}`,
+                    onPress: () => navigation.navigate('Legal', { type: 'about' }),
                 },
             ],
         },
@@ -192,7 +203,6 @@ export default function SettingsScreen({ navigation }: any) {
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <AuthCanvas />
-            {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
                     <Ionicons name="arrow-back" size={20} color={colors.text} />
@@ -202,86 +212,84 @@ export default function SettingsScreen({ navigation }: any) {
             </View>
 
             <View style={styles.contentSheet}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-                {sections.map((section, sIndex) => (
-                    <View key={sIndex} style={styles.section}>
-                        <Text style={styles.sectionTitle} allowFontScaling={false}>{section.title}</Text>
-                        <View style={styles.sectionCard}>
-                            {section.items.map((item, iIndex) => (
-                                <TouchableOpacity
-                                    key={iIndex}
-                                    style={[styles.menuRow, iIndex < section.items.length - 1 && styles.menuRowBorder]}
-                                    activeOpacity={item.toggle ? 1 : 0.7}
-                                    onPress={item.toggle ? undefined : item.onPress}
-                                >
-                                    <View style={[styles.menuIconWrap, { backgroundColor: item.color + '15' }]}>
-                                        <Ionicons name={item.icon as any} size={18} color={item.color} />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.menuLabel} allowFontScaling={false}>{item.label}</Text>
-                                        {item.subtitle && (
-                                            <Text style={styles.menuSub} allowFontScaling={false}>{item.subtitle}</Text>
-                                        )}
-                                    </View>
-                                    {item.toggle ? (
-                                        <Switch
-                                            value={item.value}
-                                            onValueChange={item.onToggle}
-                                            trackColor={{ false: colors.surfaceLight, true: colors.primary + '70' }}
-                                            thumbColor={item.value ? colors.primary : '#888'}
-                                        />
-                                    ) : (
-                                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                                    )}
-                                </TouchableOpacity>
-                            ))}
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                    <View style={styles.profilePeek}>
+                        <UserAvatar name={user?.name} uri={user?.avatar} size={52} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.peekName} allowFontScaling={false}>{user?.name || 'Citizen'}</Text>
+                            <Text style={styles.peekEmail} allowFontScaling={false}>{user?.email}</Text>
                         </View>
                     </View>
-                ))}
 
-                {/* Danger zone */}
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.error }]} allowFontScaling={false}>
-                        Danger Zone
-                    </Text>
-                    <View style={styles.sectionCard}>
-                        <TouchableOpacity
-                            style={[styles.menuRow, styles.menuRowBorder]}
-                            onPress={handleLogout}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.menuIconWrap, { backgroundColor: colors.error + '15' }]}>
-                                <Ionicons name="log-out" size={18} color={colors.error} />
+                    {sections.map((section, sIndex) => (
+                        <View key={sIndex} style={styles.section}>
+                            <Text style={styles.sectionTitle} allowFontScaling={false}>{section.title}</Text>
+                            <View style={styles.sectionCard}>
+                                {section.items.map((item, iIndex) => (
+                                    <TouchableOpacity
+                                        key={iIndex}
+                                        style={[styles.menuRow, iIndex < section.items.length - 1 && styles.menuRowBorder]}
+                                        activeOpacity={item.toggle ? 1 : 0.7}
+                                        onPress={item.toggle ? undefined : item.onPress}
+                                    >
+                                        <View style={[styles.menuIconWrap, { backgroundColor: item.color + '15' }]}>
+                                            <Ionicons name={item.icon as any} size={18} color={item.color} />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.menuLabel} allowFontScaling={false}>{item.label}</Text>
+                                            {item.subtitle ? (
+                                                <Text style={styles.menuSub} allowFontScaling={false}>{item.subtitle}</Text>
+                                            ) : null}
+                                        </View>
+                                        {item.toggle ? (
+                                            <Switch
+                                                value={item.value}
+                                                onValueChange={item.onToggle}
+                                                trackColor={{ false: colors.surfaceLight, true: colors.primary + '70' }}
+                                                thumbColor={item.value ? colors.primary : '#888'}
+                                            />
+                                        ) : (
+                                            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                                        )}
+                                    </TouchableOpacity>
+                                ))}
                             </View>
-                            <Text style={[styles.menuLabel, { color: colors.error }]} allowFontScaling={false}>
-                                Sign Out
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.menuRow}
-                            onPress={handleDeleteAccount}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.menuIconWrap, { backgroundColor: colors.error + '15' }]}>
-                                <Ionicons name="skull" size={18} color={colors.error} />
-                            </View>
-                            <View style={{ flex: 1 }}>
+                        </View>
+                    ))}
+
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: colors.error }]} allowFontScaling={false}>
+                            Account actions
+                        </Text>
+                        <View style={styles.sectionCard}>
+                            <TouchableOpacity style={[styles.menuRow, styles.menuRowBorder]} onPress={handleLogout} activeOpacity={0.7}>
+                                <View style={[styles.menuIconWrap, { backgroundColor: colors.error + '15' }]}>
+                                    <Ionicons name="log-out" size={18} color={colors.error} />
+                                </View>
                                 <Text style={[styles.menuLabel, { color: colors.error }]} allowFontScaling={false}>
-                                    Delete Account
+                                    Sign Out
                                 </Text>
-                                <Text style={styles.menuSub} allowFontScaling={false}>
-                                    Permanently remove your account and data
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.menuRow} onPress={handleDeleteAccount} activeOpacity={0.7}>
+                                <View style={[styles.menuIconWrap, { backgroundColor: colors.error + '15' }]}>
+                                    <Ionicons name="person-remove" size={18} color={colors.error} />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={[styles.menuLabel, { color: colors.error }]} allowFontScaling={false}>
+                                        Delete Account
+                                    </Text>
+                                    <Text style={styles.menuSub} allowFontScaling={false}>
+                                        Request permanent removal
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
 
-                {/* Footer */}
-                <Text style={styles.footerText} allowFontScaling={false}>
-                    UrbanFix v1.0.0{'\n'}Made with care for smarter cities
-                </Text>
-            </ScrollView>
+                    <Text style={styles.footerText} allowFontScaling={false}>
+                        UrbanFix {APP_VERSION}{'\n'}Live civic reporting for your city
+                    </Text>
+                </ScrollView>
             </View>
         </View>
     );
@@ -299,8 +307,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(15,18,32,0.72)',
         overflow: 'hidden',
     },
-
-    // Header
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: 16, paddingVertical: 12,
@@ -313,8 +319,13 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderColor: colors.border,
     },
     headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 20, color: colors.text, includeFontPadding: false },
-
-    // Sections
+    profilePeek: {
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        marginTop: 18, marginHorizontal: 16, padding: 14,
+        backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    },
+    peekName: { fontFamily: fonts.semibold, color: colors.text, fontSize: 16 },
+    peekEmail: { fontFamily: fonts.regular, color: colors.textMuted, fontSize: 12, marginTop: 2 },
     section: { marginTop: 24, paddingHorizontal: 16 },
     sectionTitle: {
         fontFamily: 'Inter_600SemiBold', color: colors.textMuted, fontSize: 12,
@@ -325,8 +336,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.surface, borderRadius: radius.lg,
         borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
     },
-
-    // Menu rows
     menuRow: {
         flexDirection: 'row', alignItems: 'center', gap: 12,
         paddingVertical: 14, paddingHorizontal: 14,
@@ -338,8 +347,6 @@ const styles = StyleSheet.create({
     },
     menuLabel: { fontFamily: 'Inter_600SemiBold', color: colors.text, fontSize: 15, includeFontPadding: false },
     menuSub: { fontFamily: 'Inter_400Regular', color: colors.textMuted, fontSize: 12, marginTop: 1, includeFontPadding: false },
-
-    // Footer
     footerText: {
         fontFamily: 'Inter_400Regular', color: colors.textMuted, textAlign: 'center',
         marginTop: 32, fontSize: 12, lineHeight: 18, includeFontPadding: false,

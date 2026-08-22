@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const store = require('../data/store');
+const upload = require('../config/multer');
+const { uploadFile } = require('../config/storage');
 
 // GET /api/users/check-username/:username — Check if username is available
 router.get('/check-username/:username', async (req, res) => {
@@ -152,6 +154,44 @@ router.post('/push-token', protect, async (req, res) => {
         res.json({ message: 'Token registered', token: saved });
     } catch (error) {
         console.error('Push token registration error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// DELETE /api/users/push-token — Remove FCM token (logout / user disabled alerts)
+router.delete('/push-token', protect, async (req, res) => {
+    try {
+        const { token } = req.body || {};
+        if (token) {
+            await store.deletePushToken(token);
+        } else {
+            const tokens = await store.getPushTokens(req.user._id);
+            for (const row of tokens || []) {
+                if (row?.token) await store.deletePushToken(row.token);
+            }
+        }
+        res.json({ message: 'Token removed' });
+    } catch (error) {
+        console.error('Push token removal error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// POST /api/users/avatar — Upload profile photo
+router.post('/avatar', protect, upload.single('avatar'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ message: 'Image is required' });
+        const url = await uploadFile(req.file);
+        if (!url) return res.status(500).json({ message: 'Could not upload photo' });
+        const updated = await store.updateUser(req.user._id, { avatar: url });
+        res.json({
+            avatar: url,
+            _id: updated.id,
+            name: updated.name,
+            email: updated.email,
+        });
+    } catch (error) {
+        console.error('Avatar upload error:', error.message);
         res.status(500).json({ message: error.message });
     }
 });

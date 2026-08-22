@@ -1,7 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { authAPI, usersAPI } from "./api";
+import { flushSync } from "react-dom";
+import { authAPI } from "./api";
 
 interface User {
   _id: string;
@@ -51,7 +52,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       localStorage.setItem("admin_token", data.token);
       localStorage.setItem("admin_user", JSON.stringify(data));
-      setUser(data);
+      // Apply user before navigation: otherwise AdminShell still sees user=null and sends you back to /login.
+      flushSync(() => {
+        setUser(data);
+      });
       return { ok: true };
     } catch (e: unknown) {
       const msg =

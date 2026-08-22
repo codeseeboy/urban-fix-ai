@@ -130,7 +130,7 @@ export default function App() {
         <ErrorBoundary>
             <AuthProvider>
                 <SafeAreaProvider>
-                    <StatusBar style="light" />
+                    <StatusBar style="dark" />
                     <AppBoot fontsLoaded={fontsLoaded} />
                 </SafeAreaProvider>
             </AuthProvider>

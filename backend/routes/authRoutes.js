@@ -64,7 +64,11 @@ router.post('/register', async (req, res) => {
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email: rawEmail, password } = req.body;
+        const email = typeof rawEmail === 'string' ? rawEmail.trim() : '';
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required' });
+        }
         const user = await store.getUserByEmail(email);
         if (!user) return res.status(401).json({ message: 'Invalid email or password' });
 

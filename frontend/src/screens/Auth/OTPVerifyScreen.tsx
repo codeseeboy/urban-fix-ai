@@ -149,9 +149,9 @@ const styles = StyleSheet.create({
     formCard: {
         marginHorizontal: 10,
         borderRadius: radius.xl,
-        backgroundColor: 'rgba(15,18,32,0.72)',
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: colors.border,
         paddingTop: 12,
         paddingBottom: 20,
     },
