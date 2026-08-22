@@ -362,13 +362,13 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: 16, paddingVertical: 14,
-        borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+        borderBottomWidth: 1, borderBottomColor: colors.border,
     },
     backBtn: {
         width: 38, height: 38, borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.04)',
+        backgroundColor: colors.surface,
         justifyContent: 'center', alignItems: 'center',
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+        borderWidth: 1, borderColor: colors.border,
     },
     headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     headerDot: {
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
 
     // Quick actions
     quickActionsWrap: {
-        borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)',
+        borderBottomWidth: 1, borderBottomColor: colors.border,
     },
     quickActionsContent: { paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
     quickAction: {

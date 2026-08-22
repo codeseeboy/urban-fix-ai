@@ -20,6 +20,7 @@ import ReportIssueScreen from '../screens/Main/ReportIssueScreen';
 import LeaderboardScreen from '../screens/Main/LeaderboardScreen';
 import SettingsScreen from '../screens/Main/SettingsScreen';
 import EditProfileScreen from '../screens/Main/EditProfileScreen';
+import LegalScreen from '../screens/Main/LegalScreen';
 import MunicipalProfileScreen from '../screens/Municipal/MunicipalProfileScreen';
 import ChatbotScreen from '../screens/Main/ChatbotScreen';
 
@@ -62,6 +63,8 @@ export default function RootNavigator() {
                         <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
                         <Stack.Screen name="Settings" component={SettingsScreen} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                        <Stack.Screen name="Legal" component={LegalScreen} />
+                        <Stack.Screen name="LocationSetup" component={LocationSetupScreen} />
                         <Stack.Screen name="MunicipalProfile" component={MunicipalProfileScreen} />
                         <Stack.Screen name="Chatbot" component={ChatbotScreen} />
                     </>

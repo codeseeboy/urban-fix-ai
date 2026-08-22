@@ -9,7 +9,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { gamificationAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { colors, fonts, radius } from '../../theme/colors';
-import AuthCanvas from '../../components/auth/AuthCanvas';
 
 const { width } = Dimensions.get('window');
 
@@ -165,7 +164,6 @@ export default function LeaderboardScreen({ navigation }: any) {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
-            <AuthCanvas />
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
@@ -215,12 +213,6 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     contentSheet: {
         flex: 1,
-        marginHorizontal: 10,
-        marginTop: 8,
-        borderRadius: radius.xl,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
-        backgroundColor: 'rgba(15,18,32,0.72)',
         overflow: 'hidden',
     },
 
@@ -228,8 +220,8 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: 16, paddingVertical: 12,
-        borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)',
-        backgroundColor: 'rgba(12,15,28,0.76)',
+        borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
+        backgroundColor: colors.surface,
     },
     backBtn: {
         width: 38, height: 38, borderRadius: 19,

@@ -1,0 +1,11 @@
+path: /content/drive/MyDrive/UrbanFix_AI/datasets/parks_yolo
+train: images/train
+val: images/val
+
+names:
+  0: broken_bench
+  1: damaged_playground
+  2: fallen_tree_branch
+  3: broken_fence
+  4: park_garbage
+  5: cracked_path

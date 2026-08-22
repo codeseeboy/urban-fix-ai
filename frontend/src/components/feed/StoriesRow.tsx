@@ -21,6 +21,7 @@ interface StoriesRowProps {
     stories: StoryItem[];
     onStoryPress: (story: StoryItem) => void;
     onAddStory?: () => void;
+    showAddStory?: boolean;
 }
 
 function StoryBubble({ item, onPress, index }: { item: StoryItem; onPress: () => void; index: number }) {

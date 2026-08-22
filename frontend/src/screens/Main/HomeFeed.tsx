@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
-import { issuesAPI, gamificationAPI } from '../../services/api';
+import { issuesAPI, gamificationAPI, municipalAPI } from '../../services/api';
 import api from '../../services/api';
 import logger from '../../utils/logger';
 import { colors, fonts, radius } from '../../theme/colors';
@@ -25,6 +25,8 @@ import ReelsTab from '../../components/feed/ReelsTab';
 import FilterDrawer from '../../components/feed/FilterDrawer';
 import FeedPost from '../../components/feed/FeedPost';
 import RejectionToast from '../../components/ui/RejectionToast';
+import EmptyState from '../../components/ui/EmptyState';
+import SearchSheet from '../../components/feed/SearchSheet';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const FEED_PAGE_SIZE = 30;
@@ -114,6 +116,11 @@ export default function HomeFeed({ navigation, route }: any) {
     // Rejection toast state
     const [showRejectionToast, setShowRejectionToast] = useState(false);
     const [rejectionMsg, setRejectionMsg] = useState('');
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [municipalStories, setMunicipalStories] = useState<any[]>([]);
+    const [newCount, setNewCount] = useState(0);
+    const listRef = useRef<FlatList>(null);
+    const seenTopIdRef = useRef<string | null>(null);
 
     // Show rejection toast when navigated back with rejection params
     useEffect(() => {
@@ -390,6 +397,14 @@ export default function HomeFeed({ navigation, route }: any) {
 
         issuesRef.current = ordered;
         setIssues(ordered);
+        if (!append && ordered[0]?._id) {
+            if (seenTopIdRef.current && seenTopIdRef.current !== ordered[0]._id) {
+                const idx = ordered.findIndex((it) => it._id === seenTopIdRef.current);
+                setNewCount(idx > 0 ? idx : 1);
+            } else if (!seenTopIdRef.current) {
+                seenTopIdRef.current = ordered[0]._id;
+            }
+        }
         await AsyncStorage.setItem(cacheKey, JSON.stringify({ items: ordered, cachedAt: Date.now() }));
         lastNetworkRefreshAtRef.current = Date.now();
 
@@ -462,6 +477,22 @@ export default function HomeFeed({ navigation, route }: any) {
         } catch (e) { console.log('Stats error:', e); }
     }, []);
 
+    const fetchMunicipalStories = useCallback(async () => {
+        try {
+            const { data } = await municipalAPI.getSuggested();
+            const pages = Array.isArray(data) ? data : [];
+            setMunicipalStories(pages.map((p: any) => ({
+                id: p._id || p.id,
+                name: p.name,
+                avatar: p.avatar,
+                hasUpdate: true,
+                verified: p.verified,
+            })));
+        } catch {
+            setMunicipalStories([]);
+        }
+    }, []);
+
     useEffect(() => {
         let isMounted = true;
 
@@ -485,7 +516,7 @@ export default function HomeFeed({ navigation, route }: any) {
                 return;
             }
 
-            await Promise.all([refreshFeed(), fetchStats()]);
+            await Promise.all([refreshFeed(), fetchStats(), fetchMunicipalStories()]);
             if (isMounted) {
                 initialLoadDoneRef.current = true;
                 setLoading(false);
@@ -521,7 +552,7 @@ export default function HomeFeed({ navigation, route }: any) {
         } finally {
             skipQueueAutoRefreshOnceRef.current = false;
         }
-        await Promise.all([refreshFeed(), fetchStats()]);
+        await Promise.all([refreshFeed(), fetchStats(), fetchMunicipalStories()]);
         setRefreshing(false);
     }, [processFeedActionQueue, refreshFeed, fetchStats]);
 
@@ -837,16 +868,16 @@ export default function HomeFeed({ navigation, route }: any) {
             </Animated.View>
 
             {/* Stories Row (shows in municipal mode) */}
-            {feedMode === 'municipal' && (
+            {feedMode === 'municipal' && municipalStories.length > 0 && (
                 <StoriesRow
-                    stories={MUNICIPAL_STORIES}
+                    stories={municipalStories}
                     showAddStory={false}
                     onStoryPress={(story) => navigation.navigate('MunicipalProfile', { pageId: story.id })}
                     onAddStory={() => navigation.navigate('ReportIssue')}
                 />
             )}
         </View>
-    ), [greeting, firstName, feedMode, sectionTabsBar, brandTag, feedBrandOpacity, feedBrandSlideY, navigation]);
+    ), [greeting, firstName, feedMode, sectionTabsBar, brandTag, feedBrandOpacity, feedBrandSlideY, navigation, municipalStories]);
 
     const listEmptyComponent = useMemo(() => {
         if (loading) {
@@ -871,21 +902,19 @@ export default function HomeFeed({ navigation, route }: any) {
             );
         }
         return (
-            <View style={styles.emptyWrap}>
-                <View style={styles.emptyIcon}>
-                    <Ionicons name="telescope-outline" size={48} color={colors.textMuted} />
-                </View>
-                <Text style={styles.emptyTitle}>
-                    {feedMode === 'municipal' ? 'No municipal updates' : 'No issues found'}
-                </Text>
-                <Text style={styles.emptySubtitle}>
-                    {feedMode === 'municipal'
-                        ? 'Follow municipal pages to see updates here'
-                        : 'Pull down to refresh or try a different filter'}
-                </Text>
-            </View>
+            <EmptyState
+                image={require('../../../assets/empty-feed.png')}
+                title={feedMode === 'municipal' ? 'No municipal updates yet' : 'No reports in this view'}
+                subtitle={
+                    feedMode === 'municipal'
+                        ? 'Follow a city department to see official posts here.'
+                        : 'Be the first nearby — photograph an issue and file a live report.'
+                }
+                actionLabel="Report an issue"
+                onAction={() => navigation.navigate('ReportIssue')}
+            />
         );
-    }, [loading, feedMode]);
+    }, [loading, feedMode, navigation]);
 
     const listFooterComponent = useMemo(() => {
         if (!loadingMore) return null;
@@ -943,7 +972,7 @@ export default function HomeFeed({ navigation, route }: any) {
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.topBarBtn}
-                                    onPress={() => navigation.navigate('Settings')}
+                                    onPress={() => setSearchOpen(true)}
                                     activeOpacity={0.7}
                                 >
                                     <Ionicons name="search-outline" size={20} color={colors.text} />
@@ -953,8 +982,8 @@ export default function HomeFeed({ navigation, route }: any) {
                         <FeedToggle activeTab={feedMode} onToggle={setFeedMode} />
                         {sectionTabsBar}
                         <ReelsTab
-                            reels={[]}
-                            loading={false}
+                            reels={issues.filter((item) => item.image || item.video)}
+                            loading={loading}
                             userId={user?._id}
                             onLike={handleUpvote}
                             onComment={(id) => navigation.navigate('IssueDetail', { issueId: id })}
@@ -965,6 +994,7 @@ export default function HomeFeed({ navigation, route }: any) {
                     </View>
                 ) : (
                     <FlatList
+                        ref={listRef}
                         data={loading ? [] : issues}
                         renderItem={renderItem}
                         keyExtractor={i => i._id}
@@ -1044,7 +1074,7 @@ export default function HomeFeed({ navigation, route }: any) {
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.topBarBtn}
-                                onPress={() => navigation.navigate('Settings')}
+                                onPress={() => setSearchOpen(true)}
                                 activeOpacity={0.7}
                             >
                                 <Ionicons name="search-outline" size={20} color={colors.text} />
@@ -1087,6 +1117,29 @@ export default function HomeFeed({ navigation, route }: any) {
                 title="Photo Rejected by AI"
                 reason={rejectionMsg || 'The image does not show a valid civic issue. Please upload a clear photo.'}
                 onDismiss={() => setShowRejectionToast(false)}
+            />
+
+            {newCount > 0 && (
+                <TouchableOpacity
+                    style={styles.newPill}
+                    onPress={() => {
+                        setNewCount(0);
+                        if (issues[0]?._id) seenTopIdRef.current = issues[0]._id;
+                        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+                    }}
+                    activeOpacity={0.9}
+                >
+                    <Ionicons name="arrow-up" size={14} color="#FFF" />
+                    <Text style={styles.newPillText}>{newCount} new update{newCount > 1 ? 's' : ''}</Text>
+                </TouchableOpacity>
+            )}
+
+            <SearchSheet
+                visible={searchOpen}
+                issues={issues}
+                onClose={() => setSearchOpen(false)}
+                onOpenIssue={(item) => handleOpenPost(item)}
+                onOpenMunicipal={(pageId) => navigation.navigate('MunicipalProfile', { pageId })}
             />
         </View>
     );
@@ -1449,5 +1502,27 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    newPill: {
+        position: 'absolute',
+        top: 110,
+        alignSelf: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: colors.primary,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        zIndex: 120,
+        shadowColor: colors.primary,
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    newPillText: {
+        fontFamily: fonts.semibold,
+        color: '#FFF',
+        fontSize: 13,
     },
 });

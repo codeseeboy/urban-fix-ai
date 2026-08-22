@@ -12,7 +12,7 @@ interface GlassCardProps {
 export const GlassCard = ({ children, style, intensity = 50 }: GlassCardProps) => {
     return (
         <View style={[styles.container, style]}>
-            <BlurView intensity={intensity} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={intensity} tint="light" style={StyleSheet.absoluteFill} />
             <View style={styles.content}>
                 {children}
             </View>
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         backgroundColor: colors.glass,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: colors.border,
         shadowColor: "#000",
         shadowOffset: {
             width: 0,

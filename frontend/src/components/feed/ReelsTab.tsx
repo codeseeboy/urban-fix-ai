@@ -242,11 +242,11 @@ export default function ReelsTab({
                     </LinearGradient>
                 </Animated.View>
 
-                <Text style={styles.emptyTitle}>Reels Coming Soon</Text>
+                <Text style={styles.emptyTitle}>No photo reports yet</Text>
                 <Text style={styles.emptySubtitle}>
                     {activeToggle === 'community'
-                        ? 'Short video reports from your community will appear here. Be the first to upload!'
-                        : 'Official video updates from municipal bodies will show up here.'
+                        ? 'Photo reports from nearby citizens show up here as full-screen stories.'
+                        : 'Official municipal photos will appear here once departments post.'
                     }
                 </Text>
 

@@ -33,7 +33,9 @@ class NotificationService {
                 type: data.type || 'general',
                 title,
                 description: body,
-                action_url: data.navigationTarget || null,
+                action_url: data.issueId
+                    ? `IssueDetails:${data.issueId}`
+                    : (data.navigationTarget || null),
                 read: false
             });
 

@@ -157,10 +157,10 @@ function FeedPost({
 
     const getSeverityStyle = (severity: string) => {
         switch (severity) {
-            case 'Critical': return { color: '#FF003C', bg: '#FF003C15', glow: '#FF003C' };
-            case 'High': return { color: '#FF453A', bg: '#FF453A15', glow: '#FF453A' };
-            case 'Medium': return { color: '#FFD60A', bg: '#FFD60A15', glow: '#FFD60A' };
-            default: return { color: '#30D158', bg: '#30D15815', glow: '#30D158' };
+            case 'Critical': return { color: '#DC2626', bg: '#FEE2E2' };
+            case 'High': return { color: '#EA580C', bg: '#FFEDD5' };
+            case 'Medium': return { color: '#D97706', bg: '#FEF3C7' };
+            default: return { color: '#16A34A', bg: '#DCFCE7' };
         }
     };
 
@@ -182,7 +182,7 @@ function FeedPost({
                                 <Image source={{ uri: item.user.avatar }} style={styles.avatar} cachePolicy="memory-disk" contentFit="cover" />
                             ) : (
                                 <LinearGradient
-                                    colors={isMunicipal ? ['#8B5CF6', '#6D28D9'] : [colors.primary, '#0055CC']}
+                                    colors={isMunicipal ? ['#7C3AED', '#6D28D9'] : (colors.gradient.primary as [string, string])}
                                     style={styles.avatar}
                                 >
                                     <Text style={styles.avatarText}>{initials}</Text>
@@ -280,19 +280,19 @@ function FeedPost({
                     {!isMunicipal && (
                         <View style={styles.statusRow}>
                             <View style={[styles.statusPill, {
-                                backgroundColor: item.status === 'Resolved' ? '#30D15815' :
-                                    item.status === 'InProgress' ? colors.primary + '15' : '#FF9F0A15',
+                                backgroundColor: item.status === 'Resolved' ? '#DCFCE7' :
+                                    item.status === 'InProgress' ? '#DBEAFE' : '#FEF3C7',
                             }]}>
                                 <Ionicons
                                     name={item.status === 'Resolved' ? 'checkmark-circle' :
                                         item.status === 'InProgress' ? 'sync' : 'time'}
                                     size={12}
-                                    color={item.status === 'Resolved' ? '#30D158' :
-                                        item.status === 'InProgress' ? colors.primary : '#FF9F0A'}
+                                    color={item.status === 'Resolved' ? colors.success :
+                                        item.status === 'InProgress' ? colors.primary : colors.warning}
                                 />
                                 <Text style={[styles.statusText, {
-                                    color: item.status === 'Resolved' ? '#30D158' :
-                                        item.status === 'InProgress' ? colors.primary : '#FF9F0A',
+                                    color: item.status === 'Resolved' ? colors.success :
+                                        item.status === 'InProgress' ? colors.primary : colors.warning,
                                 }]}>
                                     {item.status === 'InProgress' ? 'In Progress' : item.status || 'Submitted'}
                                 </Text>
@@ -426,11 +426,16 @@ export default memo(FeedPost, (prevProps, nextProps) => {
 const styles = StyleSheet.create({
     postContainer: {
         backgroundColor: colors.surface,
-        borderRadius: 0,
-        marginBottom: 10,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-        borderColor: colors.border + '40', // Slightly transparent border
+        borderRadius: radius.lg,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+        overflow: 'hidden',
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.05,
+        shadowRadius: 14,
+        elevation: 2,
     },
     header: {
         flexDirection: 'row',
@@ -471,7 +476,7 @@ const styles = StyleSheet.create({
     moreBtn: { padding: 4 },
     title: { fontFamily: fonts.medium, color: colors.text, fontSize: 15, lineHeight: 22, paddingHorizontal: 16, marginBottom: 8 },
     description: { fontFamily: fonts.regular, color: colors.textSecondary, fontSize: 14, lineHeight: 20, paddingHorizontal: 16, marginBottom: 10 },
-    imageContainer: { position: 'relative', width: '100%', height: 300, backgroundColor: colors.surfaceLight },
+    imageContainer: { position: 'relative', width: '100%', height: 220, backgroundColor: colors.surfaceLight },
     postImage: { width: '100%', height: '100%', resizeMode: 'cover' },
     imageGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 },
     heartOverlay: { justifyContent: 'center', alignItems: 'center', zIndex: 10 },

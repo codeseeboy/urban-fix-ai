@@ -1,0 +1,9 @@
+path: /content/drive/MyDrive/UrbanFix_AI/datasets/lighting_yolo
+train: images/train
+val: images/val
+
+names:
+  0: broken_street_light
+  1: tilted_pole
+  2: dark_unlit_lamp
+  3: exposed_wire

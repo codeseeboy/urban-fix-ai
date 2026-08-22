@@ -1,12 +1,7 @@
-/**
- * FeedToggle — Premium mechanical-style toggle for Community ↔ Municipal feed
- * Animated spring toggle with haptic-like feedback feel
- */
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, fonts, radius } from '../../theme/colors';
+import { colors, fonts, radius, shadows } from '../../theme/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TOGGLE_WIDTH = SCREEN_WIDTH - 40;
@@ -19,23 +14,15 @@ interface FeedToggleProps {
 
 export default function FeedToggle({ activeTab, onToggle }: FeedToggleProps) {
     const slideAnim = useRef(new Animated.Value(activeTab === 'community' ? 0 : 1)).current;
-    const scaleAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
-        // Spring animation for slider
         Animated.spring(slideAnim, {
             toValue: activeTab === 'community' ? 0 : 1,
-            friction: 7,
+            friction: 8,
             tension: 80,
             useNativeDriver: true,
         }).start();
-
-        // Micro bounce
-        Animated.sequence([
-            Animated.timing(scaleAnim, { toValue: 0.97, duration: 80, useNativeDriver: true }),
-            Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 120, useNativeDriver: true }),
-        ]).start();
-    }, [activeTab]);
+    }, [activeTab, slideAnim]);
 
     const translateX = slideAnim.interpolate({
         inputRange: [0, 1],
@@ -43,94 +30,42 @@ export default function FeedToggle({ activeTab, onToggle }: FeedToggleProps) {
     });
 
     return (
-        <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }] }]}>
-            {/* Track */}
+        <View style={styles.container}>
             <View style={styles.track}>
-                {/* Animated slider */}
-                <Animated.View style={[styles.slider, { transform: [{ translateX }] }]}>
-                    <LinearGradient
-                        colors={activeTab === 'community' ? ['#007AFF', '#0055CC'] : ['#8B5CF6', '#6D28D9']}
-                        style={styles.sliderGradient}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    />
-                </Animated.View>
-
-                {/* Community tab */}
-                <TouchableOpacity
-                    style={styles.tab}
-                    onPress={() => onToggle('community')}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons
-                        name="people"
-                        size={16}
-                        color={activeTab === 'community' ? '#FFF' : colors.textMuted}
-                    />
-                    <Text style={[
-                        styles.tabText,
-                        activeTab === 'community' && styles.tabTextActive,
-                    ]}>
-                        Community
-                    </Text>
+                <Animated.View style={[styles.slider, { transform: [{ translateX }] }]} />
+                <TouchableOpacity style={styles.tab} onPress={() => onToggle('community')} activeOpacity={0.8}>
+                    <Ionicons name="people" size={16} color={activeTab === 'community' ? colors.primary : colors.textMuted} />
+                    <Text style={[styles.tabText, activeTab === 'community' && styles.tabTextActive]}>Community</Text>
                 </TouchableOpacity>
-
-                {/* Municipal tab */}
-                <TouchableOpacity
-                    style={styles.tab}
-                    onPress={() => onToggle('municipal')}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons
-                        name="business"
-                        size={16}
-                        color={activeTab === 'municipal' ? '#FFF' : colors.textMuted}
-                    />
-                    <Text style={[
-                        styles.tabText,
-                        activeTab === 'municipal' && styles.tabTextActive,
-                    ]}>
-                        Municipal
-                    </Text>
-                    {/* Live indicator dot for municipal */}
-                    <View style={styles.liveDot} />
+                <TouchableOpacity style={styles.tab} onPress={() => onToggle('municipal')} activeOpacity={0.8}>
+                    <Ionicons name="business" size={16} color={activeTab === 'municipal' ? colors.primary : colors.textMuted} />
+                    <Text style={[styles.tabText, activeTab === 'municipal' && styles.tabTextActive]}>Municipal</Text>
                 </TouchableOpacity>
             </View>
-        </Animated.View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         paddingHorizontal: 20,
-        marginBottom: 6,
+        marginBottom: 10,
     },
     track: {
         flexDirection: 'row',
-        backgroundColor: colors.surface,
-        borderRadius: 16,
-        height: 48,
-        borderWidth: 1,
-        borderColor: colors.border,
+        backgroundColor: colors.surfaceLight,
+        borderRadius: radius.md,
+        height: 46,
         position: 'relative',
-        overflow: 'hidden',
     },
     slider: {
         position: 'absolute',
         width: HALF_WIDTH,
-        height: 42,
+        height: 40,
         top: 3,
-        borderRadius: 13,
-        overflow: 'hidden',
-        // Shadow for depth
-        shadowColor: '#007AFF',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    sliderGradient: {
-        flex: 1,
-        borderRadius: 13,
+        borderRadius: 10,
+        backgroundColor: colors.surface,
+        ...shadows.card,
     },
     tab: {
         flex: 1,
@@ -144,19 +79,9 @@ const styles = StyleSheet.create({
         fontFamily: fonts.semibold,
         fontSize: 13,
         color: colors.textMuted,
-        letterSpacing: -0.2,
     },
     tabTextActive: {
-        color: '#FFF',
+        color: colors.text,
         fontFamily: fonts.bold,
-    },
-    liveDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: '#30D158',
-        position: 'absolute',
-        top: 12,
-        right: 20,
     },
 });

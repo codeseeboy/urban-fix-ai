@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import Sidebar from "./Sidebar";
+import { cn } from "@/lib/utils";
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -30,10 +31,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   if (!user) return null;
 
+  const isMapPage = pathname === "/map";
+
   return (
     <div className="min-h-screen bg-[#06060e]">
       <Sidebar />
-      <main className="min-h-screen pt-14 lg:pt-0 lg:ml-[260px]">
+      <main
+        className={cn(
+          isMapPage
+            ? "box-border flex h-[100dvh] min-h-0 flex-col overflow-hidden pt-14 lg:ml-[260px] lg:pt-0"
+            : "min-h-screen pt-14 lg:ml-[260px] lg:pt-0"
+        )}
+      >
         {children}
       </main>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Animated } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Animated, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
@@ -59,11 +59,9 @@ export default function LoginScreen({ navigation }: any) {
             <AuthCanvas />
             <Animated.View style={[styles.inner, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
                 {/* Logo */}
-                <LinearGradient colors={[colors.primary, '#0055CC']} style={styles.logo}>
-                    <Text style={styles.logoText}>U</Text>
-                </LinearGradient>
+                <Image source={require('../../../assets/logo2.png')} style={styles.logoImage} />
                 <Text style={styles.title}>UrbanFix</Text>
-                <Text style={styles.subtitle}>Welcome back. Pick up where you left off.</Text>
+                <Text style={styles.subtitle}>Sign in to report issues and track live updates.</Text>
 
                 {/* Form */}
                 <View style={styles.formCard}>
@@ -127,12 +125,10 @@ export default function LoginScreen({ navigation }: any) {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, justifyContent: 'center' },
     inner: { paddingHorizontal: 28 },
-    logo: {
-        width: 64, height: 64, borderRadius: 18, justifyContent: 'center', alignItems: 'center',
-        alignSelf: 'center', marginBottom: 16,
-        shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
+    logoImage: {
+        width: 72, height: 72, borderRadius: 20, alignSelf: 'center', marginBottom: 16,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
     },
-    logoText: { fontFamily: 'Inter_900Black', fontSize: 32, color: '#FFF' },
     title: { fontFamily: 'Inter_900Black', fontSize: 28, color: colors.text, textAlign: 'center', letterSpacing: -1 },
     subtitle: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.65)', textAlign: 'center', marginBottom: 26, marginTop: 6 },
     formCard: {

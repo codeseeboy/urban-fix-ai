@@ -78,6 +78,23 @@ body {
   border-radius: 12px;
 }
 
+/*
+  Tailwind preflight sets img { max-width: 100%; height: auto; } which breaks Leaflet:
+  tiles are absolutely positioned; max-width collapses them so you only see the gray
+  .leaflet-container background + attribution. Reset for all Leaflet images.
+*/
+.leaflet-container img.leaflet-tile,
+.leaflet-container .leaflet-marker-icon img,
+.leaflet-container img.leaflet-marker-icon,
+.leaflet-container img.leaflet-marker-shadow {
+  max-width: none !important;
+  height: auto !important;
+}
+
+.leaflet-container .leaflet-tile-container img {
+  max-width: none !important;
+}
+
 @media (max-width: 640px) {
   select option {
     background: #141420;

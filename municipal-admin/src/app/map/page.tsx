@@ -9,7 +9,7 @@ import Link from "next/link";
 
 const IssueMap = dynamic(() => import("@/components/map/IssueMap"), {
   ssr: false,
-  loading: () => <div className="w-full h-full bg-[#0a0b14]" />,
+  loading: () => <div className="min-h-[50vh] w-full flex-1 bg-[#0a0b14]" />,
 });
 
 interface Issue {
@@ -77,7 +77,7 @@ export default function MapPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Header */}
       <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 bg-[#06060e]">
         <div>
@@ -112,14 +112,16 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* Map */}
-      <div className="flex-1 relative">
-        <IssueMap
-          center={center}
-          issues={filtered}
-          showHeatmap={showHeatmap}
-          onSelectIssue={setSelectedIssue}
-        />
+      {/* Map: flex-1 + min-h-0; inner min height so Leaflet always has pixels before invalidateSize */}
+      <div className="relative z-0 min-h-0 flex-1">
+        <div className="absolute inset-0 z-0 min-h-[280px]">
+          <IssueMap
+            center={center}
+            issues={filtered}
+            showHeatmap={showHeatmap}
+            onSelectIssue={setSelectedIssue}
+          />
+        </div>
 
         {/* Legend */}
         <div className="absolute bottom-4 left-4 glass-card p-3 z-[1000]">

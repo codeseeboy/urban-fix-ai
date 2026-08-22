@@ -1,28 +1,38 @@
 export const colors = {
-  background: '#0A0A0F',
-  surface: '#141420',
-  surfaceLight: '#1C1C2E',
-  card: '#16162A',
-  primary: '#007AFF',
-  primaryLight: '#4DA3FF',
-  secondary: '#5AC8FA',
-  accent: '#FFD60A',
-  error: '#FF453A',
-  success: '#30D158',
-  warning: '#FF9F0A',
-  text: '#FFFFFF',
-  textSecondary: '#8E8E9B',
-  textMuted: '#555566',
-  border: '#252536',
-  borderLight: '#2A2A40',
-  glass: 'rgba(20, 20, 32, 0.85)',
-  glow: 'rgba(0, 122, 255, 0.15)',
+  background: '#F4F6F9',
+  surface: '#FFFFFF',
+  surfaceLight: '#EEF2F7',
+  card: '#FFFFFF',
+  primary: '#2563EB',
+  primaryLight: '#3B82F6',
+  secondary: '#0EA5E9',
+  accent: '#F59E0B',
+  error: '#EF4444',
+  success: '#16A34A',
+  warning: '#F59E0B',
+  text: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#94A3B8',
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  glass: 'rgba(255,255,255,0.92)',
+  glow: 'rgba(37,99,235,0.10)',
+  ink: '#0F172A',
+  onPrimary: '#FFFFFF',
   gradient: {
-    primary: ['#007AFF', '#0055CC'],
-    premium: ['#1a1a2e', '#16213e', '#0f3460'],
-    card: ['rgba(20,20,40,0.9)', 'rgba(16,16,30,0.95)'],
-    gold: ['#FFD700', '#FFA500'],
-  }
+    primary: ['#2563EB', '#1D4ED8'],
+    premium: ['#EFF6FF', '#F8FAFC', '#FFFFFF'],
+    card: ['#FFFFFF', '#F8FAFC'],
+    gold: ['#F59E0B', '#D97706'],
+  },
+};
+
+export const categoryTint = {
+  roads: '#F59E0B',
+  lighting: '#EAB308',
+  trash: '#10B981',
+  water: '#0EA5E9',
+  parks: '#22C55E',
 };
 
 export const fonts = {
@@ -50,4 +60,28 @@ export const radius = {
   xl: 20,
   xxl: 24,
   full: 999,
+};
+
+export const shadows = {
+  card: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 3,
+  },
+  bar: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  fab: {
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 8,
+  },
 };

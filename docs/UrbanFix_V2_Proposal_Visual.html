@@ -1,0 +1,1079 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UrbanFix.AI 2.0 — Visual Proposal</title>
+<style>
+  :root {
+    --paper: #F7F9FA;
+    --surface: #FFFFFF;
+    --ink: #1C2A36;
+    --mist: #556776;
+    --civic: #15537F;
+    --civic-ink: #12496F;
+    --signal: #A85F10;
+    --signal-mark: #C97516;
+    --line: #D9E1E7;
+    --tint: #EDF3F7;
+    --tint-warm: #FBF3E7;
+    --grid: rgba(21, 83, 127, 0.07);
+    --serif: Charter, "Bitstream Charter", Cambria, "Georgia Pro", Georgia, serif;
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0F171E;
+      --surface: #16212B;
+      --ink: #E3EBF2;
+      --mist: #93A5B4;
+      --civic: #63A9D6;
+      --civic-ink: #8CC3E8;
+      --signal: #E09A42;
+      --signal-mark: #E09A42;
+      --line: #27343F;
+      --tint: #1A2836;
+      --tint-warm: #241E14;
+      --grid: rgba(99, 169, 214, 0.08);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0F171E;
+    --surface: #16212B;
+    --ink: #E3EBF2;
+    --mist: #93A5B4;
+    --civic: #63A9D6;
+    --civic-ink: #8CC3E8;
+    --signal: #E09A42;
+    --signal-mark: #E09A42;
+    --line: #27343F;
+    --tint: #1A2836;
+    --tint-warm: #241E14;
+    --grid: rgba(99, 169, 214, 0.08);
+  }
+  :root[data-theme="light"] {
+    --paper: #F7F9FA;
+    --surface: #FFFFFF;
+    --ink: #1C2A36;
+    --mist: #556776;
+    --civic: #15537F;
+    --civic-ink: #12496F;
+    --signal: #A85F10;
+    --signal-mark: #C97516;
+    --line: #D9E1E7;
+    --tint: #EDF3F7;
+    --tint-warm: #FBF3E7;
+    --grid: rgba(21, 83, 127, 0.07);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 940px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* ---------- Cover ---------- */
+  .cover {
+    margin: 40px 0 56px;
+    border: 1px solid var(--line);
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+      var(--surface);
+    background-size: 28px 28px, 28px 28px, auto;
+    padding: 48px 44px 40px;
+  }
+  .cover .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--civic-ink);
+    border: 1px solid var(--civic);
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 22px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(34px, 6vw, 50px);
+    line-height: 1.08;
+    margin: 0 0 12px;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .cover .sub {
+    font-family: var(--serif);
+    font-size: clamp(18px, 3vw, 22px);
+    color: var(--mist);
+    margin: 0 0 28px;
+    max-width: 34em;
+    text-wrap: balance;
+  }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 28px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--mist);
+    border-top: 1px solid var(--line); padding-top: 18px;
+  }
+  .thesis {
+    margin: 26px 0 0;
+    border-left: 3px solid var(--signal-mark);
+    background: var(--tint-warm);
+    padding: 16px 20px;
+    font-family: var(--serif);
+    font-size: 19px;
+    line-height: 1.5;
+  }
+  .thesis strong { color: var(--signal); }
+
+  /* ---------- Sections ---------- */
+  section { margin: 64px 0 0; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--civic-ink);
+    margin: 0 0 8px;
+  }
+  h2 {
+    font-family: var(--serif);
+    font-size: clamp(24px, 4vw, 30px);
+    line-height: 1.2;
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+  .lede { color: var(--mist); margin: 0 0 22px; max-width: 62ch; }
+  h3 {
+    font-family: var(--sans);
+    font-size: 17.5px;
+    font-weight: 600;
+    margin: 30px 0 8px;
+  }
+  p { max-width: 72ch; margin: 0 0 14px; }
+  ul, ol { max-width: 72ch; margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 7px; }
+  strong { font-weight: 600; }
+  .gloss { color: var(--mist); }
+
+  /* ---------- Pillar strip ---------- */
+  .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 22px 0 6px; }
+  .pillar {
+    border: 1px solid var(--line); background: var(--surface);
+    padding: 16px 16px 14px; border-top: 3px solid var(--civic);
+  }
+  .pillar.star { border-top-color: var(--signal-mark); }
+  .pillar .tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mist); }
+  .pillar .name { font-family: var(--serif); font-size: 18px; margin: 4px 0 6px; }
+  .pillar .desc { font-size: 14px; color: var(--mist); line-height: 1.5; margin: 0; }
+
+  /* ---------- Story journey cards ---------- */
+  .journey { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; margin: 18px 0; }
+  .jcard { border: 1px solid var(--line); background: var(--surface); padding: 13px 15px; border-top: 3px solid var(--signal-mark); }
+  .jcard .n { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--signal); }
+  .jcard .t { font-weight: 600; font-size: 14.5px; margin: 4px 0 5px; }
+  .jcard .d { font-size: 13px; color: var(--mist); line-height: 1.5; margin: 0; }
+  .v1box {
+    border: 1px solid var(--line); background: var(--surface);
+    padding: 16px 20px; margin: 18px 0; max-width: 76ch; font-size: 15.5px;
+  }
+  .v1box .lbl { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mist); display: block; margin-bottom: 6px; }
+  .v1box p { margin: 0; }
+
+  /* ---------- Diagram frames ---------- */
+  figure.diagram { margin: 22px 0; border: 1px solid var(--line); background: var(--surface); padding: 6px; }
+  figure.diagram .svgscroll { overflow-x: auto; }
+  figure.diagram svg { display: block; min-width: 820px; width: 100%; height: auto; }
+  figure.diagram figcaption {
+    font-size: 13.5px; color: var(--mist); padding: 10px 14px 8px;
+    border-top: 1px solid var(--line); margin-top: 4px;
+  }
+
+  /* SVG shared classes */
+  .bx  { fill: var(--surface); stroke: var(--line); stroke-width: 1.4; }
+  .bxa { fill: var(--tint); stroke: var(--civic); stroke-width: 1.4; }
+  .bxw { fill: var(--tint-warm); stroke: var(--signal-mark); stroke-width: 1.4; }
+  .tl  { font: 600 14px var(--sans); fill: var(--ink); }
+  .tlb { font: 700 15px var(--sans); fill: var(--ink); }
+  .sb  { font: 12.5px var(--sans); fill: var(--mist); }
+  .sbi { font: 12.5px var(--sans); fill: var(--civic-ink); }
+  .cap { font: italic 13px var(--serif); fill: var(--mist); }
+  .lane { font: 700 12px var(--mono); fill: var(--civic-ink); letter-spacing: 0.1em; }
+  .arr  { stroke: var(--civic); stroke-width: 1.7; fill: none; }
+  .arrs { stroke: var(--signal-mark); stroke-width: 1.7; fill: none; stroke-dasharray: 6 4; }
+  .hair { stroke: var(--line); stroke-width: 1; }
+  .mkc { fill: var(--civic); }
+  .mks { fill: var(--signal-mark); }
+
+  /* ---------- 4 V cards ---------- */
+  .vees { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 12px; margin: 20px 0; }
+  .vee { border: 1px solid var(--line); background: var(--surface); padding: 16px 16px 14px; }
+  .vee .big { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--civic-ink); letter-spacing: 0.02em; }
+  .vee .mean { font-size: 13px; color: var(--mist); margin: 2px 0 8px; }
+  .vee .ex { font-size: 13.5px; line-height: 1.5; margin: 0; border-top: 1px solid var(--line); padding-top: 8px; }
+  .vee .ex strong { color: var(--signal); }
+
+  /* ---------- Tables ---------- */
+  .tablewrap { overflow-x: auto; margin: 20px 0 8px; border: 1px solid var(--line); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 640px; }
+  caption {
+    text-align: left; font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--mist); padding: 12px 16px 0;
+  }
+  th {
+    text-align: left; font-weight: 600; font-size: 13px; letter-spacing: 0.03em;
+    color: var(--civic-ink); border-bottom: 2px solid var(--civic);
+    padding: 12px 16px 8px; white-space: nowrap;
+  }
+  td { border-bottom: 1px solid var(--line); padding: 11px 16px; vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  td.q { font-weight: 600; min-width: 170px; }
+  td.num, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13.5px; white-space: nowrap; }
+
+  /* ---------- Callouts ---------- */
+  .demo {
+    border: 1px solid var(--line); border-left: 3px solid var(--civic);
+    background: var(--tint); padding: 14px 18px; margin: 18px 0; max-width: 76ch;
+  }
+  .demo .lbl {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--civic-ink); display: block; margin-bottom: 6px;
+  }
+  .demo p { margin: 0; font-size: 15px; }
+  .note {
+    border: 1px solid var(--line); border-left: 3px solid var(--signal-mark);
+    background: var(--tint-warm); padding: 14px 18px; margin: 18px 0; max-width: 76ch;
+  }
+  .note .lbl {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--signal); display: block; margin-bottom: 6px;
+  }
+  .note p { margin: 0; font-size: 15px; }
+
+  /* ---------- Two-column stay/new ---------- */
+  .twocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 18px 0; }
+  .col { border: 1px solid var(--line); background: var(--surface); padding: 16px 18px; }
+  .col h4 { margin: 0 0 10px; font-size: 13px; font-family: var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--mist); font-weight: 600; }
+  .col ul { margin: 0; padding-left: 18px; font-size: 14.5px; }
+  .col.new h4 { color: var(--signal); }
+
+  /* ---------- Chat mockup ---------- */
+  .chat { max-width: 560px; margin: 20px 0; display: flex; flex-direction: column; gap: 10px; }
+  .bubble { padding: 11px 15px; border-radius: 14px; font-size: 14.5px; line-height: 1.55; max-width: 85%; }
+  .bubble.user { align-self: flex-end; background: var(--civic); color: #FFFFFF; border-bottom-right-radius: 4px; }
+  :root[data-theme="dark"] .bubble.user { color: #0F171E; }
+  @media (prefers-color-scheme: dark) { .bubble.user { color: #0F171E; } }
+  :root[data-theme="light"] .bubble.user { color: #FFFFFF; }
+  .bubble.bot { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .chat .sys {
+    align-self: flex-start; font-family: var(--mono); font-size: 11.5px; color: var(--mist);
+    border: 1px dashed var(--line); border-radius: 999px; padding: 3px 12px;
+  }
+
+  /* ---------- Closing ---------- */
+  .closing {
+    margin: 64px 0 0; border-top: 2px solid var(--civic); padding-top: 26px;
+    font-family: var(--serif); font-size: 20px; line-height: 1.55; max-width: 60ch;
+  }
+  footer {
+    margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
+    font-family: var(--mono); font-size: 12px; color: var(--mist);
+    display: flex; flex-wrap: wrap; gap: 6px 24px;
+  }
+  a { color: var(--civic-ink); }
+  :focus-visible { outline: 2px solid var(--signal-mark); outline-offset: 2px; }
+
+  /* ---------- Print / PDF ---------- */
+  @page { size: A4; margin: 13mm 12mm; }
+  @media print {
+    :root {
+      --paper: #FFFFFF; --surface: #FFFFFF; --ink: #1C2A36; --mist: #4A5A68;
+      --civic: #15537F; --civic-ink: #12496F; --signal: #A85F10; --signal-mark: #C97516;
+      --line: #C9D3DB; --tint: #EDF3F7; --tint-warm: #FBF3E7; --grid: rgba(21, 83, 127, 0.07);
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-size: 13px; }
+    .page { max-width: 100%; padding: 0 2mm 8mm; }
+    .cover { margin: 0 0 30px; padding: 32px 30px 26px; }
+    section { margin-top: 30px; }
+    .eyebrow, h2, h3 { break-after: avoid; }
+    figure.diagram, .tablewrap, .pillar, .jcard, .vee, .col, .demo, .note,
+    .v1box, .chat, .thesis, .closing { break-inside: avoid; }
+    figure.diagram svg { min-width: 0; }
+    figure.diagram .svgscroll { overflow: visible; }
+    table { min-width: 0; font-size: 11.5px; }
+    th, td { padding: 8px 10px; }
+    .journey { grid-template-columns: repeat(5, 1fr); }
+    .pillars { grid-template-columns: repeat(4, 1fr); }
+    .vees { grid-template-columns: repeat(4, 1fr); }
+    .twocol { grid-template-columns: repeat(2, 1fr); }
+    a { text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ================= COVER ================= -->
+  <header class="cover">
+    <span class="chip">Capstone Project · Version 2 Proposal · Visual Edition</span>
+    <h1>UrbanFix.AI&nbsp;2.0</h1>
+    <p class="sub">From a civic issue reporting app to an Urban Infrastructure Intelligence Platform — powered by Big Data Analytics and a self-improving AI.</p>
+    <div class="meta">
+      <span>Dept. of Electronics &amp; Computer Science, SJCEM</span>
+      <span>July 2026</span>
+      <span>Builds on the demonstrated &amp; working V1</span>
+      <span>Core subjects: Big Data Analytics · MLOps</span>
+    </div>
+    <p class="thesis"><strong>V1 lets citizens report what is broken.</strong> V2 lets the city understand its problems, predict what is coming, and decide what to fix first.</p>
+  </header>
+
+  <!-- ================= 01 SUMMARY ================= -->
+  <section id="summary">
+    <p class="eyebrow">Section 01</p>
+    <h2>Executive summary</h2>
+    <p>This panel has already seen UrbanFix V1 working end to end — citizens photograph civic issues, the AI classifies them, and the municipal dashboard tracks them to resolution. V1 proved the idea works. It also revealed where the next value lies: the platform now <em>collects</em> a city's problems, but it does not yet <em>learn from them or help decide on them</em>.</p>
+    <p>Version 2 adds an intelligence layer on top of the working product, built on four pillars:</p>
+    <div class="pillars">
+      <div class="pillar star">
+        <span class="tag">Pillar 1 · Core</span>
+        <p class="name">Big Data Analytics</p>
+        <p class="desc">Every report, photo, vote and status change becomes city-scale data that answers seven real questions for officials.</p>
+      </div>
+      <div class="pillar star">
+        <span class="tag">Pillar 2 · Core</span>
+        <p class="name">MLOps — AI with quality control</p>
+        <p class="desc">The AI gets a report card, learns from officials' corrections every month, and is upgraded only when it proves improvement.</p>
+      </div>
+      <div class="pillar">
+        <span class="tag">Pillar 3</span>
+        <p class="name">Civic Assistant</p>
+        <p class="desc">Citizens ask about complaints in Hindi, Marathi or English and get answers taken only from the city's own records.</p>
+      </div>
+      <div class="pillar">
+        <span class="tag">Pillar 4</span>
+        <p class="name">Faster, dependable engine</p>
+        <p class="desc">Verdicts in seconds instead of 10–20 seconds, with a second-opinion check that filters out false detections.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 02 STORY ================= -->
+  <section id="story">
+    <p class="eyebrow">Section 02</p>
+    <h2>A use-case story: one pothole, two versions</h2>
+
+    <div class="v1box">
+      <span class="lbl">Ravi's pothole — in V1 (what the panel has already seen)</span>
+      <p>Ravi photographs a pothole near his home. The app takes 15–20 seconds to analyse it, classifies it as a road issue, and it appears on the dashboard as complaint #4312 — one row in a long list. Forty other people report the same pothole that month; the dashboard shows 40 separate complaints. The ward officer picks jobs by experience and instinct. The pothole is eventually fixed — and the 41 reports go into the database, <strong>never to be looked at again</strong>.</p>
+    </div>
+
+    <p><strong>The same pothole — in V2:</strong></p>
+    <div class="journey">
+      <div class="jcard">
+        <span class="n">Step 1</span>
+        <p class="t">Instant submit</p>
+        <p class="d">Ravi taps submit and the app responds immediately. Analysis runs in the background; the verdict arrives as a notification seconds later.</p>
+      </div>
+      <div class="jcard">
+        <span class="n">Step 2</span>
+        <p class="t">Duplicate caught</p>
+        <p class="d">"39 neighbours already reported this — add your voice?" One pothole becomes one job with 40 supporters, not 40 rows.</p>
+      </div>
+      <div class="jcard">
+        <span class="n">Step 3</span>
+        <p class="t">Ranked, not listed</p>
+        <p class="d">The officer sees it at #3 in the ward: severe, on a bus route, 40 people affected — and this street fails after every heavy-rain week.</p>
+      </div>
+      <div class="jcard">
+        <span class="n">Step 4</span>
+        <p class="t">Monsoon foreseen</p>
+        <p class="d">The commissioner's screen forecasts complaint surges in Wards 7 and 12 for late June. Crews move <em>before</em> the rain.</p>
+      </div>
+      <div class="jcard">
+        <span class="n">Step 5</span>
+        <p class="t">AI got smarter</p>
+        <p class="d">An officer's earlier correction became a lesson. The new AI passed its monthly exam and was promoted — with proof.</p>
+      </div>
+    </div>
+    <p><strong>That is the difference: V1 collects problems. V2 helps govern them.</strong></p>
+  </section>
+
+  <!-- ================= 03 ARCHITECTURE ================= -->
+  <section id="architecture">
+    <p class="eyebrow">Section 03</p>
+    <h2>The architecture in one picture</h2>
+    <p class="lede">Nothing from V1 is discarded — the top half is what the panel has already seen working. V2 adds a memory, a brain and a quality loop below it.</p>
+
+    <figure class="diagram">
+      <div class="svgscroll">
+      <svg viewBox="0 0 960 640" role="img" aria-label="UrbanFix V2 architecture diagram">
+        <defs>
+          <marker id="mA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path class="mkc" d="M0,0 L8,4 L0,8 Z"/>
+          </marker>
+          <marker id="mAs" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path class="mks" d="M0,0 L8,4 L0,8 Z"/>
+          </marker>
+        </defs>
+
+        <!-- Row 1: users -->
+        <rect class="bx" x="60" y="24" width="380" height="112" rx="5"/>
+        <text class="tlb" x="250" y="54" text-anchor="middle">CITIZENS — Mobile App (V1)</text>
+        <text class="sb" x="250" y="78" text-anchor="middle">+ Civic Assistant (V2):</text>
+        <text class="sb" x="250" y="96" text-anchor="middle">Hindi · Marathi · English</text>
+
+        <rect class="bx" x="520" y="24" width="380" height="112" rx="5"/>
+        <text class="tlb" x="710" y="54" text-anchor="middle">OFFICIALS — Admin Panel (V1)</text>
+        <text class="sb" x="710" y="78" text-anchor="middle">+ 7 decision dashboards (V2)</text>
+        <text class="sb" x="710" y="96" text-anchor="middle">+ AI health page (V2)</text>
+
+        <line class="arr" x1="250" y1="136" x2="250" y2="176" marker-end="url(#mA)"/>
+        <text class="sbi" x="258" y="160">reports · questions</text>
+        <line class="arr" x1="710" y1="136" x2="710" y2="176" marker-end="url(#mA)"/>
+        <text class="sbi" x="718" y="160">decisions · corrections</text>
+
+        <!-- Row 2: core -->
+        <rect class="bx" x="60" y="180" width="840" height="84" rx="5"/>
+        <text class="tlb" x="480" y="212" text-anchor="middle">PLATFORM CORE (V1 — unchanged)</text>
+        <text class="sb" x="480" y="238" text-anchor="middle">accounts · reports · status timeline · votes · community</text>
+
+        <line class="arr" x1="300" y1="264" x2="300" y2="308" marker-end="url(#mA)"/>
+        <text class="sbi" x="308" y="290">every action becomes an event</text>
+        <line class="arr" x1="700" y1="264" x2="700" y2="308" marker-end="url(#mA)"/>
+        <text class="sbi" x="708" y="290">every photo</text>
+
+        <!-- Row 3: lake + engine -->
+        <rect class="bxa" x="60" y="312" width="400" height="116" rx="5"/>
+        <text class="tlb" x="260" y="342" text-anchor="middle">CITY DATA LAKE (V2)</text>
+        <text class="sb" x="260" y="366" text-anchor="middle">years of reports, votes, status</text>
+        <text class="sb" x="260" y="384" text-anchor="middle">changes, AI verdicts + rainfall data</text>
+        <text class="sb" x="260" y="402" text-anchor="middle">— the city's memory</text>
+
+        <rect class="bxa" x="500" y="312" width="400" height="116" rx="5"/>
+        <text class="tlb" x="700" y="342" text-anchor="middle">AI ENGINE (V2)</text>
+        <text class="sb" x="700" y="366" text-anchor="middle">one consolidated model +</text>
+        <text class="sb" x="700" y="384" text-anchor="middle">second-opinion check on</text>
+        <text class="sb" x="700" y="402" text-anchor="middle">uncertain photos only</text>
+
+        <line class="arr" x1="260" y1="428" x2="260" y2="472" marker-end="url(#mA)"/>
+        <line class="arr" x1="700" y1="428" x2="700" y2="472" marker-end="url(#mA)"/>
+        <text class="sbi" x="708" y="452">corrections &amp; monthly retraining</text>
+
+        <!-- Row 4: analytics + mlops -->
+        <rect class="bxa" x="60" y="476" width="400" height="116" rx="5"/>
+        <text class="tlb" x="260" y="506" text-anchor="middle">ANALYTICS BRAIN (V2)</text>
+        <text class="sb" x="260" y="530" text-anchor="middle">hotspots · monsoon forecasts ·</text>
+        <text class="sb" x="260" y="548" text-anchor="middle">repair rankings · department</text>
+        <text class="sb" x="260" y="566" text-anchor="middle">scorecards</text>
+
+        <rect class="bxa" x="500" y="476" width="400" height="116" rx="5"/>
+        <text class="tlb" x="700" y="506" text-anchor="middle">MLOPS QUALITY LOOP (V2)</text>
+        <text class="sb" x="700" y="530" text-anchor="middle">corrections → lessons → retrain</text>
+        <text class="sb" x="700" y="548" text-anchor="middle">→ exam → promote only if better</text>
+
+        <!-- dashed promotion return -->
+        <path class="arrs" d="M 905 530 C 944 472, 944 424, 906 374" marker-end="url(#mAs)"/>
+
+        <text class="cap" x="480" y="628" text-anchor="middle">Solid arrows = data flowing down · dashed arrow = the improved AI model promoted back into service each month</text>
+      </svg>
+      </div>
+      <figcaption><strong>How to read it:</strong> citizens and officials keep the exact apps they know (top). Below the core, V2 adds the City Data Lake (memory), the Analytics Brain (decisions), and the MLOps loop (self-improvement).</figcaption>
+    </figure>
+
+    <div class="twocol">
+      <div class="col">
+        <h4>Stays exactly as demonstrated</h4>
+        <ul>
+          <li>Citizen mobile app and reporting flow</li>
+          <li>Municipal admin dashboard and map</li>
+          <li>Community features — votes, gamification</li>
+          <li>Status timeline and notifications</li>
+        </ul>
+      </div>
+      <div class="col new">
+        <h4>New in V2</h4>
+        <ul>
+          <li>City-scale analytics answering 7 official questions</li>
+          <li>Monthly AI improvement cycle with proof</li>
+          <li>Multilingual assistant grounded in real records</li>
+          <li>Second-opinion check on uncertain AI verdicts</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 04 WHAT IS BDA ================= -->
+  <section id="bda-explained">
+    <p class="eyebrow">Section 04 · The core subject, explained</p>
+    <h2>What is Big Data Analytics — and where exactly do we use it?</h2>
+
+    <p><strong>In plain words:</strong> a normal application database is built to answer small, immediate questions — "show me complaint #4312." It is <em>not</em> built to answer questions like "which streets failed repeatedly over three years, and what happens to them after heavy rain?" — that needs millions of records, arriving continuously, in mixed forms. <strong>Big Data Analytics (BDA)</strong> is the set of methods for storing, processing and learning from data that is too large, too fast and too varied for one ordinary database to handle.</p>
+
+    <p>The textbook definition of "big data" uses four V's. Here is each one — not as theory, but as it actually appears in UrbanFix V2:</p>
+
+    <div class="vees">
+      <div class="vee">
+        <p class="big">VOLUME</p>
+        <p class="mean">Too much data to sit in one ordinary database</p>
+        <p class="ex">Years of reports, photos, votes and status changes — <strong>2 million+ events</strong> in our simulated 3-year city history.</p>
+      </div>
+      <div class="vee">
+        <p class="big">VELOCITY</p>
+        <p class="mean">Data arrives continuously, sometimes in bursts</p>
+        <p class="ex">During a heavy-rain evening, <strong>hundreds of reports per hour</strong> — analysed live, not next week.</p>
+      </div>
+      <div class="vee">
+        <p class="big">VARIETY</p>
+        <p class="mean">Many different shapes of data together</p>
+        <p class="ex"><strong>Photos, GPS points, text descriptions, status logs, rainfall tables</strong> — all combined in one analysis.</p>
+      </div>
+      <div class="vee">
+        <p class="big">VERACITY</p>
+        <p class="mean">Raw data is messy and must be made trustworthy</p>
+        <p class="ex"><strong>Duplicates, wrong categories, irrelevant photos</strong> — cleaned and cross-checked before any decision uses them.</p>
+      </div>
+    </div>
+
+    <h3>How the data moves: one pipeline, two speeds</h3>
+    <p>Every action on the platform becomes an <strong>event</strong> that flows into a <strong>city data lake</strong> <span class="gloss">(a permanent store designed for analysing years of history, not just running today's app)</span>. Two kinds of processing run on it — and these two modes are exactly the heart of the BDA curriculum:</p>
+
+    <figure class="diagram">
+      <div class="svgscroll">
+      <svg viewBox="0 0 960 340" role="img" aria-label="BDA data journey flowchart">
+        <defs>
+          <marker id="mB" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path class="mkc" d="M0,0 L8,4 L0,8 Z"/>
+          </marker>
+        </defs>
+
+        <!-- sources -->
+        <rect class="bx" x="20" y="36" width="180" height="44" rx="5"/>
+        <text class="tl" x="110" y="63" text-anchor="middle">New report</text>
+        <rect class="bx" x="20" y="96" width="180" height="44" rx="5"/>
+        <text class="tl" x="110" y="123" text-anchor="middle">Vote / follow</text>
+        <rect class="bx" x="20" y="156" width="180" height="44" rx="5"/>
+        <text class="tl" x="110" y="183" text-anchor="middle">Status change</text>
+        <rect class="bx" x="20" y="216" width="180" height="44" rx="5"/>
+        <text class="tl" x="110" y="243" text-anchor="middle">AI verdict</text>
+
+        <line class="arr" x1="200" y1="58"  x2="280" y2="126" marker-end="url(#mB)"/>
+        <line class="arr" x1="200" y1="118" x2="280" y2="140" marker-end="url(#mB)"/>
+        <line class="arr" x1="200" y1="178" x2="280" y2="158" marker-end="url(#mB)"/>
+        <line class="arr" x1="200" y1="238" x2="280" y2="172" marker-end="url(#mB)"/>
+
+        <!-- stream -->
+        <rect class="bxa" x="280" y="94" width="170" height="110" rx="5"/>
+        <text class="tlb" x="365" y="140" text-anchor="middle">EVENT STREAM</text>
+        <text class="sb" x="365" y="164" text-anchor="middle">every action flows</text>
+        <text class="sb" x="365" y="182" text-anchor="middle">in, continuously</text>
+
+        <line class="arr" x1="450" y1="149" x2="510" y2="149" marker-end="url(#mB)"/>
+
+        <!-- lake -->
+        <rect class="bxa" x="510" y="94" width="170" height="110" rx="5"/>
+        <text class="tlb" x="595" y="140" text-anchor="middle">CITY DATA LAKE</text>
+        <text class="sb" x="595" y="164" text-anchor="middle">years of history,</text>
+        <text class="sb" x="595" y="182" text-anchor="middle">kept analysable</text>
+
+        <line class="arr" x1="680" y1="134" x2="736" y2="84"  marker-end="url(#mB)"/>
+        <line class="arr" x1="680" y1="164" x2="736" y2="214" marker-end="url(#mB)"/>
+
+        <!-- bulk -->
+        <rect class="bx" x="736" y="36" width="204" height="96" rx="5"/>
+        <text class="tlb" x="838" y="64" text-anchor="middle">BULK ANALYSIS</text>
+        <text class="sb" x="838" y="86" text-anchor="middle">full history →</text>
+        <text class="sb" x="838" y="104" text-anchor="middle">7 decision dashboards</text>
+
+        <!-- live -->
+        <rect class="bx" x="736" y="186" width="204" height="96" rx="5"/>
+        <text class="tlb" x="838" y="214" text-anchor="middle">LIVE ANALYSIS</text>
+        <text class="sb" x="838" y="236" text-anchor="middle">as events arrive →</text>
+        <text class="sb" x="838" y="254" text-anchor="middle">live city pulse</text>
+
+        <text class="cap" x="480" y="322" text-anchor="middle">One pipeline, two speeds: bulk analysis studies years of history; live analysis watches this very minute.</text>
+      </svg>
+      </div>
+      <figcaption><strong>Bulk (batch) analysis</strong> answers slow, deep questions — hotspots, forecasts, rankings. <strong>Live (stream) analysis</strong> answers fast questions — what is happening in the city right now.</figcaption>
+    </figure>
+
+    <h3>Where exactly BDA is used in UrbanFix V2 — and how</h3>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>BDA concept</th><th>Where it appears in V2</th><th>How it is used</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="q">Event streaming <span class="gloss">(data as a continuous flow)</span></td>
+            <td>Between the app and the data lake</td>
+            <td>Every report, vote, status change and AI verdict is carried into storage the moment it happens — nothing is lost, nothing waits.</td>
+          </tr>
+          <tr>
+            <td class="q">Data lake <span class="gloss">(long-term analytical storage)</span></td>
+            <td>The city's memory layer</td>
+            <td>Keeps years of history in an analysable form, so questions about "the last three monsoons" become answerable.</td>
+          </tr>
+          <tr>
+            <td class="q">Batch processing <span class="gloss">(bulk jobs over full history)</span></td>
+            <td>Nightly and weekly analysis jobs</td>
+            <td>Computes hotspots, repair rankings and department scorecards over millions of records.</td>
+          </tr>
+          <tr>
+            <td class="q">Stream processing <span class="gloss">(analysing data as it arrives)</span></td>
+            <td>The live city pulse</td>
+            <td>Counts and clusters reports minute by minute — an operations screen during storms and emergencies.</td>
+          </tr>
+          <tr>
+            <td class="q">Clustering <span class="gloss">(grouping similar data points)</span></td>
+            <td>Hotspot mining (Dashboard 1)</td>
+            <td>Groups reports by location and category to reveal streets that fail again and again.</td>
+          </tr>
+          <tr>
+            <td class="q">Time-series forecasting <span class="gloss">(predicting from past patterns)</span></td>
+            <td>Monsoon planning (Dashboard 2)</td>
+            <td>Learns each ward's seasonal pattern and predicts complaint surges weeks ahead.</td>
+          </tr>
+          <tr>
+            <td class="q">Similarity matching at scale <span class="gloss">(finding near-identical items among millions)</span></td>
+            <td>Duplicate grouping (Dashboard 4)</td>
+            <td>Matches photos + locations + descriptions city-wide, so 40 reports of one pothole become one job.</td>
+          </tr>
+          <tr>
+            <td class="q">Data fusion <span class="gloss">(combining different data sources)</span></td>
+            <td>Reports + rainfall + ward data</td>
+            <td>Turns "many pothole complaints" into "this corridor fails after every 100&nbsp;mm rain week — resurface, don't patch."</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:12px;">In short: <strong>BDA is not a chapter added to the project — it is the layer that turns the project from an app into a platform.</strong></p>
+  </section>
+
+  <!-- ================= 05 BDA IN ACTION ================= -->
+  <section id="bda-action">
+    <p class="eyebrow">Section 05 · Pillar 1 — the backbone</p>
+    <h2>BDA in action: seven questions the city could never answer before</h2>
+    <p class="lede">The honest test of an analytics platform: which questions can it answer that nobody could answer before?</p>
+
+    <div class="tablewrap">
+      <table>
+        <caption>The seven decision dashboards</caption>
+        <thead>
+          <tr><th>City question</th><th>What officials get</th><th>Decision it enables</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="q">1. Where are our hotspots?</td>
+            <td>Heat map of streets and corridors that break again and again</td>
+            <td>Send crews and budget where impact is highest, not where the loudest complaint is</td>
+          </tr>
+          <tr>
+            <td class="q">2. What will the monsoon do to us?</td>
+            <td>Ward-wise surge forecast, weeks ahead — reports fused with rainfall history</td>
+            <td>Pre-position crews and material <em>before</em> July, not during it</td>
+          </tr>
+          <tr>
+            <td class="q">3. What should we fix first?</td>
+            <td>Ranked repair list: severity + people affected + recurrence + road importance</td>
+            <td>A defensible, data-backed priority order replacing guesswork</td>
+          </tr>
+          <tr>
+            <td class="q">4. Is this complaint a duplicate?</td>
+            <td>Automatic city-wide grouping of same-problem reports</td>
+            <td>True workload numbers — 40 reports of one pothole is one job, not 40</td>
+          </tr>
+          <tr>
+            <td class="q">5. Which departments deliver?</td>
+            <td>Resolution-time scorecards, ageing complaints, monthly trends</td>
+            <td>Accountability, and early escalation of complaints going stale</td>
+          </tr>
+          <tr>
+            <td class="q">6. Is our AI still accurate?</td>
+            <td>The AI's own verdicts analysed by category, ward and month</td>
+            <td>Evidence for trusting — or retraining — the AI (feeds Pillar 2)</td>
+          </tr>
+          <tr>
+            <td class="q">7. Are citizens engaged?</td>
+            <td>Participation trends, active communities, gamification effect</td>
+            <td>Awareness drives where problems are high but reporting is low</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Plus a live city pulse</h3>
+    <p>A real-time strip shows reports arriving <em>as they happen</em> — reports per minute, category mix, emerging clusters. During a heavy-rain event it becomes an operations screen: officials watch waterlogging complaints spike ward by ward, live.</p>
+
+    <div class="note">
+      <span class="lbl">Honest scale, honestly demonstrated</span>
+      <p>Our pilot data is real but small. To prove the platform works at metropolitan scale, we will generate a realistic <strong>simulated 3-year history (~2 million reports)</strong> across real city wards with monsoon seasonality, and replay it through the full pipeline. This is standard industry practice for validating data platforms, and it will be clearly labelled as simulation. Real pilot data remains the seed and the ground truth.</p>
+    </div>
+
+    <div class="demo">
+      <span class="lbl">What the panel will see at review</span>
+      <p>The municipal dashboard running on 2 million+ events: the hotspot heat map, a monsoon surge forecast for specific wards, and the live pulse reacting to a simulated storm — all inside the admin panel the panel already knows.</p>
+    </div>
+  </section>
+
+  <!-- ================= 06 MLOPS ================= -->
+  <section id="mlops">
+    <p class="eyebrow">Section 06 · Pillar 2 — the trust engine</p>
+    <h2>MLOps: an AI with quality control</h2>
+    <p class="lede">Today our AI is frozen at launch and its accuracy is an estimate. A system a government office relies on for years cannot work that way — MLOps is the discipline that fixes it.</p>
+    <p>The plainest way to describe it: <strong>we run the AI the way a university runs students</strong> — fixed question paper, recorded marks, improvement expected every term, and promotion only when earned.</p>
+
+    <figure class="diagram">
+      <div class="svgscroll">
+      <svg viewBox="0 0 960 420" role="img" aria-label="MLOps monthly improvement loop">
+        <defs>
+          <marker id="mC" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path class="mkc" d="M0,0 L8,4 L0,8 Z"/>
+          </marker>
+          <marker id="mCs" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path class="mks" d="M0,0 L8,4 L0,8 Z"/>
+          </marker>
+        </defs>
+
+        <!-- top row -->
+        <rect class="bx" x="40" y="36" width="260" height="92" rx="5"/>
+        <text class="tl" x="170" y="72" text-anchor="middle">1 · Official corrects a</text>
+        <text class="tl" x="170" y="92" text-anchor="middle">wrong verdict (one click)</text>
+
+        <rect class="bx" x="350" y="36" width="260" height="92" rx="5"/>
+        <text class="tl" x="480" y="72" text-anchor="middle">2 · Correction saved</text>
+        <text class="tl" x="480" y="92" text-anchor="middle">as a lesson</text>
+
+        <rect class="bx" x="660" y="36" width="260" height="92" rx="5"/>
+        <text class="tl" x="790" y="72" text-anchor="middle">3 · Monthly retraining</text>
+        <text class="tl" x="790" y="92" text-anchor="middle">on all lessons</text>
+
+        <line class="arr" x1="300" y1="82" x2="350" y2="82" marker-end="url(#mC)"/>
+        <line class="arr" x1="610" y1="82" x2="660" y2="82" marker-end="url(#mC)"/>
+
+        <!-- down to exam -->
+        <line class="arr" x1="790" y1="128" x2="790" y2="168" marker-end="url(#mC)"/>
+
+        <!-- exam -->
+        <rect class="bxw" x="660" y="172" width="260" height="100" rx="5"/>
+        <text class="tlb" x="790" y="204" text-anchor="middle">4 · THE EXAM</text>
+        <text class="sb" x="790" y="226" text-anchor="middle">same fixed test set every time:</text>
+        <text class="sb" x="790" y="244" text-anchor="middle">real photos + trap photos</text>
+
+        <!-- pass branch -->
+        <line class="arr" x1="660" y1="222" x2="610" y2="222" marker-end="url(#mC)"/>
+        <rect class="bx" x="350" y="172" width="260" height="100" rx="5"/>
+        <text class="tl" x="480" y="208" text-anchor="middle">5 · Promoted — only if it</text>
+        <text class="tl" x="480" y="228" text-anchor="middle">beats the current AI ✓</text>
+        <text class="sb" x="480" y="252" text-anchor="middle">(old version safely archived)</text>
+
+        <line class="arr" x1="350" y1="222" x2="300" y2="222" marker-end="url(#mC)"/>
+        <rect class="bx" x="40" y="172" width="260" height="100" rx="5"/>
+        <text class="tl" x="170" y="208" text-anchor="middle">6 · Citizens get a better</text>
+        <text class="tl" x="170" y="228" text-anchor="middle">AI — every month</text>
+
+        <!-- fail branch -->
+        <line class="arrs" x1="790" y1="272" x2="790" y2="312" marker-end="url(#mCs)"/>
+        <rect class="bxw" x="660" y="316" width="260" height="66" rx="5"/>
+        <text class="sb" x="790" y="342" text-anchor="middle">✗ doesn't beat it → old version</text>
+        <text class="sb" x="790" y="360" text-anchor="middle">stays; lessons carry forward</text>
+
+        <!-- loop back -->
+        <line class="arr" x1="170" y1="172" x2="170" y2="128" marker-end="url(#mC)"/>
+        <text class="sbi" x="186" y="156">↺ the loop repeats every month</text>
+
+        <text class="cap" x="480" y="408" text-anchor="middle">A new AI version can never silently replace the old one — promotion must be earned on the same exam.</text>
+      </svg>
+      </div>
+      <figcaption>The monthly quality loop: corrections officials already make stop being wasted — they become lessons, and the AI must prove improvement before promotion.</figcaption>
+    </figure>
+
+    <p>What this loop guarantees, in five plain promises:</p>
+    <ol>
+      <li><strong>A measured AI.</strong> A fixed test set (including deliberately irrelevant "trap" photos) gives every version a report card. "About 80% accurate" becomes an exact, reproducible number.</li>
+      <li><strong>An AI that learns from its users.</strong> The system improves <em>because</em> it is used — every correction is a lesson.</li>
+      <li><strong>Safe upgrades.</strong> No regressions can reach citizens: the challenger must beat the champion on the same exam first.</li>
+      <li><strong>Health monitoring.</strong> A model-health page tracks accuracy, speed and mistake patterns month by month — the AI's vitals chart.</li>
+      <li><strong>Accountability.</strong> Every version is recorded and reversible. "Why did the AI say this in March?" always has an exact answer — the audit trail that makes AI acceptable in a government workflow.</li>
+    </ol>
+
+    <div class="demo">
+      <span class="lbl">What the panel will see at review</span>
+      <p>A live loop: an official corrects a wrong verdict on the dashboard, that correction enters the next training batch, and the new AI's report card beats the old one before promotion.</p>
+    </div>
+  </section>
+
+  <!-- ================= 07 ASSISTANT ================= -->
+  <section id="assistant">
+    <p class="eyebrow">Section 07 · Pillar 3 — reach &amp; transparency</p>
+    <h2>The Civic Assistant: answers in the citizen's own language</h2>
+    <p>Citizens simply ask — in <strong>Hindi, Marathi or English</strong>. The critical design rule: <strong>the assistant answers only from the city's own verified records.</strong> Before replying, it looks up the actual complaint database and status history — so it cannot invent facts. If a record doesn't exist, it says so.</p>
+
+    <div class="chat" role="img" aria-label="Example conversation with the Civic Assistant">
+      <div class="bubble user">मेरी complaint का क्या status है?</div>
+      <span class="sys">assistant checks the real record for complaint #4312 …</span>
+      <div class="bubble bot">आपकी सड़क की complaint (#4312) पर काम शुरू हो चुका है — PWD ने 12 July को "In Progress" mark किया है। Expected completion: इसी हफ्ते। 40 पड़ोसियों ने भी इस issue को support किया है।</div>
+      <div class="bubble user">And how do I report a broken streetlight?</div>
+      <div class="bubble bot">Take a photo of the streetlight in the app — location is captured automatically. I'll check for nearby duplicates before submitting, so your report joins the right job.</div>
+    </div>
+
+    <ul>
+      <li><strong>For citizens:</strong> no forms, no English barrier, no office visits — status and guidance in one question.</li>
+      <li><strong>For officials:</strong> acknowledgement replies drafted automatically, and a <strong>monthly ward report auto-written from the analytics</strong> — hours of compiling reduced to seconds, reviewed by a human before sending.</li>
+      <li><strong>For data quality:</strong> at submission time the assistant warns "this looks like an already-reported issue nearby — support it instead," killing duplicates at the source.</li>
+    </ul>
+
+    <div class="demo">
+      <span class="lbl">What the panel will see at review</span>
+      <p>A question asked in Hindi answered correctly from the live database, and a one-click monthly ward report generated from the Pillar-1 analytics.</p>
+    </div>
+  </section>
+
+  <!-- ================= 08 ENGINE ================= -->
+  <section id="engine">
+    <p class="eyebrow">Section 08 · Pillar 4 — foundation work</p>
+    <h2>A faster, more dependable engine</h2>
+    <p>The panel already knows V1's detection pipeline in detail, so we show only what changes and why it matters:</p>
+
+    <figure class="diagram">
+      <div class="svgscroll">
+      <svg viewBox="0 0 960 430" role="img" aria-label="Engine comparison: V1 chain of checks versus V2 single model with second opinion">
+        <defs>
+          <marker id="mD" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path class="mkc" d="M0,0 L8,4 L0,8 Z"/>
+          </marker>
+        </defs>
+
+        <!-- V1 lane -->
+        <text class="lane" x="40" y="30">V1 — TODAY</text>
+        <rect class="bx" x="40" y="48" width="70" height="52" rx="5"/>
+        <text class="tl" x="75" y="79" text-anchor="middle">Photo</text>
+        <line class="arr" x1="110" y1="74" x2="140" y2="74" marker-end="url(#mD)"/>
+
+        <rect class="bx" x="140" y="48" width="92" height="52" rx="5"/>
+        <text class="sb" x="186" y="79" text-anchor="middle">Check 1</text>
+        <line class="arr" x1="232" y1="74" x2="262" y2="74" marker-end="url(#mD)"/>
+        <rect class="bx" x="262" y="48" width="92" height="52" rx="5"/>
+        <text class="sb" x="308" y="79" text-anchor="middle">Check 2</text>
+        <line class="arr" x1="354" y1="74" x2="384" y2="74" marker-end="url(#mD)"/>
+        <rect class="bx" x="384" y="48" width="92" height="52" rx="5"/>
+        <text class="sb" x="430" y="79" text-anchor="middle">Check 3</text>
+        <line class="arr" x1="476" y1="74" x2="506" y2="74" marker-end="url(#mD)"/>
+        <rect class="bx" x="506" y="48" width="92" height="52" rx="5"/>
+        <text class="sb" x="552" y="79" text-anchor="middle">Check 4</text>
+        <line class="arr" x1="598" y1="74" x2="628" y2="74" marker-end="url(#mD)"/>
+        <rect class="bx" x="628" y="48" width="92" height="52" rx="5"/>
+        <text class="sb" x="674" y="79" text-anchor="middle">Check 5</text>
+        <line class="arr" x1="720" y1="74" x2="750" y2="74" marker-end="url(#mD)"/>
+        <rect class="bx" x="750" y="48" width="92" height="52" rx="5"/>
+        <text class="sb" x="796" y="79" text-anchor="middle">Check 6</text>
+        <line class="arr" x1="842" y1="74" x2="866" y2="74" marker-end="url(#mD)"/>
+        <rect class="bxw" x="866" y="48" width="74" height="52" rx="5"/>
+        <text class="tl" x="903" y="79" text-anchor="middle">Verdict</text>
+
+        <text class="cap" x="40" y="138">10–20 seconds per photo · several separate AI checks run one after another · borderline photos can create false detections</text>
+
+        <line class="hair" x1="40" y1="166" x2="920" y2="166"/>
+
+        <!-- V2 lane -->
+        <text class="lane" x="40" y="198">V2 — PROPOSED</text>
+        <rect class="bx" x="40" y="222" width="70" height="56" rx="5"/>
+        <text class="tl" x="75" y="255" text-anchor="middle">Photo</text>
+        <line class="arr" x1="110" y1="250" x2="140" y2="250" marker-end="url(#mD)"/>
+
+        <rect class="bxa" x="140" y="218" width="260" height="64" rx="5"/>
+        <text class="tl" x="270" y="246" text-anchor="middle">One consolidated model</text>
+        <text class="sb" x="270" y="266" text-anchor="middle">(trained on our own data)</text>
+        <line class="arr" x1="400" y1="250" x2="436" y2="250" marker-end="url(#mD)"/>
+
+        <polygon class="bxw" points="506,214 576,250 506,286 436,250"/>
+        <text class="tl" x="506" y="255" text-anchor="middle">confident?</text>
+
+        <line class="arr" x1="576" y1="250" x2="660" y2="250" marker-end="url(#mD)"/>
+        <text class="sbi" x="616" y="238" text-anchor="middle">yes</text>
+        <text class="sbi" x="616" y="272" text-anchor="middle">7–8 of 10</text>
+
+        <rect class="bxa" x="660" y="222" width="250" height="56" rx="5"/>
+        <text class="tlb" x="785" y="256" text-anchor="middle">Verdict — under 3 s</text>
+
+        <line class="arr" x1="506" y1="286" x2="506" y2="326" marker-end="url(#mD)"/>
+        <text class="sbi" x="518" y="310">no · 2–3 of 10</text>
+
+        <rect class="bx" x="396" y="330" width="220" height="56" rx="5"/>
+        <text class="tl" x="506" y="352" text-anchor="middle">Second-opinion review</text>
+        <text class="sb" x="506" y="371" text-anchor="middle">(uncertain photos only)</text>
+
+        <path class="arr" d="M 616 358 C 700 358, 758 330, 782 284" marker-end="url(#mD)"/>
+        <text class="sb" x="712" y="392" text-anchor="middle">adds a few seconds — only for these</text>
+
+        <text class="cap" x="40" y="422">Analysis runs in the background — the citizen's app responds instantly either way, and the verdict arrives as a notification.</text>
+      </svg>
+      </div>
+      <figcaption>V1 runs every photo through a chain of separate checks. V2 uses one stronger model trained on our own accumulated data, with a second opinion reserved for the few uncertain cases — the false-alarm filter.</figcaption>
+    </figure>
+
+    <div class="tablewrap">
+      <table>
+        <caption>Engine outcomes — measured on the fixed test set (targets)</caption>
+        <thead><tr><th>Measure</th><th>V1 today</th><th>V2 target</th></tr></thead>
+        <tbody>
+          <tr><td class="q">Verdict time</td><td class="num">10–20 s (longer after idle)</td><td class="num">under 3 s · app feels instant</td></tr>
+          <tr><td class="q">Classification accuracy</td><td class="num">≈ 80% (estimated)</td><td class="num">90%+ (measured)</td></tr>
+          <tr><td class="q">False detections on irrelevant photos</td><td class="num">unmeasured</td><td class="num">measured &amp; below 10%</td></tr>
+          <tr><td class="q">Reports needing manual confirmation</td><td class="num">majority</td><td class="num">minority (60–70% auto-confirmed)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 09 WHO ================= -->
+  <section id="who">
+    <p class="eyebrow">Section 09</p>
+    <h2>Who can use it, concretely</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Who</th><th>How they use V2</th></tr></thead>
+        <tbody>
+          <tr><td class="q">Citizens (esp. tier-2/3 cities)</td><td>Report in seconds, ask in their own language, and see their report change a real priority.</td></tr>
+          <tr><td class="q">Ward engineers / field staff</td><td>A duplicate-free, ranked daily work list instead of a raw complaint feed.</td></tr>
+          <tr><td class="q">Municipal commissioners</td><td>Department scorecards, monsoon readiness forecasts, one-click monthly reports.</td></tr>
+          <tr><td class="q">City planners</td><td>Multi-year evidence of where infrastructure repeatedly fails — input for budgets, not just repairs.</td></tr>
+          <tr><td class="q">Smart City missions / other municipalities</td><td>The platform is not tied to one city — any urban local body can adopt it as-is.</td></tr>
+          <tr><td class="q">NGOs &amp; researchers</td><td>Anonymised, aggregated civic data for urban studies and advocacy.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The bigger picture: a working template for <strong>UN SDG 11 (Sustainable Cities and Communities)</strong> — and a shift from <em>reactive</em> governance (wait for complaints) to <em>preventive</em> governance (predict and pre-position).</p>
+  </section>
+
+  <!-- ================= 10 VIABILITY ================= -->
+  <section id="viability">
+    <p class="eyebrow">Section 10</p>
+    <h2>Is it viable? Honest answers</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Concern</th><th>Our answer</th></tr></thead>
+        <tbody>
+          <tr><td class="q">Cost</td><td>₹0 in services. Everything runs on free tiers and open-source software; the big-data stack runs on our own machines and demos fully <strong>offline</strong>.</td></tr>
+          <tr><td class="q">Risk to V1</td><td>None. V1 stays live and untouched; V2 layers are added alongside it. The panel's working demo is never at risk.</td></tr>
+          <tr><td class="q">Our real data is small</td><td>Openly addressed: a simulated 3-year city history (~2 million reports) proves scale; real pilot data stays the ground truth.</td></tr>
+          <tr><td class="q">Timeline</td><td>10 weeks, 4 phases — and <strong>every phase ends in a live demo</strong>, never "trust us, it's coming."</td></tr>
+          <tr><td class="q">Team capability</td><td>V1 was built, deployed and demonstrated by this same team — V2 reuses that entire foundation.</td></tr>
+          <tr><td class="q">What if retraining gains are slow?</td><td>The exam gate simply keeps the current AI. The system can degrade to "no worse than today" — never below it.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 11 TOOLS ================= -->
+  <section id="tools">
+    <p class="eyebrow">Section 11</p>
+    <h2>What it's built with — named once, kept light</h2>
+    <p class="lede">The design matters more than the brand names. All open-source or free-tier; exact configurations sit in a technical annexe, available on request.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Layer</th><th>Built with</th><th>One-line why</th></tr></thead>
+        <tbody>
+          <tr><td class="q">Event stream &amp; data lake</td><td>Kafka + Spark-family processing, open data formats</td><td>The same industry-standard concepts taught in the BDA curriculum.</td></tr>
+          <tr><td class="q">Dashboards</td><td>Our existing admin panel + an open-source BI tool</td><td>Officials keep the interface they already know.</td></tr>
+          <tr><td class="q">AI engine</td><td>One consolidated vision model + a vision-language "second opinion"</td><td>Fewer moving parts — faster and more reliable.</td></tr>
+          <tr><td class="q">MLOps loop</td><td>Open-source experiment tracking &amp; data versioning</td><td>Every model version and dataset recorded and reproducible.</td></tr>
+          <tr><td class="q">Assistant</td><td>A language model grounded in our own database (retrieval-based)</td><td>Trustworthy answers in three languages — it cannot invent facts.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 12 PLAN ================= -->
+  <section id="plan">
+    <p class="eyebrow">Section 12</p>
+    <h2>Execution plan — a demo at every review</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Phase</th><th>Weeks</th><th>Work</th><th>Shown to the panel</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="q">1 · Measure &amp; upgrade the engine</td><td class="num">1–3</td>
+            <td>Fixed test set built; V1's true numbers recorded; consolidated V2 engine + second opinion deployed.</td>
+            <td>Same photos through V1 and V2 <strong>side by side</strong> — speed and verdicts compared, first printed report card.</td>
+          </tr>
+          <tr>
+            <td class="q">2 · MLOps loop</td><td class="num">4–5</td>
+            <td>One-click correction; retrain–exam–promote cycle; model health page.</td>
+            <td>A correction made <strong>live</strong>, and a new AI beating the old one on the same exam before promotion.</td>
+          </tr>
+          <tr>
+            <td class="q">3 · Big Data platform</td><td class="num">5–8</td>
+            <td>Event pipeline, city data lake, simulated 3-year history, the seven dashboards, live pulse.</td>
+            <td>Hotspots, monsoon forecast and a <strong>live storm pulse</strong> running on 2M+ events.</td>
+          </tr>
+          <tr>
+            <td class="q">4 · Civic Assistant</td><td class="num">8–10</td>
+            <td>Multilingual grounded assistant; auto-drafted replies; auto-generated ward reports.</td>
+            <td>A <strong>Hindi</strong> status query answered from the live database; a ward report generated in one click.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 13 JUDGEMENT ================= -->
+  <section id="success">
+    <p class="eyebrow">Section 13</p>
+    <h2>How to judge us at the end</h2>
+    <p class="lede">We propose to be evaluated against these commitments — each one demonstrable, none decorative.</p>
+    <ul>
+      <li>All <strong>seven city questions</strong> answered by live dashboards over 2M+ events</li>
+      <li>One <strong>complete monthly AI improvement cycle</strong> executed and documented: correction → retraining → exam → promotion</li>
+      <li>Verdicts in <strong>under 3 seconds</strong> · accuracy <strong>90%+ measured</strong> (not estimated) · false detections <strong>below 10%</strong> on the trap-photo test</li>
+      <li>The assistant answering correctly <strong>in three languages</strong>, strictly from real records</li>
+      <li>A <strong>monsoon surge forecast</strong> for named wards, generated from fused report + rainfall history</li>
+      <li>One <strong>auto-generated ward report</strong> an official could actually send</li>
+    </ul>
+  </section>
+
+  <!-- ================= 14 V1 vs V2 ================= -->
+  <section id="compare">
+    <p class="eyebrow">Section 14</p>
+    <h2>V1 → V2 at a glance</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Dimension</th><th>V1 (demonstrated)</th><th>V2 (proposed)</th></tr></thead>
+        <tbody>
+          <tr><td class="q">Core question answered</td><td>"What is broken in this photo?"</td><td>"What will break, where, and what do we fix first?"</td></tr>
+          <tr><td class="q">Role of data</td><td>Stored as records</td><td>Turned into forecasts, rankings and scorecards</td></tr>
+          <tr><td class="q">AI after launch</td><td>Frozen; mistakes repeat</td><td>Improves monthly from corrections, with proof</td></tr>
+          <tr><td class="q">Accuracy claim</td><td>Estimated</td><td>Measured on a fixed test set, tracked over time</td></tr>
+          <tr><td class="q">Official's view</td><td>List of complaints</td><td>Priorities, predictions, performance</td></tr>
+          <tr><td class="q">Languages</td><td>English interface</td><td>+ Hindi &amp; Marathi assistant</td></tr>
+          <tr><td class="q">Scale demonstrated</td><td>Hundreds of reports</td><td>Millions of events (simulated city history)</td></tr>
+          <tr><td class="q">Identity</td><td>Reporting app with AI</td><td><strong>Urban Infrastructure Intelligence Platform</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="closing">V1 answered a photo. V2 answers a city. The same platform this panel watched classify a single pothole will rank every road in a ward, warn about the monsoon before it arrives, and prove — with a report card — that its AI is better this month than last. That is the difference between a project that <em>detects</em> problems and a platform that helps <em>govern</em> them.</p>
+
+  <footer>
+    <span>UrbanFix.AI 2.0 — V2 Proposal (Visual Edition)</span>
+    <span>Prepared for the capstone review panel, SJCEM</span>
+    <span>July 2026</span>
+  </footer>
+
+</div>
+</body>
+</html>

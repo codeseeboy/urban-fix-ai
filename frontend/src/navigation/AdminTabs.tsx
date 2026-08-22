@@ -20,8 +20,8 @@ export default function AdminTabs() {
                 tabBarStyle: {
                     position: 'absolute',
                     bottom: 0, left: 0, right: 0,
-                    backgroundColor: 'rgba(10, 10, 15, 0.96)',
-                    borderTopWidth: 0.5,
+                    backgroundColor: colors.surface,
+                    borderTopWidth: StyleSheet.hairlineWidth,
                     borderTopColor: colors.border,
                     height: 62,
                     paddingBottom: 8,

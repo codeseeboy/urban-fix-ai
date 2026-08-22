@@ -1,83 +1,40 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { colors } from '../../theme/colors';
 
 export default function AuthCanvas() {
-    const floatA = useRef(new Animated.Value(0)).current;
-    const floatB = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(floatA, { toValue: 1, duration: 7000, useNativeDriver: true }),
-                Animated.timing(floatA, { toValue: 0, duration: 7000, useNativeDriver: true }),
-            ])
-        ).start();
-
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(floatB, { toValue: 1, duration: 9000, useNativeDriver: true }),
-                Animated.timing(floatB, { toValue: 0, duration: 9000, useNativeDriver: true }),
-            ])
-        ).start();
-    }, [floatA, floatB]);
-
-    const blobATranslateY = floatA.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, -18],
-    });
-
-    const blobBTranslateY = floatB.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 22],
-    });
-
     return (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <LinearGradient
-                colors={['#05070F', '#0B1022', '#0A0A14']}
-                start={{ x: 0.1, y: 0 }}
-                end={{ x: 0.9, y: 1 }}
-                style={StyleSheet.absoluteFill}
-            />
-
-            <Animated.View
-                style={[
-                    styles.blob,
-                    styles.blobA,
-                    { transform: [{ translateY: blobATranslateY }] },
-                ]}
-            />
-            <Animated.View
-                style={[
-                    styles.blob,
-                    styles.blobB,
-                    { transform: [{ translateY: blobBTranslateY }] },
-                ]}
-            />
+            <View style={styles.canvas} />
+            <View style={styles.orbTop} />
+            <View style={styles.orbBottom} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    blob: {
+    canvas: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: colors.background,
+    },
+    orbTop: {
         position: 'absolute',
-        borderRadius: 999,
+        width: 280,
+        height: 280,
+        borderRadius: 140,
+        top: -90,
+        right: -70,
+        backgroundColor: '#DBEAFE',
+        opacity: 0.7,
     },
-    blobA: {
-        width: 260,
-        height: 260,
-        top: -40,
-        right: -60,
-        backgroundColor: 'rgba(0,122,255,0.16)',
-    },
-    blobB: {
+    orbBottom: {
+        position: 'absolute',
         width: 220,
         height: 220,
-        bottom: -50,
-        left: -50,
-        backgroundColor: 'rgba(90,200,250,0.10)',
+        borderRadius: 110,
+        bottom: -80,
+        left: -60,
+        backgroundColor: '#DCFCE7',
+        opacity: 0.55,
     },
 });
-

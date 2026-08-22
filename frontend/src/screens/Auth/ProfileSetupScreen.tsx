@@ -475,8 +475,8 @@ const styles = StyleSheet.create({
     },
     progressDot: {
         width: 24, height: 24, borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.06)',
-        borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: colors.surfaceLight,
+        borderWidth: 1.5, borderColor: colors.border,
         justifyContent: 'center', alignItems: 'center',
     },
     progressDotActive: {
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     },
     progressLine: {
         width: 20, height: 2, borderRadius: 1,
-        backgroundColor: 'rgba(255,255,255,0.08)', marginHorizontal: 4,
+        backgroundColor: colors.border, marginHorizontal: 4,
     },
 
     // Image
@@ -511,18 +511,18 @@ const styles = StyleSheet.create({
     // Content
     stepContent: { marginBottom: 24 },
     stepTitle: {
-        fontFamily: 'Inter_700Bold', fontSize: 26, color: '#FFF',
+        fontFamily: 'Inter_700Bold', fontSize: 26, color: colors.text,
         textAlign: 'center', marginBottom: 8, includeFontPadding: false,
     },
     stepSubtitle: {
-        fontFamily: 'Inter_400Regular', fontSize: 14, color: 'rgba(255,255,255,0.45)',
+        fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.textSecondary,
         textAlign: 'center', lineHeight: 20, marginBottom: 28, includeFontPadding: false,
     },
 
     // Step 0: Username
     usernameCard: {
-        backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: radius.lg,
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', padding: 16,
+        backgroundColor: colors.surface, borderRadius: radius.lg,
+        borderWidth: 1, borderColor: colors.border, padding: 16,
     },
     usernameInputRow: {
         flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
         includeFontPadding: false,
     },
     usernameInput: {
-        flex: 1, fontFamily: 'Inter_500Medium', color: '#FFF', fontSize: 17,
+        flex: 1, fontFamily: 'Inter_500Medium', color: colors.text, fontSize: 17,
         paddingVertical: 0, includeFontPadding: false,
     },
     usernamePreview: {
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
 
     // Step 1: Location
     fieldLabel: {
-        fontFamily: 'Inter_600SemiBold', color: 'rgba(255,255,255,0.6)', fontSize: 12,
+        fontFamily: 'Inter_600SemiBold', color: colors.textSecondary, fontSize: 12,
         marginBottom: 8, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1,
         includeFontPadding: false,
     },
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderColor: colors.border, marginBottom: 18,
     },
     fieldInput: {
-        flex: 1, fontFamily: 'Inter_500Medium', color: '#FFF', fontSize: 15,
+        flex: 1, fontFamily: 'Inter_500Medium', color: colors.text, fontSize: 15,
         paddingVertical: 0, includeFontPadding: false,
     },
     autoTag: {
@@ -582,8 +582,8 @@ const styles = StyleSheet.create({
     wardChip: {
         flexDirection: 'row', alignItems: 'center', gap: 6,
         paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: colors.surface,
+        borderWidth: 1, borderColor: colors.border,
     },
     wardActive: { backgroundColor: colors.primary, borderColor: colors.primary },
     wardText: {
@@ -605,8 +605,8 @@ const styles = StyleSheet.create({
     interestGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     interestItem: {
         width: '22%', alignItems: 'center', paddingVertical: 16,
-        borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.03)',
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+        borderRadius: radius.md, backgroundColor: colors.surface,
+        borderWidth: 1, borderColor: colors.border,
         position: 'relative',
     },
     interestLabel: {
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     checkBadge: {
         position: 'absolute', top: 4, right: 4,
         width: 16, height: 16, borderRadius: 8,
-        backgroundColor: 'rgba(255,255,255,0.25)',
+        backgroundColor: colors.primary,
         justifyContent: 'center', alignItems: 'center',
     },
     selectedCount: {
@@ -632,8 +632,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row', alignItems: 'center', gap: 6,
         paddingVertical: 14, paddingHorizontal: 16,
         borderRadius: radius.md,
-        backgroundColor: 'rgba(255,255,255,0.04)',
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+        backgroundColor: colors.surface,
+        borderWidth: 1, borderColor: colors.border,
     },
     backText: {
         fontFamily: 'Inter_500Medium', color: colors.textSecondary, fontSize: 14,

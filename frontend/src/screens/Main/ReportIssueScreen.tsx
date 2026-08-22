@@ -436,13 +436,12 @@ export default function ReportIssueScreen({ navigation }: any) {
         return data;
     }, []);
 
-    const handleAIComplete = useCallback((results: any[]) => {
+    const handleAIComplete = useCallback((results: any[], imageUris: string[]) => {
         logger.success('ReportIssue', 'All images analyzed successfully', { count: results.length });
         setShowAIOverlay(false);
         setFlowCompleted(true);
 
-        // Transfer portal images to form images
-        setImages(portalImages);
+        setImages(imageUris);
 
         // Merge AI results: use first valid result as primary, combine tags
         const primary = results[0];
@@ -492,7 +491,7 @@ export default function ReportIssueScreen({ navigation }: any) {
             mass: 0.9,
             useNativeDriver: true,
         }).start();
-    }, [portalImages]);
+    }, []);
 
     const handleAIRejected = useCallback((reason: string) => {
         logger.warn('ReportIssue', 'Image rejected by AI', { reason });
@@ -562,13 +561,14 @@ export default function ReportIssueScreen({ navigation }: any) {
                 return;
             }
 
+            const coverUri = images[0] ?? portalImages[0];
             const { data } = await issuesAPI.create({
                 title,
                 description,
                 category,
                 anonymous,
                 emergency,
-                image: images[0] || undefined,
+                image: coverUri || undefined,
                 video: video || undefined,
                 location: locationData,
             });
@@ -611,7 +611,7 @@ export default function ReportIssueScreen({ navigation }: any) {
 
     const handleJoinDuplicate = async () => {
         if (!dupMatch?.issueId) return;
-        if (images.length === 0) {
+        if (!images[0] && !portalImages[0]) {
             Alert.alert('Image required', 'To join an existing report group, please add at least 1 image.');
             return;
         }
@@ -636,7 +636,7 @@ export default function ReportIssueScreen({ navigation }: any) {
                 category,
                 anonymous,
                 emergency,
-                image: images[0],
+                image: images[0] ?? portalImages[0],
                 video: video || undefined,
                 location: locationData,
             });

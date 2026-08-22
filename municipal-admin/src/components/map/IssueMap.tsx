@@ -1,8 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import { SEVERITY_COLORS } from "@/lib/utils";
+import "leaflet/dist/leaflet.css";
+
+/** Leaflet must measure the container after layout; flex + Next dynamic import often starts at 0×0. */
+function MapResize() {
+  const map = useMap();
+  useEffect(() => {
+    const el = map.getContainer();
+    const run = () => {
+      map.invalidateSize();
+    };
+    run();
+    const ro = new ResizeObserver(run);
+    ro.observe(el);
+    const t1 = window.setTimeout(run, 50);
+    const t2 = window.setTimeout(run, 400);
+    window.addEventListener("resize", run);
+    return () => {
+      ro.disconnect();
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.removeEventListener("resize", run);
+    };
+  }, [map]);
+  return null;
+}
 
 interface Issue {
   _id: string;
@@ -34,19 +59,25 @@ export default function IssueMap({ center, issues, showHeatmap, onSelectIssue }:
   }, []);
 
   if (!isMounted) {
-    return <div className="w-full h-full bg-[#0a0b14]" />;
+    return <div className="h-full min-h-[280px] w-full bg-[#0a0b14]" />;
   }
 
   return (
     <MapContainer
       center={[center.lat, center.lng]}
       zoom={13}
-      className="w-full h-full"
+      className="z-0 h-full w-full min-h-[280px]"
+      style={{ height: "100%", width: "100%", minHeight: 280 }}
       zoomControl={false}
+      scrollWheelZoom
     >
+      <MapResize />
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+        /* Single subdomain avoids rare {s} resolution issues; dark basemap */
+        url="https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+        maxZoom={19}
+        maxNativeZoom={19}
       />
       {issues.map((issue) => {
         const lat = issue.location!.coordinates![1];

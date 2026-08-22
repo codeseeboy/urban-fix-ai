@@ -23,14 +23,15 @@ interface Props {
     visible: boolean;
     images: string[];
     onAnalyzeImage: (uri: string) => Promise<AIResult>;
-    onComplete: (results: AIResult[]) => void;
+    /** Second arg is the same URIs as `images` prop, passed explicitly so parents avoid stale closure. */
+    onComplete: (results: AIResult[], imageUris: string[]) => void;
     onRejected: (reason: string) => void;
 }
 
 const PHASES = [
-    { key: 'scanning', label: 'Scanning Image…', emoji: '🔍', color: '#5AC8FA', dur: 2200 },
-    { key: 'analyzing', label: 'AI Analyzing…', emoji: '🧠', color: '#BF5AF2', dur: 2000 },
-    { key: 'identifying', label: 'Identifying Issues…', emoji: '🎯', color: '#FFD60A', dur: 1800 },
+    { key: 'scanning', label: 'Reading the photo…', color: '#5AC8FA' },
+    { key: 'analyzing', label: 'Running vision model…', color: '#BF5AF2' },
+    { key: 'identifying', label: 'Matching civic category…', color: '#FFD60A' },
 ];
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -143,16 +144,13 @@ export default function AIDetectionOverlay({ visible, images, onAnalyzeImage, on
         setPhase('scanning'); animTxt();
         const prom = onAnalyzeImage(uri);
 
-        await wait(PHASES[0].dur);
-        setPhase('analyzing'); animTxt();
-
-        await wait(PHASES[1].dur);
-        setPhase('identifying'); animTxt();
-        Animated.spring(crosshair, { toValue: 1, stiffness: 200, damping: 12, useNativeDriver: true }).start();
+        const analyzingTimer = setTimeout(() => { setPhase('analyzing'); animTxt(); }, 900);
+        const identifyingTimer = setTimeout(() => { setPhase('identifying'); animTxt(); }, 1800);
 
         let res: AIResult;
         try { res = await prom; } catch (e: any) { res = { is_valid: false, note: e?.message || 'AI analysis failed' }; }
-        await wait(800);
+        clearTimeout(analyzingTimer);
+        clearTimeout(identifyingTimer);
         setResult(res);
 
         if (res.is_valid === false) {
@@ -197,7 +195,7 @@ export default function AIDetectionOverlay({ visible, images, onAnalyzeImage, on
         } else {
             await wait(400);
             Animated.timing(bgOp, { toValue: 0, duration: 500, useNativeDriver: true }).start(() => {
-                onComplete(updated);
+                onComplete(updated, [...images]);
             });
         }
     }, [images, onAnalyzeImage, onComplete, onRejected]);
@@ -205,9 +203,9 @@ export default function AIDetectionOverlay({ visible, images, onAnalyzeImage, on
     if (!visible) return null;
 
     const pc = PHASES.find(p => p.key === phase);
-    const phaseLabel = phase === 'identified' ? '✅ Issue Identified!'
-        : phase === 'rejected' ? '❌ Image Rejected'
-        : pc ? `${pc.emoji} ${pc.label}` : '';
+    const phaseLabel = phase === 'identified' ? 'Issue confirmed'
+        : phase === 'rejected' ? 'Not a civic issue'
+        : pc ? pc.label : '';
     const phaseColor = phase === 'identified' ? '#30D158'
         : phase === 'rejected' ? '#FF453A'
         : pc?.color || '#5AC8FA';
@@ -242,8 +240,7 @@ export default function AIDetectionOverlay({ visible, images, onAnalyzeImage, on
             <Animated.View style={[styles.imgWrap, { transform: [{ scale: imgScale }], opacity: imgOp }]}>
                 <Animated.View style={[styles.glowRing, { borderColor: phaseColor, opacity: glow.interpolate({ inputRange: [0,1], outputRange: [0.3, 0.8] }) }]} />
                 <Image source={{ uri: images[idx] }} style={styles.img} resizeMode="cover" />
-                <ScanLine active={phase === 'scanning'} />
-                {(phase === 'analyzing' || phase === 'identifying') && [0,1,2].map(i => <DetectionBox key={i} phase={phase} index={i} />)}
+                <ScanLine active={phase === 'scanning' || phase === 'analyzing'} />
                 {phase === 'identifying' && (
                     <Animated.View style={[styles.xhairWrap, { transform: [{ scale: crosshair }] }]}>
                         <View style={[styles.xhairLine, { width: 60, height: 1.5 }]} />
