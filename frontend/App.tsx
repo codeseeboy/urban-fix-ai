@@ -44,7 +44,7 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
 });
 
 export default function App() {
-    const [fontsLoaded] = useFonts({
+    const [fontsLoaded, fontError] = useFonts({
         Inter_400Regular,
         Inter_500Medium,
         Inter_600SemiBold,
@@ -131,28 +131,39 @@ export default function App() {
             <AuthProvider>
                 <SafeAreaProvider>
                     <StatusBar style="dark" />
-                    <AppBoot fontsLoaded={fontsLoaded} />
+                    <AppBoot fontsLoaded={fontsLoaded} fontError={fontError} />
                 </SafeAreaProvider>
             </AuthProvider>
         </ErrorBoundary>
     );
 }
 
-function AppBoot({ fontsLoaded }: { fontsLoaded: boolean }) {
+function AppBoot({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError: Error | null }) {
     const { loading, user, needsLocationSetup, needsProfileSetup } = useAuth();
     const [ready, setReady] = React.useState(false);
 
     React.useEffect(() => {
-        if (!fontsLoaded) return;
-        if (loading) return;
+        // Fallback safety timeout: NEVER leave app stuck on splash for more than 1.5 seconds!
+        const safetyTimer = setTimeout(() => {
+            console.log('⚡ Splash safety fallback triggered — forcing app ready');
+            ExpoSplashScreen.hideAsync().catch(() => {});
+            setReady(true);
+        }, 1500);
 
-        // Allow 1 frame for layout to mount before hiding native splash
+        if ((!fontsLoaded && !fontError) || loading) {
+            return () => clearTimeout(safetyTimer);
+        }
+
         const t = setTimeout(() => {
             ExpoSplashScreen.hideAsync().catch(() => {});
             setReady(true);
-        }, 120);
-        return () => clearTimeout(t);
-    }, [fontsLoaded, loading]);
+        }, 80);
+
+        return () => {
+            clearTimeout(t);
+            clearTimeout(safetyTimer);
+        };
+    }, [fontsLoaded, fontError, loading]);
 
     // After auth/setup is ready, process any pending notification tap navigation.
     React.useEffect(() => {
