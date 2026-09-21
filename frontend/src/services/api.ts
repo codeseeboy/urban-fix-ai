@@ -23,11 +23,11 @@ import logger from '../utils/logger';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ← CHANGE THIS to your PC's LAN IP if using a physical device
-const LAN_IP = '192.168.0.102'; // ← Wi‑Fi IPv4 from ipconfig — must match this PC when using a physical device
+const LAN_IP = '10.217.156.145'; // ← Wi-Fi IPv4 from ipconfig
 /** If the phone still cannot reach LAN_IP (router “AP isolation”, etc.): USB-connect the device, run `adb reverse tcp:5000 tcp:5000`, set this to true. */
 const USE_ADB_REVERSE_FOR_LOCAL_API = false;
 const PROD_URL = 'https://urban-fix-ai.onrender.com';
-const USE_LOCAL_IN_PROD = false; // Set true if you want APK to hit local LAN IP
+const USE_LOCAL_IN_PROD = true; // APK talks to this PC's backend + local AI models
 const USE_PROD_ON_WEB = true;
 
 const LOCAL_BASE = Platform.select({

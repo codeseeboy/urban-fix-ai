@@ -70,8 +70,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "a186adfc-c966-4e6e-a193-30430c4fce36"
+        "projectId": "e10bf0f2-5df8-407f-b75d-042ea8f2a036"
       }
-    }
+    },
+    "owner": "shashiiiii"
   }
 }
