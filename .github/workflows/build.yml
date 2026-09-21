@@ -52,16 +52,13 @@ jobs:
       - name: Prebuild
         run: cd frontend && npx expo prebuild --platform android --clean --no-install
 
-      - name: Install React Native CLI
-        run: cd frontend && npm install --save-dev @react-native-community/cli @react-native-community/cli-platform-android @react-native/metro-config
-
       - name: Create assets directory
         run: mkdir -p frontend/android/app/src/main/assets
 
       - name: Bundle JS for release
         run: |
           cd frontend
-          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+          npx expo export:embed --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
 
       - name: Make gradlew executable
         run: chmod +x frontend/android/gradlew
