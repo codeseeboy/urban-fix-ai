@@ -7,21 +7,13 @@
     "orientation": "portrait",
     "icon": "./assets/logo2.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/logo2.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.urbanfix.ai"
     },
     "android": {
-      "usesCleartextTraffic": true,
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.urbanfix.ai",
-      "googleServicesFile": "./google-services.json",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyApHoIvTWWPC84MhWG6vnE4kfT_J63bprU"
@@ -31,7 +23,6 @@
         "foregroundImage": "./assets/logo2.png",
         "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -66,7 +57,17 @@
       [
         "expo-web-browser"
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo2.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ],
+      "expo-status-bar"
     ],
     "extra": {
       "eas": {
