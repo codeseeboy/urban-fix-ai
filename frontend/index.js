@@ -1,4 +1,9 @@
 import { registerRootComponent } from 'expo';
+import { StyleSheet } from 'react-native';
+
+if (!StyleSheet.absoluteFillObject) {
+    StyleSheet.absoluteFillObject = StyleSheet.absoluteFill;
+}
 
 import App from './App';
 
