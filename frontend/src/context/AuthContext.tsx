@@ -91,7 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
     useEffect(() => {
-        loadUser();
+        const timeout = setTimeout(() => {
+            setLoading(false);
+        }, 2000);
+
+        loadUser().finally(() => clearTimeout(timeout));
 
         // Listen for Supabase auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
