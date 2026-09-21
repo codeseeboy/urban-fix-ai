@@ -129,8 +129,8 @@ export default function App() {
     return (
         <ErrorBoundary>
             <AuthProvider>
-                <SafeAreaProvider>
-                    <StatusBar style="dark" />
+                <SafeAreaProvider style={{ flex: 1, backgroundColor: '#020205' }}>
+                    <StatusBar style="light" />
                     <AppBoot fontsLoaded={fontsLoaded} fontError={fontError} />
                 </SafeAreaProvider>
             </AuthProvider>

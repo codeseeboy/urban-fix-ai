@@ -1,9 +1,10 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { navigationRef } from './navigationRef';
+import SplashScreen from '../screens/Auth/SplashScreen';
 
 import OnboardingScreen from '../screens/Auth/OnboardingScreen';
 import LoginScreen from '../screens/Auth/LoginScreen';
@@ -26,10 +27,23 @@ import ChatbotScreen from '../screens/Main/ChatbotScreen';
 
 const Stack = createStackNavigator();
 
+const customDarkTheme = {
+    ...DarkTheme,
+    colors: {
+        ...DarkTheme.colors,
+        background: '#020205',
+        card: '#0B1220',
+        text: '#FFFFFF',
+        border: 'rgba(255, 255, 255, 0.1)',
+    },
+};
+
 export default function RootNavigator() {
     const { user, loading, needsLocationSetup, needsProfileSetup } = useAuth();
 
-    if (loading) return null;
+    if (loading) {
+        return <SplashScreen />;
+    }
 
     const getMainScreen = () => {
         if (!user) return null;
@@ -39,7 +53,7 @@ export default function RootNavigator() {
     };
 
     return (
-        <NavigationContainer ref={navigationRef}>
+        <NavigationContainer ref={navigationRef} theme={customDarkTheme}>
             <Stack.Navigator id="root" screenOptions={{ headerShown: false, cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS }}>
                 {!user ? (
                     <>
