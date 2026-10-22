@@ -5,3 +5,6 @@ __pycache__
 .venv
 venv
 *.egg-info
+assetss
+test_*.jpg
+test_all_images.py
