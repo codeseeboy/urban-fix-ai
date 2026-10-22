@@ -6,6 +6,7 @@ Node.js backend calls POST /analyze with an image file.
 
 import io
 import logging
+import threading
 import time
 from contextlib import asynccontextmanager
 
@@ -37,8 +38,8 @@ _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting UrbanFix AI Service ...")
-    model_manager.load_all()
-    logger.info("AI Service ready.")
+    # Load in the background so the HTTP port binds immediately (Hugging Face health checks).
+    threading.Thread(target=model_manager.load_all, name="model-loader", daemon=True).start()
     yield
     logger.info("Shutting down AI Service.")
 
@@ -89,6 +90,19 @@ async def _read_image(file: UploadFile) -> Image.Image:
 
 
 # ── Endpoints ────────────────────────────────────────────────
+
+
+@app.get("/")
+async def root():
+    return {
+        "status": "UrbanFix AI is running",
+        "ready": model_manager.is_loaded,
+        "health": "/health",
+        "docs": "/docs",
+        "test": "/test",
+        "analyze": "POST /analyze",
+        "models_loaded": model_manager.loaded_summary(),
+    }
 
 
 @app.get("/test", response_class=HTMLResponse, include_in_schema=False)
