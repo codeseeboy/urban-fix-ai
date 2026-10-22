@@ -38,3 +38,15 @@ docs/*.docx
 
 # Firebase Android config contains API keys — copy from example after clone
 frontend/google-services.json
+
+# added by push-projects.ps1
+.venv/
+bda/.venv/
+bda/sparktmp/
+.mediator/
+.claude/
+/colab.zip
+/urbanfix.apk
+colab2/best.pt
+docs/docx_media/
+docs/extracted_figures/
