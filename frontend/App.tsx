@@ -143,12 +143,18 @@ function AppBoot({ fontsLoaded, fontError }: { fontsLoaded: boolean; fontError: 
     const [ready, setReady] = React.useState(false);
 
     React.useEffect(() => {
-        // Fallback safety timeout: NEVER leave app stuck on splash for more than 1.5 seconds!
+        // Fallback safety timeout: never leave the app stuck on splash.
+        // On web, @expo-google-fonts' useFonts() can take longer than this to
+        // resolve (or never resolve fontError either), so this fallback is the
+        // ONLY path that fires there in practice — it is the common case, not
+        // an edge case. Keep it short: the public/index.html shell is already
+        // painted dark, so this only gates how long the JS-driven UI takes to
+        // appear on top of that, not how long the page looks broken.
         const safetyTimer = setTimeout(() => {
             console.log('⚡ Splash safety fallback triggered — forcing app ready');
             ExpoSplashScreen.hideAsync().catch(() => {});
             setReady(true);
-        }, 1500);
+        }, 400);
 
         if ((!fontsLoaded && !fontError) || loading) {
             return () => clearTimeout(safetyTimer);
