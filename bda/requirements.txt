@@ -1,0 +1,18 @@
+# Python 3.11 only. PySpark does not support 3.12+ reliably; 3.14 is unsupported.
+# Pinned <4.0 so the bundled Hadoop client stays compatible with the
+# hadoop 3.2 namenode/datanode containers in docker-compose.yml.
+pyspark>=3.5.3,<4.0
+kafka-python>=2.0.2
+pillow>=10.0.0
+# pandas 3.x breaks PySpark 3.5 toPandas()/Arrow conversion.
+pandas>=2.0.0,<3.0
+numpy>=1.24.0,<2.3
+matplotlib>=3.7.0
+seaborn>=0.13.0
+streamlit>=1.28.0
+requests>=2.31.0
+tqdm>=4.66.0
+pyarrow>=14.0.0
+lxml>=4.9.0
+imagehash>=4.3.1
+pyyaml>=6.0

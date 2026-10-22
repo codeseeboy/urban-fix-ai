@@ -1,0 +1,3 @@
+stem,classes,country,ext,filename,format,has_label,has_pothole,height,image_path,is_corrupt,label_format,label_path,label_valid,md5,num_objects,size_bytes,width
+Japan_0072,"",Japan,.jpg,Japan_0072.jpg,JPEG,false,false,720,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/Japan_0072.jpg,false,,,false,63d0a8da3b739a61f30243e00f8700d6,0,25555,1280
+Japan_0084,"",Japan,.jpg,Japan_0084.jpg,JPEG,false,false,480,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/Japan_0084.jpg,false,,,false,8fcb3bab51cbf01d3c5e26d6fa6a25a7,0,9509,640

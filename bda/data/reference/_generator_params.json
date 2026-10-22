@@ -1,0 +1,21 @@
+{
+  "_warning": "Verification only. No Spark job may read this file.",
+  "seed": 42,
+  "target_reports": 20000,
+  "lag_weights": {
+    "1": 0.25,
+    "2": 0.6,
+    "3": 0.15
+  },
+  "surge_alpha": 2.0,
+  "rain_reference_mm": 45.0,
+  "p_duplicate_cluster": 0.35,
+  "p_viral": 0.02,
+  "dirt_rates": {
+    "gps_drift": 0.03,
+    "out_of_bbox": 0.01,
+    "future_timestamp": 0.005,
+    "null_category": 0.02
+  },
+  "generated_at": "2026-09-21T20:15:39"
+}

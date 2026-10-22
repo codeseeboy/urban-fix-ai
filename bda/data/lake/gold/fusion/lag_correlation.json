@@ -1,0 +1,11 @@
+{
+  "24h": 3.892,
+  "24h_ward_days": 376,
+  "48h": 4.593,
+  "48h_ward_days": 376,
+  "72h": 4.089,
+  "72h_ward_days": 376,
+  "peak_lag_hours": 48,
+  "heavy_rain_threshold_mm": 45.0,
+  "dry_day_threshold_mm": 5.0
+}

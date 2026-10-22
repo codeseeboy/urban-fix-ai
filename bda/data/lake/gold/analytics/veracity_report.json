@@ -1,0 +1,16 @@
+{
+  "bronze_reports": 19282,
+  "rejected_gps_accuracy": 583,
+  "rejected_out_of_bbox": 191,
+  "rejected_future_timestamp": 0,
+  "rejected_unparseable_date": 0,
+  "rejected_outside_window": 62,
+  "after_veracity": 18455,
+  "quarantined_unknown_ward": 976,
+  "department_values_before": 11,
+  "department_values_after": 7,
+  "duplicate_graph_edges": 136257,
+  "silver_reports": 18455,
+  "distinct_incidents": 5163,
+  "reports_per_incident": 3.574
+}

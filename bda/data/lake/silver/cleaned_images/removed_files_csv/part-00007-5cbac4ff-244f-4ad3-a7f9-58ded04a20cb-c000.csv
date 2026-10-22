@@ -1,0 +1,2 @@
+stem,classes,country,ext,filename,format,has_label,has_pothole,height,image_path,is_corrupt,label_format,label_path,label_valid,md5,num_objects,size_bytes,width
+India_0048,"",India,.jpg,India_0048.jpg,JPEG,false,false,768,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/India_0048.jpg,false,,,false,3b7a7ec18620ebc57af647d0c695170a,0,21927,1024

@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<annotation><filename>Japan_0038.jpg</filename><size><width>1280</width><height>720</height><depth>3</depth></size><object><name>D00</name><bndbox><xmin>673</xmin><ymin>177</ymin><xmax>724</xmax><ymax>239</ymax></bndbox></object><object><name>D10</name><bndbox><xmin>930</xmin><ymin>659</ymin><xmax>981</xmax><ymax>703</ymax></bndbox></object></annotation>

@@ -1,0 +1,6 @@
+metric,original,cleaned
+total_images,120,100
+corrupt,6,0
+missing_or_invalid_labels,14,0
+pothole_images,33,31
+unique_md5,109,100

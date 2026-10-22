@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<annotation><filename>Czech_0098.jpg</filename><size><width>640</width><height>480</height><depth>3</depth></size><object><name>D10</name><bndbox><xmin>568</xmin><ymin>47</ymin><xmax>612</xmax><ymax>149</ymax></bndbox></object><object><name>D10</name><bndbox><xmin>302</xmin><ymin>340</ymin><xmax>447</xmax><ymax>430</ymax></bndbox></object><object><name>D10</name><bndbox><xmin>208</xmin><ymin>240</ymin><xmax>335</xmax><ymax>348</ymax></bndbox></object></annotation>

@@ -1,0 +1,9 @@
+country,has_pothole,count
+Czech,False,15
+Japan,True,9
+India,False,20
+Japan,False,23
+India,True,7
+Czech,True,10
+United,True,5
+United,False,11

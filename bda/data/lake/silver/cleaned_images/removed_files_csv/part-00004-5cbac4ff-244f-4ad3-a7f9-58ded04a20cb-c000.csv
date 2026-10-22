@@ -1,0 +1,3 @@
+stem,classes,country,ext,filename,format,has_label,has_pothole,height,image_path,is_corrupt,label_format,label_path,label_valid,md5,num_objects,size_bytes,width
+India_0105,"D00,D20,D20",India,.jpg,India_0105.jpg,JPEG,true,false,600,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/India_0105.jpg,false,voc_xml,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/annotations/India_0105.xml,true,7e3d65bd9602a567e5c7197f9f117306,3,35447,800
+India_0108,"",India,.jpg,India_0108.jpg,JPEG,false,false,480,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/India_0108.jpg,false,,,false,0842c037b3d2b6bcc5a4a8db34d93264,0,9493,640

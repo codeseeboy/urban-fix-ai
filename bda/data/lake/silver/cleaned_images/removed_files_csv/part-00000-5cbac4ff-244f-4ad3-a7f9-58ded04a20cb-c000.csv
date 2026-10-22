@@ -1,0 +1,3 @@
+stem,classes,country,ext,filename,format,has_label,has_pothole,height,image_path,is_corrupt,label_format,label_path,label_valid,md5,num_objects,size_bytes,width
+United_States_0075,"D40,D40,D40",United,.jpg,United_States_0075.jpg,JPEG,true,true,600,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/United_States_0075.jpg,false,voc_xml,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/annotations/United_States_0075.xml,true,7e3d65bd9602a567e5c7197f9f117306,3,35447,800
+United_States_0080,"",United,.jpg,United_States_0080.jpg,,false,false,,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/United_States_0080.jpg,true,,,false,992a50dd9df1d68752d7286b1f7b9b6e,0,10,

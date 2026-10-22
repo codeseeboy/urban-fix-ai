@@ -1,0 +1,11 @@
+{
+  "total_images": 120,
+  "corrupt_images": 6,
+  "labeled_images": 106,
+  "missing_labels": 14,
+  "pothole_images": 33,
+  "duplicate_groups": 2,
+  "duplicate_extra_copies": 11,
+  "class_imbalance_pothole_ratio": 0.275,
+  "events_total": 5325
+}
