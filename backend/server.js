@@ -45,7 +45,7 @@ app.use('/api/chatbot', require('./routes/chatbotRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ UrbanFix AI API running on http://localhost:${PORT}`);
     console.log(`🗄️  Database: Supabase PostgreSQL`);
     console.log(`📡 Project: ${process.env.SUPABASE_URL || 'NOT SET'}`);
