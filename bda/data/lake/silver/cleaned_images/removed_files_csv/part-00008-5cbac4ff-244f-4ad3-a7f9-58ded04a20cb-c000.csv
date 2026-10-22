@@ -1,0 +1,2 @@
+stem,classes,country,ext,filename,format,has_label,has_pothole,height,image_path,is_corrupt,label_format,label_path,label_valid,md5,num_objects,size_bytes,width
+Czech_0036,"",Czech,.jpg,Czech_0036.jpg,JPEG,false,false,600,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/Czech_0036.jpg,false,,,false,ba513aa8913c4cc41f5faf5743e2b6fc,0,20516,800

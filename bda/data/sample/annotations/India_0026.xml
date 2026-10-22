@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<annotation><filename>India_0026.jpg</filename><size><width>1280</width><height>720</height><depth>3</depth></size><object><name>D20</name><bndbox><xmin>1028</xmin><ymin>312</ymin><xmax>1085</xmax><ymax>345</ymax></bndbox></object><object><name>D20</name><bndbox><xmin>805</xmin><ymin>46</ymin><xmax>898</xmax><ymax>127</ymax></bndbox></object><object><name>D20</name><bndbox><xmin>712</xmin><ymin>237</ymin><xmax>825</xmax><ymax>291</ymax></bndbox></object></annotation>

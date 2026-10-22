@@ -1,0 +1,13 @@
+{
+  "before_count": 120,
+  "after_count": 100,
+  "removed_count": 20,
+  "kept_ratio": 0.8333,
+  "removal_reasons": {
+    "corrupt": 6,
+    "missing_label": 8,
+    "invalid_label": 0,
+    "duplicates_removed": 6,
+    "total_removed": 20
+  }
+}

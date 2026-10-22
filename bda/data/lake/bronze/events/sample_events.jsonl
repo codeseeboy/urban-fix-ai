@@ -1,0 +1,325 @@
+{"event_type": "issue.created", "issue_id": "UF-1000", "timestamp": "2024-01-01T00:14:00", "ward": "Ward-4", "country": "India", "category": "roads", "image_stem": "India_0000", "has_pothole": false, "lat": 19.09791, "lon": 72.8905}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1000", "timestamp": "2024-01-01T00:14:08", "ward": "Ward-4", "predicted_class": "alligator_crack", "confidence": 0.868, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1000", "timestamp": "2024-01-03T00:14:00", "ward": "Ward-4", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1001", "timestamp": "2024-01-01T03:35:00", "ward": "Ward-8", "country": "India", "category": "roads", "image_stem": "India_0001", "has_pothole": true, "lat": 19.10303, "lon": 72.97553}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1001", "timestamp": "2024-01-01T03:35:08", "ward": "Ward-8", "predicted_class": "transverse_crack", "confidence": 0.811, "severity": "Medium"}
+{"event_type": "issue.created", "issue_id": "UF-1002", "timestamp": "2024-01-01T06:13:00", "ward": "Ward-6", "country": "Japan", "category": "roads", "image_stem": "Japan_0002", "has_pothole": true, "lat": 19.2075, "lon": 73.04058}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1002", "timestamp": "2024-01-01T06:13:08", "ward": "Ward-6", "predicted_class": "pothole", "confidence": 0.767, "severity": "High"}
+{"event_type": "issue.created", "issue_id": "UF-1003", "timestamp": "2024-01-01T09:21:00", "ward": "Ward-10", "country": "India", "category": "roads", "image_stem": "India_0003", "has_pothole": true, "lat": 19.08868, "lon": 73.0604}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1003", "timestamp": "2024-01-01T09:21:08", "ward": "Ward-10", "predicted_class": "pothole", "confidence": 0.651, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1003", "timestamp": "2024-01-08T09:21:00", "ward": "Ward-10", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1004", "timestamp": "2024-01-01T12:49:00", "ward": "Ward-5", "country": "India", "category": "roads", "image_stem": "India_0004", "has_pothole": false, "lat": 19.14378, "lon": 72.99118}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1004", "timestamp": "2024-01-01T12:49:08", "ward": "Ward-5", "predicted_class": "transverse_crack", "confidence": 0.964, "severity": "Low"}
+{"event_type": "issue.created", "issue_id": "UF-1005", "timestamp": "2024-01-01T15:39:00", "ward": "Ward-1", "country": "Japan", "category": "roads", "image_stem": "Japan_0005", "has_pothole": false, "lat": 19.26202, "lon": 72.88985}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1005", "timestamp": "2024-01-01T15:39:08", "ward": "Ward-1", "predicted_class": "longitudinal_crack", "confidence": 0.878, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1005", "timestamp": "2024-01-04T15:39:00", "ward": "Ward-1", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1006", "timestamp": "2024-01-01T18:42:00", "ward": "Ward-10", "country": "Japan", "category": "roads", "image_stem": "Japan_0006", "has_pothole": false, "lat": 19.16793, "lon": 72.89972}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1006", "timestamp": "2024-01-01T18:42:08", "ward": "Ward-10", "predicted_class": "longitudinal_crack", "confidence": 0.782, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1006", "timestamp": "2024-01-19T18:42:00", "ward": "Ward-10", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1007", "timestamp": "2024-01-01T21:23:00", "ward": "Ward-8", "country": "Czech", "category": "roads", "image_stem": "Czech_0007", "has_pothole": true, "lat": 19.20457, "lon": 73.00447}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1007", "timestamp": "2024-01-01T21:23:08", "ward": "Ward-8", "predicted_class": "transverse_crack", "confidence": 0.801, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1007", "timestamp": "2024-01-09T21:23:00", "ward": "Ward-8", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1008", "timestamp": "2024-01-02T00:46:00", "ward": "Ward-7", "country": "India", "category": "roads", "image_stem": "India_0008", "has_pothole": false, "lat": 19.08029, "lon": 72.92753}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1008", "timestamp": "2024-01-02T00:46:08", "ward": "Ward-7", "predicted_class": "transverse_crack", "confidence": 0.684, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1008", "timestamp": "2024-01-09T00:46:00", "ward": "Ward-7", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1009", "timestamp": "2024-01-02T03:41:00", "ward": "Ward-10", "country": "Czech", "category": "roads", "image_stem": "Czech_0009", "has_pothole": false, "lat": 19.19706, "lon": 72.9949}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1009", "timestamp": "2024-01-02T03:41:08", "ward": "Ward-10", "predicted_class": "longitudinal_crack", "confidence": 0.922, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1009", "timestamp": "2024-01-05T03:41:00", "ward": "Ward-10", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1010", "timestamp": "2024-01-02T06:08:00", "ward": "Ward-3", "country": "Czech", "category": "roads", "image_stem": "Czech_0010", "has_pothole": false, "lat": 19.07766, "lon": 73.05348}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1010", "timestamp": "2024-01-02T06:08:08", "ward": "Ward-3", "predicted_class": "alligator_crack", "confidence": 0.753, "severity": "Medium"}
+{"event_type": "issue.created", "issue_id": "UF-1011", "timestamp": "2024-01-02T09:36:00", "ward": "Ward-7", "country": "Czech", "category": "roads", "image_stem": "Czech_0011", "has_pothole": false, "lat": 19.07648, "lon": 72.90069}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1011", "timestamp": "2024-01-02T09:36:08", "ward": "Ward-7", "predicted_class": "longitudinal_crack", "confidence": 0.743, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1011", "timestamp": "2024-01-05T09:36:00", "ward": "Ward-7", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1012", "timestamp": "2024-01-02T12:48:00", "ward": "Ward-3", "country": "United_States", "category": "roads", "image_stem": "United_States_0012", "has_pothole": false, "lat": 19.14411, "lon": 72.98233}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1012", "timestamp": "2024-01-02T12:48:08", "ward": "Ward-3", "predicted_class": "alligator_crack", "confidence": 0.687, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1012", "timestamp": "2024-01-17T12:48:00", "ward": "Ward-3", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1013", "timestamp": "2024-01-02T15:42:00", "ward": "Ward-6", "country": "Japan", "category": "roads", "image_stem": "Japan_0013", "has_pothole": false, "lat": 19.16567, "lon": 72.94536}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1013", "timestamp": "2024-01-02T15:42:08", "ward": "Ward-6", "predicted_class": "longitudinal_crack", "confidence": 0.961, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1014", "timestamp": "2024-01-02T18:36:00", "ward": "Ward-4", "country": "United_States", "category": "roads", "image_stem": "United_States_0014", "has_pothole": true, "lat": 19.17733, "lon": 72.90291}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1014", "timestamp": "2024-01-02T18:36:08", "ward": "Ward-4", "predicted_class": "alligator_crack", "confidence": 0.917, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1014", "timestamp": "2024-01-09T18:36:00", "ward": "Ward-4", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1015", "timestamp": "2024-01-02T21:13:00", "ward": "Ward-1", "country": "India", "category": "roads", "image_stem": "India_0015", "has_pothole": false, "lat": 19.25743, "lon": 73.06242}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1015", "timestamp": "2024-01-02T21:13:08", "ward": "Ward-1", "predicted_class": "longitudinal_crack", "confidence": 0.6, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1016", "timestamp": "2024-01-03T00:03:00", "ward": "Ward-6", "country": "Japan", "category": "roads", "image_stem": "Japan_0016", "has_pothole": false, "lat": 19.08954, "lon": 72.91643}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1016", "timestamp": "2024-01-03T00:03:08", "ward": "Ward-6", "predicted_class": "transverse_crack", "confidence": 0.583, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1017", "timestamp": "2024-01-03T03:34:00", "ward": "Ward-7", "country": "United_States", "category": "roads", "image_stem": "United_States_0017", "has_pothole": true, "lat": 19.07735, "lon": 73.06369}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1017", "timestamp": "2024-01-03T03:34:08", "ward": "Ward-7", "predicted_class": "alligator_crack", "confidence": 0.852, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1017", "timestamp": "2024-01-11T03:34:00", "ward": "Ward-7", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1018", "timestamp": "2024-01-03T06:31:00", "ward": "Ward-8", "country": "Japan", "category": "roads", "image_stem": "Japan_0018", "has_pothole": true, "lat": 19.10345, "lon": 72.98308}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1018", "timestamp": "2024-01-03T06:31:08", "ward": "Ward-8", "predicted_class": "pothole", "confidence": 0.892, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1018", "timestamp": "2024-01-12T06:31:00", "ward": "Ward-8", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1019", "timestamp": "2024-01-03T09:24:00", "ward": "Ward-3", "country": "United_States", "category": "roads", "image_stem": "United_States_0019", "has_pothole": true, "lat": 19.22469, "lon": 73.02063}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1019", "timestamp": "2024-01-03T09:24:08", "ward": "Ward-3", "predicted_class": "pothole", "confidence": 0.607, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1019", "timestamp": "2024-01-22T09:24:00", "ward": "Ward-3", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1020", "timestamp": "2024-01-03T12:40:00", "ward": "Ward-4", "country": "Japan", "category": "roads", "image_stem": "Japan_0020", "has_pothole": false, "lat": 19.21965, "lon": 73.05398}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1020", "timestamp": "2024-01-03T12:40:08", "ward": "Ward-4", "predicted_class": "alligator_crack", "confidence": 0.815, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1021", "timestamp": "2024-01-03T15:11:00", "ward": "Ward-3", "country": "India", "category": "roads", "image_stem": "India_0021", "has_pothole": false, "lat": 19.25623, "lon": 73.0415}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1021", "timestamp": "2024-01-03T15:11:08", "ward": "Ward-3", "predicted_class": "transverse_crack", "confidence": 0.788, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1021", "timestamp": "2024-01-11T15:11:00", "ward": "Ward-3", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1022", "timestamp": "2024-01-03T18:09:00", "ward": "Ward-8", "country": "United_States", "category": "roads", "image_stem": "United_States_0022", "has_pothole": false, "lat": 19.07693, "lon": 72.99384}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1022", "timestamp": "2024-01-03T18:09:08", "ward": "Ward-8", "predicted_class": "longitudinal_crack", "confidence": 0.656, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1022", "timestamp": "2024-01-21T18:09:00", "ward": "Ward-8", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1023", "timestamp": "2024-01-03T21:28:00", "ward": "Ward-7", "country": "India", "category": "roads", "image_stem": "India_0023", "has_pothole": false, "lat": 19.21652, "lon": 73.06382}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1023", "timestamp": "2024-01-03T21:28:08", "ward": "Ward-7", "predicted_class": "alligator_crack", "confidence": 0.93, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1024", "timestamp": "2024-01-04T00:50:00", "ward": "Ward-1", "country": "United_States", "category": "roads", "image_stem": "United_States_0024", "has_pothole": false, "lat": 19.21008, "lon": 72.98752}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1024", "timestamp": "2024-01-04T00:50:08", "ward": "Ward-1", "predicted_class": "longitudinal_crack", "confidence": 0.886, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1024", "timestamp": "2024-01-09T00:50:00", "ward": "Ward-1", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1025", "timestamp": "2024-01-04T03:40:00", "ward": "Ward-5", "country": "India", "category": "roads", "image_stem": "India_0025", "has_pothole": false, "lat": 19.13503, "lon": 72.92538}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1025", "timestamp": "2024-01-04T03:40:08", "ward": "Ward-5", "predicted_class": "alligator_crack", "confidence": 0.832, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1025", "timestamp": "2024-01-21T03:40:00", "ward": "Ward-5", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1026", "timestamp": "2024-01-04T06:35:00", "ward": "Ward-2", "country": "India", "category": "roads", "image_stem": "India_0026", "has_pothole": false, "lat": 19.12055, "lon": 73.01037}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1026", "timestamp": "2024-01-04T06:35:08", "ward": "Ward-2", "predicted_class": "alligator_crack", "confidence": 0.638, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1026", "timestamp": "2024-01-08T06:35:00", "ward": "Ward-2", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1027", "timestamp": "2024-01-04T09:32:00", "ward": "Ward-5", "country": "Japan", "category": "roads", "image_stem": "Japan_0027", "has_pothole": false, "lat": 19.18247, "lon": 73.00092}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1027", "timestamp": "2024-01-04T09:32:08", "ward": "Ward-5", "predicted_class": "longitudinal_crack", "confidence": 0.746, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1027", "timestamp": "2024-01-06T09:32:00", "ward": "Ward-5", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1028", "timestamp": "2024-01-04T12:29:00", "ward": "Ward-6", "country": "Czech", "category": "roads", "image_stem": "Czech_0028", "has_pothole": true, "lat": 19.21194, "lon": 72.90096}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1028", "timestamp": "2024-01-04T12:29:08", "ward": "Ward-6", "predicted_class": "pothole", "confidence": 0.616, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1028", "timestamp": "2024-01-24T12:29:00", "ward": "Ward-6", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1029", "timestamp": "2024-01-04T15:12:00", "ward": "Ward-2", "country": "Czech", "category": "roads", "image_stem": "Czech_0029", "has_pothole": false, "lat": 19.13356, "lon": 72.96013}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1029", "timestamp": "2024-01-04T15:12:08", "ward": "Ward-2", "predicted_class": "longitudinal_crack", "confidence": 0.815, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1029", "timestamp": "2024-01-09T15:12:00", "ward": "Ward-2", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1030", "timestamp": "2024-01-04T18:33:00", "ward": "Ward-3", "country": "United_States", "category": "roads", "image_stem": "United_States_0030", "has_pothole": false, "lat": 19.26165, "lon": 72.98987}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1030", "timestamp": "2024-01-04T18:33:08", "ward": "Ward-3", "predicted_class": "transverse_crack", "confidence": 0.792, "severity": "Low"}
+{"event_type": "issue.created", "issue_id": "UF-1031", "timestamp": "2024-01-04T21:18:00", "ward": "Ward-9", "country": "United_States", "category": "roads", "image_stem": "United_States_0031", "has_pothole": false, "lat": 19.21232, "lon": 72.98949}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1031", "timestamp": "2024-01-04T21:18:08", "ward": "Ward-9", "predicted_class": "transverse_crack", "confidence": 0.957, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1031", "timestamp": "2024-01-19T21:18:00", "ward": "Ward-9", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1032", "timestamp": "2024-01-05T00:21:00", "ward": "Ward-10", "country": "Japan", "category": "roads", "image_stem": "Japan_0032", "has_pothole": false, "lat": 19.14318, "lon": 72.96975}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1032", "timestamp": "2024-01-05T00:21:08", "ward": "Ward-10", "predicted_class": "transverse_crack", "confidence": 0.641, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1032", "timestamp": "2024-01-18T00:21:00", "ward": "Ward-10", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1033", "timestamp": "2024-01-05T03:33:00", "ward": "Ward-1", "country": "Czech", "category": "roads", "image_stem": "Czech_0033", "has_pothole": true, "lat": 19.23308, "lon": 73.03959}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1033", "timestamp": "2024-01-05T03:33:08", "ward": "Ward-1", "predicted_class": "transverse_crack", "confidence": 0.698, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1033", "timestamp": "2024-01-21T03:33:00", "ward": "Ward-1", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1034", "timestamp": "2024-01-05T06:28:00", "ward": "Ward-6", "country": "United_States", "category": "roads", "image_stem": "United_States_0034", "has_pothole": true, "lat": 19.21664, "lon": 72.87427}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1034", "timestamp": "2024-01-05T06:28:08", "ward": "Ward-6", "predicted_class": "pothole", "confidence": 0.712, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1034", "timestamp": "2024-01-07T06:28:00", "ward": "Ward-6", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1035", "timestamp": "2024-01-05T09:09:00", "ward": "Ward-6", "country": "Czech", "category": "roads", "image_stem": "Czech_0035", "has_pothole": true, "lat": 19.09768, "lon": 72.94342}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1035", "timestamp": "2024-01-05T09:09:08", "ward": "Ward-6", "predicted_class": "pothole", "confidence": 0.8, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1035", "timestamp": "2024-01-15T09:09:00", "ward": "Ward-6", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1036", "timestamp": "2024-01-05T12:06:00", "ward": "Ward-6", "country": "Czech", "category": "roads", "image_stem": "Czech_0036", "has_pothole": false, "lat": 19.07382, "lon": 73.04348}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1036", "timestamp": "2024-01-05T12:06:08", "ward": "Ward-6", "predicted_class": "longitudinal_crack", "confidence": 0.829, "severity": "Medium"}
+{"event_type": "issue.created", "issue_id": "UF-1037", "timestamp": "2024-01-05T15:49:00", "ward": "Ward-3", "country": "India", "category": "roads", "image_stem": "India_0037", "has_pothole": true, "lat": 19.18709, "lon": 73.04887}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1037", "timestamp": "2024-01-05T15:49:08", "ward": "Ward-3", "predicted_class": "pothole", "confidence": 0.785, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1037", "timestamp": "2024-01-20T15:49:00", "ward": "Ward-3", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1038", "timestamp": "2024-01-05T18:00:00", "ward": "Ward-4", "country": "Japan", "category": "roads", "image_stem": "Japan_0038", "has_pothole": false, "lat": 19.19812, "lon": 73.008}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1038", "timestamp": "2024-01-05T18:00:08", "ward": "Ward-4", "predicted_class": "transverse_crack", "confidence": 0.659, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1038", "timestamp": "2024-01-22T18:00:00", "ward": "Ward-4", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1039", "timestamp": "2024-01-05T21:03:00", "ward": "Ward-7", "country": "India", "category": "roads", "image_stem": "India_0039", "has_pothole": false, "lat": 19.08722, "lon": 72.94838}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1039", "timestamp": "2024-01-05T21:03:08", "ward": "Ward-7", "predicted_class": "alligator_crack", "confidence": 0.853, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1039", "timestamp": "2024-01-15T21:03:00", "ward": "Ward-7", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1040", "timestamp": "2024-01-06T00:08:00", "ward": "Ward-10", "country": "Japan", "category": "roads", "image_stem": "Japan_0040", "has_pothole": false, "lat": 19.08858, "lon": 73.03047}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1040", "timestamp": "2024-01-06T00:08:08", "ward": "Ward-10", "predicted_class": "pothole", "confidence": 0.85, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1040", "timestamp": "2024-01-21T00:08:00", "ward": "Ward-10", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1041", "timestamp": "2024-01-06T03:11:00", "ward": "Ward-4", "country": "Japan", "category": "roads", "image_stem": "Japan_0041", "has_pothole": false, "lat": 19.15495, "lon": 72.87149}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1041", "timestamp": "2024-01-06T03:11:08", "ward": "Ward-4", "predicted_class": "transverse_crack", "confidence": 0.764, "severity": "Medium"}
+{"event_type": "issue.created", "issue_id": "UF-1042", "timestamp": "2024-01-06T06:33:00", "ward": "Ward-2", "country": "United_States", "category": "roads", "image_stem": "United_States_0042", "has_pothole": false, "lat": 19.09078, "lon": 72.95919}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1042", "timestamp": "2024-01-06T06:33:08", "ward": "Ward-2", "predicted_class": "alligator_crack", "confidence": 0.644, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1042", "timestamp": "2024-01-08T06:33:00", "ward": "Ward-2", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1043", "timestamp": "2024-01-06T09:02:00", "ward": "Ward-2", "country": "India", "category": "roads", "image_stem": "India_0043", "has_pothole": false, "lat": 19.21709, "lon": 72.96778}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1043", "timestamp": "2024-01-06T09:02:08", "ward": "Ward-2", "predicted_class": "transverse_crack", "confidence": 0.558, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1043", "timestamp": "2024-01-11T09:02:00", "ward": "Ward-2", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1044", "timestamp": "2024-01-06T12:03:00", "ward": "Ward-8", "country": "Japan", "category": "roads", "image_stem": "Japan_0044", "has_pothole": false, "lat": 19.2481, "lon": 72.89899}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1044", "timestamp": "2024-01-06T12:03:08", "ward": "Ward-8", "predicted_class": "alligator_crack", "confidence": 0.949, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1044", "timestamp": "2024-01-18T12:03:00", "ward": "Ward-8", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1045", "timestamp": "2024-01-06T15:05:00", "ward": "Ward-2", "country": "Czech", "category": "roads", "image_stem": "Czech_0045", "has_pothole": true, "lat": 19.14814, "lon": 72.90576}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1045", "timestamp": "2024-01-06T15:05:08", "ward": "Ward-2", "predicted_class": "alligator_crack", "confidence": 0.962, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1045", "timestamp": "2024-01-15T15:05:00", "ward": "Ward-2", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1046", "timestamp": "2024-01-06T18:18:00", "ward": "Ward-8", "country": "Japan", "category": "roads", "image_stem": "Japan_0046", "has_pothole": false, "lat": 19.10276, "lon": 73.0156}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1046", "timestamp": "2024-01-06T18:18:08", "ward": "Ward-8", "predicted_class": "transverse_crack", "confidence": 0.936, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1046", "timestamp": "2024-01-25T18:18:00", "ward": "Ward-8", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1047", "timestamp": "2024-01-06T21:02:00", "ward": "Ward-7", "country": "Japan", "category": "roads", "image_stem": "Japan_0047", "has_pothole": true, "lat": 19.10927, "lon": 72.87656}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1047", "timestamp": "2024-01-06T21:02:08", "ward": "Ward-7", "predicted_class": "alligator_crack", "confidence": 0.834, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1047", "timestamp": "2024-01-15T21:02:00", "ward": "Ward-7", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1048", "timestamp": "2024-01-07T00:21:00", "ward": "Ward-9", "country": "India", "category": "roads", "image_stem": "India_0048", "has_pothole": false, "lat": 19.2319, "lon": 72.97811}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1048", "timestamp": "2024-01-07T00:21:08", "ward": "Ward-9", "predicted_class": "longitudinal_crack", "confidence": 0.558, "severity": "Low"}
+{"event_type": "issue.created", "issue_id": "UF-1049", "timestamp": "2024-01-07T03:12:00", "ward": "Ward-9", "country": "India", "category": "roads", "image_stem": "India_0049", "has_pothole": true, "lat": 19.14285, "lon": 72.89955}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1049", "timestamp": "2024-01-07T03:12:08", "ward": "Ward-9", "predicted_class": "pothole", "confidence": 0.615, "severity": "High"}
+{"event_type": "issue.created", "issue_id": "UF-1050", "timestamp": "2024-01-07T06:20:00", "ward": "Ward-10", "country": "Czech", "category": "roads", "image_stem": "Czech_0050", "has_pothole": false, "lat": 19.22991, "lon": 72.90973}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1050", "timestamp": "2024-01-07T06:20:08", "ward": "Ward-10", "predicted_class": "longitudinal_crack", "confidence": 0.728, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1050", "timestamp": "2024-01-20T06:20:00", "ward": "Ward-10", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1051", "timestamp": "2024-01-07T09:31:00", "ward": "Ward-9", "country": "India", "category": "roads", "image_stem": "India_0051", "has_pothole": false, "lat": 19.16155, "lon": 72.8925}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1051", "timestamp": "2024-01-07T09:31:08", "ward": "Ward-9", "predicted_class": "transverse_crack", "confidence": 0.859, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1051", "timestamp": "2024-01-10T09:31:00", "ward": "Ward-9", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1052", "timestamp": "2024-01-07T12:00:00", "ward": "Ward-1", "country": "United_States", "category": "roads", "image_stem": "United_States_0052", "has_pothole": false, "lat": 19.14899, "lon": 72.87266}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1052", "timestamp": "2024-01-07T12:00:08", "ward": "Ward-1", "predicted_class": "transverse_crack", "confidence": 0.832, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1052", "timestamp": "2024-01-27T12:00:00", "ward": "Ward-1", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1053", "timestamp": "2024-01-07T15:07:00", "ward": "Ward-3", "country": "United_States", "category": "roads", "image_stem": "United_States_0053", "has_pothole": true, "lat": 19.23972, "lon": 72.95782}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1053", "timestamp": "2024-01-07T15:07:08", "ward": "Ward-3", "predicted_class": "pothole", "confidence": 0.729, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1053", "timestamp": "2024-01-23T15:07:00", "ward": "Ward-3", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1054", "timestamp": "2024-01-07T18:28:00", "ward": "Ward-7", "country": "United_States", "category": "roads", "image_stem": "United_States_0054", "has_pothole": false, "lat": 19.2078, "lon": 73.05956}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1054", "timestamp": "2024-01-07T18:28:08", "ward": "Ward-7", "predicted_class": "longitudinal_crack", "confidence": 0.865, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1055", "timestamp": "2024-01-07T21:24:00", "ward": "Ward-9", "country": "Japan", "category": "roads", "image_stem": "Japan_0055", "has_pothole": true, "lat": 19.25987, "lon": 72.92386}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1055", "timestamp": "2024-01-07T21:24:08", "ward": "Ward-9", "predicted_class": "pothole", "confidence": 0.687, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1055", "timestamp": "2024-01-08T21:24:00", "ward": "Ward-9", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1056", "timestamp": "2024-01-08T00:46:00", "ward": "Ward-9", "country": "Japan", "category": "roads", "image_stem": "Japan_0056", "has_pothole": false, "lat": 19.22645, "lon": 72.90837}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1056", "timestamp": "2024-01-08T00:46:08", "ward": "Ward-9", "predicted_class": "alligator_crack", "confidence": 0.842, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1056", "timestamp": "2024-01-23T00:46:00", "ward": "Ward-9", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1057", "timestamp": "2024-01-08T03:22:00", "ward": "Ward-7", "country": "Czech", "category": "roads", "image_stem": "Czech_0057", "has_pothole": false, "lat": 19.10908, "lon": 72.91007}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1057", "timestamp": "2024-01-08T03:22:08", "ward": "Ward-7", "predicted_class": "alligator_crack", "confidence": 0.941, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1057", "timestamp": "2024-01-24T03:22:00", "ward": "Ward-7", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1058", "timestamp": "2024-01-08T06:22:00", "ward": "Ward-2", "country": "United_States", "category": "roads", "image_stem": "United_States_0058", "has_pothole": false, "lat": 19.2503, "lon": 72.9289}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1058", "timestamp": "2024-01-08T06:22:08", "ward": "Ward-2", "predicted_class": "alligator_crack", "confidence": 0.766, "severity": "Low"}
+{"event_type": "issue.created", "issue_id": "UF-1059", "timestamp": "2024-01-08T09:00:00", "ward": "Ward-4", "country": "Japan", "category": "roads", "image_stem": "Japan_0059", "has_pothole": false, "lat": 19.26822, "lon": 72.95915}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1059", "timestamp": "2024-01-08T09:00:08", "ward": "Ward-4", "predicted_class": "longitudinal_crack", "confidence": 0.905, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1059", "timestamp": "2024-01-27T09:00:00", "ward": "Ward-4", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1060", "timestamp": "2024-01-08T12:18:00", "ward": "Ward-2", "country": "Czech", "category": "roads", "image_stem": "Czech_0060", "has_pothole": false, "lat": 19.19926, "lon": 73.05378}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1060", "timestamp": "2024-01-08T12:18:08", "ward": "Ward-2", "predicted_class": "longitudinal_crack", "confidence": 0.699, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1060", "timestamp": "2024-01-14T12:18:00", "ward": "Ward-2", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1061", "timestamp": "2024-01-08T15:06:00", "ward": "Ward-5", "country": "Japan", "category": "roads", "image_stem": "Japan_0061", "has_pothole": true, "lat": 19.18997, "lon": 73.06628}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1061", "timestamp": "2024-01-08T15:06:08", "ward": "Ward-5", "predicted_class": "pothole", "confidence": 0.849, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1061", "timestamp": "2024-01-19T15:06:00", "ward": "Ward-5", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1062", "timestamp": "2024-01-08T18:29:00", "ward": "Ward-10", "country": "India", "category": "roads", "image_stem": "India_0062", "has_pothole": false, "lat": 19.25885, "lon": 72.89947}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1062", "timestamp": "2024-01-08T18:29:08", "ward": "Ward-10", "predicted_class": "longitudinal_crack", "confidence": 0.656, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1062", "timestamp": "2024-01-11T18:29:00", "ward": "Ward-10", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1063", "timestamp": "2024-01-08T21:12:00", "ward": "Ward-10", "country": "Czech", "category": "roads", "image_stem": "Czech_0063", "has_pothole": false, "lat": 19.21239, "lon": 73.04397}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1063", "timestamp": "2024-01-08T21:12:08", "ward": "Ward-10", "predicted_class": "transverse_crack", "confidence": 0.927, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1063", "timestamp": "2024-01-11T21:12:00", "ward": "Ward-10", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1064", "timestamp": "2024-01-09T00:06:00", "ward": "Ward-10", "country": "Czech", "category": "roads", "image_stem": "Czech_0064", "has_pothole": true, "lat": 19.20566, "lon": 73.0677}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1064", "timestamp": "2024-01-09T00:06:08", "ward": "Ward-10", "predicted_class": "pothole", "confidence": 0.613, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1064", "timestamp": "2024-01-15T00:06:00", "ward": "Ward-10", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1065", "timestamp": "2024-01-09T03:26:00", "ward": "Ward-9", "country": "India", "category": "roads", "image_stem": "India_0065", "has_pothole": true, "lat": 19.08319, "lon": 72.99804}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1065", "timestamp": "2024-01-09T03:26:08", "ward": "Ward-9", "predicted_class": "pothole", "confidence": 0.706, "severity": "High"}
+{"event_type": "issue.created", "issue_id": "UF-1066", "timestamp": "2024-01-09T06:25:00", "ward": "Ward-3", "country": "Japan", "category": "roads", "image_stem": "Japan_0066", "has_pothole": false, "lat": 19.14091, "lon": 72.89027}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1066", "timestamp": "2024-01-09T06:25:08", "ward": "Ward-3", "predicted_class": "alligator_crack", "confidence": 0.762, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1066", "timestamp": "2024-01-14T06:25:00", "ward": "Ward-3", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1067", "timestamp": "2024-01-09T09:47:00", "ward": "Ward-6", "country": "India", "category": "roads", "image_stem": "India_0067", "has_pothole": false, "lat": 19.22576, "lon": 72.97577}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1067", "timestamp": "2024-01-09T09:47:08", "ward": "Ward-6", "predicted_class": "longitudinal_crack", "confidence": 0.71, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1067", "timestamp": "2024-01-22T09:47:00", "ward": "Ward-6", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1068", "timestamp": "2024-01-09T12:43:00", "ward": "Ward-7", "country": "India", "category": "roads", "image_stem": "India_0068", "has_pothole": false, "lat": 19.19156, "lon": 72.88389}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1068", "timestamp": "2024-01-09T12:43:08", "ward": "Ward-7", "predicted_class": "longitudinal_crack", "confidence": 0.581, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1068", "timestamp": "2024-01-22T12:43:00", "ward": "Ward-7", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1069", "timestamp": "2024-01-09T15:07:00", "ward": "Ward-3", "country": "Japan", "category": "roads", "image_stem": "Japan_0069", "has_pothole": false, "lat": 19.08192, "lon": 72.93987}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1069", "timestamp": "2024-01-09T15:07:08", "ward": "Ward-3", "predicted_class": "longitudinal_crack", "confidence": 0.915, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1069", "timestamp": "2024-01-14T15:07:00", "ward": "Ward-3", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1070", "timestamp": "2024-01-09T18:45:00", "ward": "Ward-2", "country": "Japan", "category": "roads", "image_stem": "Japan_0070", "has_pothole": false, "lat": 19.11631, "lon": 72.91313}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1070", "timestamp": "2024-01-09T18:45:08", "ward": "Ward-2", "predicted_class": "transverse_crack", "confidence": 0.843, "severity": "Medium"}
+{"event_type": "issue.created", "issue_id": "UF-1071", "timestamp": "2024-01-09T21:12:00", "ward": "Ward-10", "country": "Japan", "category": "roads", "image_stem": "Japan_0071", "has_pothole": true, "lat": 19.08556, "lon": 73.00359}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1071", "timestamp": "2024-01-09T21:12:08", "ward": "Ward-10", "predicted_class": "pothole", "confidence": 0.815, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1071", "timestamp": "2024-01-20T21:12:00", "ward": "Ward-10", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1072", "timestamp": "2024-01-10T00:01:00", "ward": "Ward-2", "country": "Japan", "category": "roads", "image_stem": "Japan_0072", "has_pothole": false, "lat": 19.15748, "lon": 72.99578}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1072", "timestamp": "2024-01-10T00:01:08", "ward": "Ward-2", "predicted_class": "transverse_crack", "confidence": 0.805, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1072", "timestamp": "2024-01-28T00:01:00", "ward": "Ward-2", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1073", "timestamp": "2024-01-10T03:22:00", "ward": "Ward-9", "country": "Czech", "category": "roads", "image_stem": "Czech_0073", "has_pothole": false, "lat": 19.14966, "lon": 72.89293}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1073", "timestamp": "2024-01-10T03:22:08", "ward": "Ward-9", "predicted_class": "transverse_crack", "confidence": 0.898, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1074", "timestamp": "2024-01-10T06:29:00", "ward": "Ward-4", "country": "United_States", "category": "roads", "image_stem": "United_States_0074", "has_pothole": false, "lat": 19.2337, "lon": 72.90758}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1074", "timestamp": "2024-01-10T06:29:08", "ward": "Ward-4", "predicted_class": "longitudinal_crack", "confidence": 0.595, "severity": "Medium"}
+{"event_type": "issue.created", "issue_id": "UF-1075", "timestamp": "2024-01-10T09:09:00", "ward": "Ward-1", "country": "United_States", "category": "roads", "image_stem": "United_States_0075", "has_pothole": true, "lat": 19.26573, "lon": 73.04125}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1075", "timestamp": "2024-01-10T09:09:08", "ward": "Ward-1", "predicted_class": "pothole", "confidence": 0.834, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1075", "timestamp": "2024-01-11T09:09:00", "ward": "Ward-1", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1076", "timestamp": "2024-01-10T12:19:00", "ward": "Ward-3", "country": "Czech", "category": "roads", "image_stem": "Czech_0076", "has_pothole": true, "lat": 19.19565, "lon": 73.01383}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1076", "timestamp": "2024-01-10T12:19:08", "ward": "Ward-3", "predicted_class": "transverse_crack", "confidence": 0.953, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1076", "timestamp": "2024-01-17T12:19:00", "ward": "Ward-3", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1077", "timestamp": "2024-01-10T15:14:00", "ward": "Ward-5", "country": "India", "category": "roads", "image_stem": "India_0077", "has_pothole": false, "lat": 19.11024, "lon": 72.90242}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1077", "timestamp": "2024-01-10T15:14:08", "ward": "Ward-5", "predicted_class": "transverse_crack", "confidence": 0.9, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1077", "timestamp": "2024-01-11T15:14:00", "ward": "Ward-5", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1078", "timestamp": "2024-01-10T18:00:00", "ward": "Ward-1", "country": "Japan", "category": "roads", "image_stem": "Japan_0078", "has_pothole": false, "lat": 19.24465, "lon": 72.91998}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1078", "timestamp": "2024-01-10T18:00:08", "ward": "Ward-1", "predicted_class": "transverse_crack", "confidence": 0.574, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1078", "timestamp": "2024-01-16T18:00:00", "ward": "Ward-1", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1079", "timestamp": "2024-01-10T21:28:00", "ward": "Ward-9", "country": "India", "category": "roads", "image_stem": "India_0079", "has_pothole": false, "lat": 19.18598, "lon": 72.87839}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1079", "timestamp": "2024-01-10T21:28:08", "ward": "Ward-9", "predicted_class": "alligator_crack", "confidence": 0.858, "severity": "Low"}
+{"event_type": "issue.created", "issue_id": "UF-1080", "timestamp": "2024-01-11T00:34:00", "ward": "Ward-6", "country": "United_States", "category": "roads", "image_stem": "United_States_0080", "has_pothole": false, "lat": 19.21366, "lon": 72.99012}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1080", "timestamp": "2024-01-11T00:34:08", "ward": "Ward-6", "predicted_class": "longitudinal_crack", "confidence": 0.7, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1080", "timestamp": "2024-01-15T00:34:00", "ward": "Ward-6", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1081", "timestamp": "2024-01-11T03:37:00", "ward": "Ward-1", "country": "Japan", "category": "roads", "image_stem": "Japan_0081", "has_pothole": false, "lat": 19.18861, "lon": 73.00478}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1081", "timestamp": "2024-01-11T03:37:08", "ward": "Ward-1", "predicted_class": "alligator_crack", "confidence": 0.745, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1081", "timestamp": "2024-01-28T03:37:00", "ward": "Ward-1", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1082", "timestamp": "2024-01-11T06:20:00", "ward": "Ward-8", "country": "India", "category": "roads", "image_stem": "India_0082", "has_pothole": true, "lat": 19.20212, "lon": 72.93952}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1082", "timestamp": "2024-01-11T06:20:08", "ward": "Ward-8", "predicted_class": "alligator_crack", "confidence": 0.721, "severity": "Medium"}
+{"event_type": "issue.created", "issue_id": "UF-1083", "timestamp": "2024-01-11T09:48:00", "ward": "Ward-10", "country": "Czech", "category": "roads", "image_stem": "Czech_0083", "has_pothole": true, "lat": 19.11649, "lon": 73.02348}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1083", "timestamp": "2024-01-11T09:48:08", "ward": "Ward-10", "predicted_class": "pothole", "confidence": 0.658, "severity": "High"}
+{"event_type": "issue.created", "issue_id": "UF-1084", "timestamp": "2024-01-11T12:13:00", "ward": "Ward-4", "country": "Japan", "category": "roads", "image_stem": "Japan_0084", "has_pothole": false, "lat": 19.08827, "lon": 73.03067}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1084", "timestamp": "2024-01-11T12:13:08", "ward": "Ward-4", "predicted_class": "alligator_crack", "confidence": 0.613, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1084", "timestamp": "2024-01-12T12:13:00", "ward": "Ward-4", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1085", "timestamp": "2024-01-11T15:49:00", "ward": "Ward-1", "country": "India", "category": "roads", "image_stem": "India_0085", "has_pothole": false, "lat": 19.10387, "lon": 72.87209}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1085", "timestamp": "2024-01-11T15:49:08", "ward": "Ward-1", "predicted_class": "transverse_crack", "confidence": 0.824, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1085", "timestamp": "2024-01-19T15:49:00", "ward": "Ward-1", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1086", "timestamp": "2024-01-11T18:22:00", "ward": "Ward-3", "country": "Japan", "category": "roads", "image_stem": "Japan_0086", "has_pothole": false, "lat": 19.08998, "lon": 72.97997}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1086", "timestamp": "2024-01-11T18:22:08", "ward": "Ward-3", "predicted_class": "alligator_crack", "confidence": 0.719, "severity": "Medium"}
+{"event_type": "issue.created", "issue_id": "UF-1087", "timestamp": "2024-01-11T21:02:00", "ward": "Ward-8", "country": "Czech", "category": "roads", "image_stem": "Czech_0087", "has_pothole": false, "lat": 19.08531, "lon": 72.94456}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1087", "timestamp": "2024-01-11T21:02:08", "ward": "Ward-8", "predicted_class": "transverse_crack", "confidence": 0.613, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1087", "timestamp": "2024-01-14T21:02:00", "ward": "Ward-8", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1088", "timestamp": "2024-01-12T00:41:00", "ward": "Ward-8", "country": "United_States", "category": "roads", "image_stem": "United_States_0088", "has_pothole": false, "lat": 19.10445, "lon": 73.05146}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1088", "timestamp": "2024-01-12T00:41:08", "ward": "Ward-8", "predicted_class": "pothole", "confidence": 0.715, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1089", "timestamp": "2024-01-12T03:33:00", "ward": "Ward-3", "country": "Czech", "category": "roads", "image_stem": "Czech_0089", "has_pothole": true, "lat": 19.16641, "lon": 72.9668}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1089", "timestamp": "2024-01-12T03:33:08", "ward": "Ward-3", "predicted_class": "longitudinal_crack", "confidence": 0.713, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1089", "timestamp": "2024-01-22T03:33:00", "ward": "Ward-3", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1090", "timestamp": "2024-01-12T06:19:00", "ward": "Ward-8", "country": "Japan", "category": "roads", "image_stem": "Japan_0090", "has_pothole": false, "lat": 19.14416, "lon": 72.93125}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1090", "timestamp": "2024-01-12T06:19:08", "ward": "Ward-8", "predicted_class": "alligator_crack", "confidence": 0.862, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1090", "timestamp": "2024-01-26T06:19:00", "ward": "Ward-8", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1091", "timestamp": "2024-01-12T09:41:00", "ward": "Ward-3", "country": "Czech", "category": "roads", "image_stem": "Czech_0091", "has_pothole": false, "lat": 19.13609, "lon": 72.90633}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1091", "timestamp": "2024-01-12T09:41:08", "ward": "Ward-3", "predicted_class": "pothole", "confidence": 0.797, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1091", "timestamp": "2024-01-26T09:41:00", "ward": "Ward-3", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1092", "timestamp": "2024-01-12T12:40:00", "ward": "Ward-10", "country": "Czech", "category": "roads", "image_stem": "Czech_0092", "has_pothole": false, "lat": 19.07014, "lon": 72.96525}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1092", "timestamp": "2024-01-12T12:40:08", "ward": "Ward-10", "predicted_class": "longitudinal_crack", "confidence": 0.937, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1092", "timestamp": "2024-01-30T12:40:00", "ward": "Ward-10", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1093", "timestamp": "2024-01-12T15:12:00", "ward": "Ward-10", "country": "India", "category": "roads", "image_stem": "India_0093", "has_pothole": true, "lat": 19.11971, "lon": 72.94008}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1093", "timestamp": "2024-01-12T15:12:08", "ward": "Ward-10", "predicted_class": "pothole", "confidence": 0.647, "severity": "High"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1093", "timestamp": "2024-01-25T15:12:00", "ward": "Ward-10", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1094", "timestamp": "2024-01-12T18:45:00", "ward": "Ward-5", "country": "Japan", "category": "roads", "image_stem": "Japan_0094", "has_pothole": true, "lat": 19.16709, "lon": 72.9374}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1094", "timestamp": "2024-01-12T18:45:08", "ward": "Ward-5", "predicted_class": "pothole", "confidence": 0.738, "severity": "High"}
+{"event_type": "issue.created", "issue_id": "UF-1095", "timestamp": "2024-01-12T21:21:00", "ward": "Ward-2", "country": "Japan", "category": "roads", "image_stem": "Japan_0095", "has_pothole": false, "lat": 19.08782, "lon": 73.05923}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1095", "timestamp": "2024-01-12T21:21:08", "ward": "Ward-2", "predicted_class": "longitudinal_crack", "confidence": 0.797, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1096", "timestamp": "2024-01-13T00:19:00", "ward": "Ward-2", "country": "Czech", "category": "roads", "image_stem": "Czech_0096", "has_pothole": false, "lat": 19.24842, "lon": 73.01957}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1096", "timestamp": "2024-01-13T00:19:08", "ward": "Ward-2", "predicted_class": "transverse_crack", "confidence": 0.796, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1096", "timestamp": "2024-01-15T00:19:00", "ward": "Ward-2", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1097", "timestamp": "2024-01-13T03:23:00", "ward": "Ward-6", "country": "India", "category": "roads", "image_stem": "India_0097", "has_pothole": false, "lat": 19.07769, "lon": 73.0503}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1097", "timestamp": "2024-01-13T03:23:08", "ward": "Ward-6", "predicted_class": "pothole", "confidence": 0.844, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1097", "timestamp": "2024-02-01T03:23:00", "ward": "Ward-6", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1098", "timestamp": "2024-01-13T06:10:00", "ward": "Ward-3", "country": "Czech", "category": "roads", "image_stem": "Czech_0098", "has_pothole": false, "lat": 19.15304, "lon": 72.97646}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1098", "timestamp": "2024-01-13T06:10:08", "ward": "Ward-3", "predicted_class": "transverse_crack", "confidence": 0.816, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1098", "timestamp": "2024-01-29T06:10:00", "ward": "Ward-3", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1099", "timestamp": "2024-01-13T09:45:00", "ward": "Ward-1", "country": "Japan", "category": "roads", "image_stem": "Japan_0099", "has_pothole": false, "lat": 19.08588, "lon": 72.93408}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1099", "timestamp": "2024-01-13T09:45:08", "ward": "Ward-1", "predicted_class": "transverse_crack", "confidence": 0.778, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1100", "timestamp": "2024-01-13T12:46:00", "ward": "Ward-5", "country": "Czech", "category": "roads", "image_stem": "Czech_0100", "has_pothole": false, "lat": 19.20523, "lon": 73.043}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1100", "timestamp": "2024-01-13T12:46:08", "ward": "Ward-5", "predicted_class": "pothole", "confidence": 0.576, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1100", "timestamp": "2024-01-16T12:46:00", "ward": "Ward-5", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1101", "timestamp": "2024-01-13T15:08:00", "ward": "Ward-4", "country": "Japan", "category": "roads", "image_stem": "Japan_0101", "has_pothole": false, "lat": 19.26309, "lon": 73.02632}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1101", "timestamp": "2024-01-13T15:08:08", "ward": "Ward-4", "predicted_class": "transverse_crack", "confidence": 0.796, "severity": "Medium"}
+{"event_type": "issue.created", "issue_id": "UF-1102", "timestamp": "2024-01-13T18:02:00", "ward": "Ward-1", "country": "Japan", "category": "roads", "image_stem": "Japan_0102", "has_pothole": true, "lat": 19.1138, "lon": 72.91653}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1102", "timestamp": "2024-01-13T18:02:08", "ward": "Ward-1", "predicted_class": "pothole", "confidence": 0.616, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1102", "timestamp": "2024-01-24T18:02:00", "ward": "Ward-1", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1103", "timestamp": "2024-01-13T21:46:00", "ward": "Ward-2", "country": "Czech", "category": "roads", "image_stem": "Czech_0103", "has_pothole": false, "lat": 19.20836, "lon": 72.9131}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1103", "timestamp": "2024-01-13T21:46:08", "ward": "Ward-2", "predicted_class": "alligator_crack", "confidence": 0.721, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1103", "timestamp": "2024-01-29T21:46:00", "ward": "Ward-2", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1104", "timestamp": "2024-01-14T00:20:00", "ward": "Ward-8", "country": "Czech", "category": "roads", "image_stem": "Czech_0104", "has_pothole": true, "lat": 19.1403, "lon": 72.92116}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1104", "timestamp": "2024-01-14T00:20:08", "ward": "Ward-8", "predicted_class": "transverse_crack", "confidence": 0.754, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1105", "timestamp": "2024-01-14T03:30:00", "ward": "Ward-8", "country": "India", "category": "roads", "image_stem": "India_0105", "has_pothole": false, "lat": 19.16575, "lon": 72.88981}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1105", "timestamp": "2024-01-14T03:30:08", "ward": "Ward-8", "predicted_class": "alligator_crack", "confidence": 0.717, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1105", "timestamp": "2024-01-19T03:30:00", "ward": "Ward-8", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1106", "timestamp": "2024-01-14T06:17:00", "ward": "Ward-2", "country": "India", "category": "roads", "image_stem": "India_0106", "has_pothole": true, "lat": 19.09149, "lon": 72.97704}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1106", "timestamp": "2024-01-14T06:17:08", "ward": "Ward-2", "predicted_class": "longitudinal_crack", "confidence": 0.605, "severity": "Low"}
+{"event_type": "issue.created", "issue_id": "UF-1107", "timestamp": "2024-01-14T09:18:00", "ward": "Ward-3", "country": "Czech", "category": "roads", "image_stem": "Czech_0107", "has_pothole": false, "lat": 19.17959, "lon": 73.0584}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1107", "timestamp": "2024-01-14T09:18:08", "ward": "Ward-3", "predicted_class": "longitudinal_crack", "confidence": 0.935, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1107", "timestamp": "2024-01-21T09:18:00", "ward": "Ward-3", "status": "submitted"}
+{"event_type": "issue.created", "issue_id": "UF-1108", "timestamp": "2024-01-14T12:21:00", "ward": "Ward-6", "country": "India", "category": "roads", "image_stem": "India_0108", "has_pothole": false, "lat": 19.1087, "lon": 73.0544}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1108", "timestamp": "2024-01-14T12:21:08", "ward": "Ward-6", "predicted_class": "alligator_crack", "confidence": 0.621, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1108", "timestamp": "2024-02-01T12:21:00", "ward": "Ward-6", "status": "in_progress"}
+{"event_type": "issue.created", "issue_id": "UF-1109", "timestamp": "2024-01-14T15:15:00", "ward": "Ward-7", "country": "India", "category": "roads", "image_stem": "India_0109", "has_pothole": false, "lat": 19.12729, "lon": 72.99211}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1109", "timestamp": "2024-01-14T15:15:08", "ward": "Ward-7", "predicted_class": "transverse_crack", "confidence": 0.621, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1109", "timestamp": "2024-02-02T15:15:00", "ward": "Ward-7", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1110", "timestamp": "2024-01-14T18:46:00", "ward": "Ward-4", "country": "India", "category": "roads", "image_stem": "India_0110", "has_pothole": false, "lat": 19.1061, "lon": 72.87769}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1110", "timestamp": "2024-01-14T18:46:08", "ward": "Ward-4", "predicted_class": "longitudinal_crack", "confidence": 0.554, "severity": "High"}
+{"event_type": "issue.created", "issue_id": "UF-1111", "timestamp": "2024-01-14T21:47:00", "ward": "Ward-10", "country": "United_States", "category": "roads", "image_stem": "United_States_0111", "has_pothole": false, "lat": 19.20947, "lon": 73.06523}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1111", "timestamp": "2024-01-14T21:47:08", "ward": "Ward-10", "predicted_class": "longitudinal_crack", "confidence": 0.87, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1111", "timestamp": "2024-01-29T21:47:00", "ward": "Ward-10", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1112", "timestamp": "2024-01-15T00:36:00", "ward": "Ward-3", "country": "United_States", "category": "roads", "image_stem": "United_States_0112", "has_pothole": false, "lat": 19.10687, "lon": 72.99816}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1112", "timestamp": "2024-01-15T00:36:08", "ward": "Ward-3", "predicted_class": "transverse_crack", "confidence": 0.602, "severity": "Medium"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1112", "timestamp": "2024-01-17T00:36:00", "ward": "Ward-3", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1113", "timestamp": "2024-01-15T03:31:00", "ward": "Ward-6", "country": "Japan", "category": "roads", "image_stem": "Japan_0113", "has_pothole": false, "lat": 19.11552, "lon": 73.0615}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1113", "timestamp": "2024-01-15T03:31:08", "ward": "Ward-6", "predicted_class": "longitudinal_crack", "confidence": 0.557, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1113", "timestamp": "2024-01-20T03:31:00", "ward": "Ward-6", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1114", "timestamp": "2024-01-15T06:29:00", "ward": "Ward-9", "country": "Czech", "category": "roads", "image_stem": "Czech_0114", "has_pothole": false, "lat": 19.25545, "lon": 73.04494}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1114", "timestamp": "2024-01-15T06:29:08", "ward": "Ward-9", "predicted_class": "transverse_crack", "confidence": 0.6, "severity": "Medium"}
+{"event_type": "issue.created", "issue_id": "UF-1115", "timestamp": "2024-01-15T09:03:00", "ward": "Ward-8", "country": "Japan", "category": "roads", "image_stem": "Japan_0115", "has_pothole": true, "lat": 19.15135, "lon": 72.91808}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1115", "timestamp": "2024-01-15T09:03:08", "ward": "Ward-8", "predicted_class": "pothole", "confidence": 0.809, "severity": "Critical"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1115", "timestamp": "2024-01-16T09:03:00", "ward": "Ward-8", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1116", "timestamp": "2024-01-15T12:46:00", "ward": "Ward-1", "country": "Japan", "category": "roads", "image_stem": "Japan_0116", "has_pothole": false, "lat": 19.08537, "lon": 72.88677}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1116", "timestamp": "2024-01-15T12:46:08", "ward": "Ward-1", "predicted_class": "longitudinal_crack", "confidence": 0.873, "severity": "Critical"}
+{"event_type": "issue.created", "issue_id": "UF-1117", "timestamp": "2024-01-15T15:08:00", "ward": "Ward-9", "country": "United_States", "category": "roads", "image_stem": "United_States_0117", "has_pothole": false, "lat": 19.15149, "lon": 72.91239}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1117", "timestamp": "2024-01-15T15:08:08", "ward": "Ward-9", "predicted_class": "longitudinal_crack", "confidence": 0.827, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1117", "timestamp": "2024-01-27T15:08:00", "ward": "Ward-9", "status": "resolved"}
+{"event_type": "issue.created", "issue_id": "UF-1118", "timestamp": "2024-01-15T18:27:00", "ward": "Ward-9", "country": "India", "category": "roads", "image_stem": "India_0118", "has_pothole": false, "lat": 19.19008, "lon": 73.05147}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1118", "timestamp": "2024-01-15T18:27:08", "ward": "Ward-9", "predicted_class": "alligator_crack", "confidence": 0.717, "severity": "Low"}
+{"event_type": "issue.status_changed", "issue_id": "UF-1118", "timestamp": "2024-01-28T18:27:00", "ward": "Ward-9", "status": "acknowledged"}
+{"event_type": "issue.created", "issue_id": "UF-1119", "timestamp": "2024-01-15T21:04:00", "ward": "Ward-3", "country": "India", "category": "roads", "image_stem": "India_0119", "has_pothole": false, "lat": 19.0728, "lon": 72.9023}
+{"event_type": "issue.ai_verdict", "issue_id": "UF-1119", "timestamp": "2024-01-15T21:04:08", "ward": "Ward-3", "predicted_class": "transverse_crack", "confidence": 0.59, "severity": "Critical"}

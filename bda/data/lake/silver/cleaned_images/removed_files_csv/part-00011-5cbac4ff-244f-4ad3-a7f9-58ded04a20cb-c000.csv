@@ -1,0 +1,4 @@
+stem,classes,country,ext,filename,format,has_label,has_pothole,height,image_path,is_corrupt,label_format,label_path,label_valid,md5,num_objects,size_bytes,width
+Czech_0096,"",Czech,.jpg,Czech_0096.jpg,JPEG,false,false,720,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/Czech_0096.jpg,false,,,false,29c30be63df16ef3379960db164f2749,0,21680,1280
+Czech_0100,"",Czech,.jpg,Czech_0100.jpg,,false,false,,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/Czech_0100.jpg,true,,,false,992a50dd9df1d68752d7286b1f7b9b6e,0,10,
+India_0000,"",India,.jpg,India_0000.jpg,,false,false,,/mnt/c/Work/Projects/FullStackAI/UrbanFix/bda/data/sample/images/India_0000.jpg,true,,,false,992a50dd9df1d68752d7286b1f7b9b6e,0,10,

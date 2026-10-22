@@ -1,0 +1,2 @@
+total_images,corrupt_images,labeled_images,missing_labels,pothole_images,duplicate_groups,duplicate_extra_copies,class_imbalance_pothole_ratio,events_total
+120,6,106,14,33,2,11,0.275,5325

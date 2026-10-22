@@ -1,0 +1,25 @@
+ward_id,ward_name,zone,centroid_lat,centroid_lon,station_id,station_distance_km,road_km,drainage_capacity_mm_hr,population_2011
+A,Colaba / Fort / Churchgate,Island City,18.922,72.832,COLABA,2.49,48.0,25,185014
+B,Sandhurst Road / Dongri,Island City,18.95,72.837,COLABA,5.36,22.0,25,127290
+C,Marine Lines / Kalbadevi,Island City,18.95,72.825,COLABA,4.94,26.0,25,166161
+D,Grant Road / Malabar Hill,Island City,18.96,72.81,COLABA,5.95,55.0,25,346866
+E,Byculla / Mazgaon,Island City,18.975,72.835,COLABA,7.89,61.0,25,393286
+F/S,Parel / Sewri,Island City,19.0,72.845,CHEMBUR,8.23,54.0,30,360972
+F/N,Matunga / Sion,Island City,19.03,72.86,CHEMBUR,4.92,72.0,30,529034
+G/S,Worli / Prabhadevi,Island City,19.0,72.82,CHEMBUR,10.26,58.0,30,377749
+G/N,Dadar / Mahim,Island City,19.02,72.84,CHEMBUR,7.3,79.0,30,682902
+H/E,Bandra East / Santacruz East,Western Suburbs,19.07,72.85,SANTACRUZ,2.73,74.0,35,580835
+H/W,Bandra West / Khar,Western Suburbs,19.06,72.83,SANTACRUZ,4.98,61.0,35,307581
+K/E,Andheri East / Jogeshwari East,Western Suburbs,19.115,72.86,SANTACRUZ,2.88,118.0,40,823885
+K/W,Andheri West / Versova,Western Suburbs,19.13,72.83,SANTACRUZ,5.85,104.0,40,748688
+P/S,Goregaon,Western Suburbs,19.165,72.85,BORIVALI,7.34,71.0,40,463507
+P/N,Malad,Western Suburbs,19.185,72.848,BORIVALI,5.16,132.0,45,941366
+R/S,Kandivali,Western Suburbs,19.205,72.85,BORIVALI,2.94,97.0,45,691229
+R/C,Borivali,Western Suburbs,19.23,72.855,BORIVALI,0.19,83.0,50,562162
+R/N,Dahisar,Western Suburbs,19.25,72.86,BORIVALI,2.17,64.0,50,431368
+L,Kurla,Eastern Suburbs,19.07,72.88,SANTACRUZ,2.65,126.0,30,902225
+M/E,Govandi / Mankhurd,Eastern Suburbs,19.055,72.92,CHEMBUR,2.07,108.0,25,807720
+M/W,Chembur,Eastern Suburbs,19.05,72.9,CHEMBUR,0.25,69.0,35,411893
+N,Ghatkopar,Eastern Suburbs,19.09,72.91,CHEMBUR,4.32,88.0,35,622853
+S,Bhandup / Vikhroli,Eastern Suburbs,19.14,72.93,MULUND,3.86,101.0,40,743783
+T,Mulund,Eastern Suburbs,19.175,72.95,MULUND,0.83,62.0,45,341463
