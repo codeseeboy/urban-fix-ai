@@ -6,6 +6,6 @@
  * A server saved in Settings always wins; the LAN / USB addresses are tried last.
  */
 export const REMOTE_SERVERS = [
-  'RAGPC_TUNNEL_URL',
+  'https://plans-mails-tanks-purchasing.trycloudflare.com',
   'https://urban-fix-ai.onrender.com',
 ].filter((u) => /^https:\/\//.test(u));
