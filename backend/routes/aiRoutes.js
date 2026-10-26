@@ -1,127 +1,104 @@
+/**
+ * Small text-generation helpers for the report and issue screens.
+ *
+ *   POST /api/ai/refine   rewrite a citizen's rough title/description into a clear report
+ *   POST /api/ai/explain  plain-language "why this matters / what happens next" for an issue
+ *
+ * Both run on Gemini Flash-Lite (Vertex AI) with a response schema. If the model is
+ * unavailable they return 503 — never canned text dressed up as an AI answer.
+ */
+
 const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
-const { generateJSON, sanitizeText } = require('../services/llm/polishReply');
-const {
-    REFINE_SYSTEM,
-    getRefineUserPrompt,
-    EXPLAIN_SYSTEM,
-    getExplainUserPrompt,
-} = require('../services/llm/prompts');
+const { generate } = require('../services/llm/providers');
 
 const router = express.Router();
 
-function clamp(n, min, max) {
-    return Math.max(min, Math.min(max, n));
+function clean(v, maxLen) {
+    if (typeof v !== 'string') return '';
+    return v.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, maxLen);
 }
 
-function toBool(v, fallback = false) {
-    if (typeof v === 'boolean') return v;
-    if (typeof v === 'string') {
-        const s = v.trim().toLowerCase();
-        if (s === 'true') return true;
-        if (s === 'false') return false;
-    }
-    return fallback;
-}
+const REFINE_SYSTEM = `You rewrite citizen reports for a municipal civic-issue system in India.
+Make them clear, specific and factual. Keep every fact the citizen gave; never invent
+places, sizes, dates or injuries. No emojis, no exaggeration. Title max 60 characters,
+description 1-3 sentences. If the text is in Hindi or Hinglish, write the result in
+clear English.`;
 
-function toNumber(v, fallback = 0) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : fallback;
-}
-
-function cleanText(v, fallback, maxLen) {
-    const s = sanitizeText(typeof v === 'string' ? v : fallback, maxLen);
-    return s || fallback;
-}
-
-function validateRefineOutput(raw, input) {
-    const titleFallback = cleanText(input.user_title, 'Civic issue report', 120);
-    const descFallback = cleanText(input.user_description, 'Issue requires municipal attention.', 320);
-
-    const confidence = clamp(toNumber(raw?.confidence_alignment, 0.6), 0, 1);
-    const matched = typeof raw?.matched === 'boolean' ? raw.matched : confidence >= 0.65;
-
-    return {
-        title: cleanText(raw?.title, titleFallback, 120),
-        description: cleanText(raw?.description, descFallback, 320),
-        matched,
-        confidence_alignment: Number(confidence.toFixed(3)),
-        severity_reason: cleanText(raw?.severity_reason, 'Issue can affect public safety and daily movement.', 200),
-    };
-}
-
-function validateExplainOutput(raw, input) {
-    const severityReasonFallback = `${input.label || 'This issue'} at ${input.location || 'the reported location'} needs attention due to ${input.severity || 'its impact'}.`;
-
-    return {
-        explanation: cleanText(raw?.explanation, 'This civic issue should be addressed to avoid further public inconvenience and safety risk.', 360),
-        next_step: cleanText(raw?.next_step, 'Please monitor updates and escalate with local authorities if unresolved.', 200),
-        severity_reason: cleanText(raw?.severity_reason, severityReasonFallback, 220),
-        confidence_alignment: Number(clamp(toNumber(raw?.confidence_alignment, 0.7), 0, 1).toFixed(3)),
-        matched: toBool(raw?.matched, true),
-    };
-}
+const REFINE_SCHEMA = {
+    type: 'OBJECT',
+    properties: {
+        title: { type: 'STRING' },
+        description: { type: 'STRING' },
+    },
+    required: ['title', 'description'],
+};
 
 router.post('/refine', protect, async (req, res) => {
+    const title = clean(req.body?.title ?? req.body?.user_title, 120);
+    const description = clean(req.body?.description ?? req.body?.user_description, 600);
+    const category = clean(req.body?.category, 40) || 'other';
+    if (!title && !description) return res.status(400).json({ message: 'Write a title or description first.' });
+
     try {
-        const payload = {
-            detected_issue: sanitizeText(req.body?.detected_issue, 120) || 'civic issue',
-            category: sanitizeText(req.body?.category, 60) || 'other',
-            user_title: sanitizeText(req.body?.user_title, 120) || 'Issue reported',
-            user_description: sanitizeText(req.body?.user_description, 320) || 'Citizen reported a civic issue requiring action.',
-        };
-
-        const userPrompt = getRefineUserPrompt(payload);
-        const startedAt = Date.now();
-        const raw = await generateJSON(REFINE_SYSTEM, userPrompt);
-        const llmLatencyMs = Date.now() - startedAt;
-
-        const data = validateRefineOutput(raw || {}, payload);
-
-        return res.json({
-            ok: true,
-            data,
-            llmLatencyMs,
+        const { json, model } = await generate({
+            system: REFINE_SYSTEM,
+            schema: REFINE_SCHEMA,
+            temperature: 0.3,
+            maxOutputTokens: 250,
+            contents: [{
+                role: 'user',
+                parts: [{ text: `Category: ${category}\nTitle: ${title || '(none)'}\nDescription: ${description || '(none)'}` }],
+            }],
         });
+        if (!json?.title) throw new Error('empty result');
+        res.json({ title: clean(json.title, 80), description: clean(json.description, 600), model });
     } catch (error) {
-        console.error('[AI refine] error:', error);
-        return res.status(500).json({
-            ok: false,
-            error: 'Failed to refine issue description',
-        });
+        console.warn('[ai/refine]', error.message);
+        res.status(503).json({ message: 'AI writing help is unavailable right now.' });
     }
 });
 
+const EXPLAIN_SYSTEM = `You explain a reported civic issue to a citizen of an Indian city in plain,
+calm language. Be specific to the issue's category, severity and status. Do not invent
+facts about this particular case (no dates, names or promises). Keep each field short.`;
+
+const EXPLAIN_SCHEMA = {
+    type: 'OBJECT',
+    properties: {
+        why_it_matters: { type: 'STRING', description: 'One or two sentences on the risk or impact.' },
+        what_happens_next: { type: 'STRING', description: 'What the municipality typically does at this status.' },
+        stay_safe: { type: 'STRING', description: 'One practical safety tip for people nearby.' },
+    },
+    required: ['why_it_matters', 'what_happens_next', 'stay_safe'],
+};
+
 router.post('/explain', protect, async (req, res) => {
+    const facts = {
+        title: clean(req.body?.title ?? req.body?.label, 120) || 'civic issue',
+        category: clean(req.body?.category, 40) || 'other',
+        severity: clean(req.body?.severity, 20) || 'Medium',
+        status: clean(req.body?.status, 30) || 'Submitted',
+        department: clean(req.body?.department, 60) || 'the municipality',
+    };
     try {
-        const payload = {
-            category: sanitizeText(req.body?.category, 60) || 'other',
-            label: sanitizeText(req.body?.label, 120) || 'civic issue',
-            severity: sanitizeText(req.body?.severity, 40) || 'Medium',
-            location: sanitizeText(req.body?.location, 160) || 'reported location',
-            status: sanitizeText(req.body?.status, 60) || 'Submitted',
-        };
-
-        const basePrompt = getExplainUserPrompt(payload);
-        const userPrompt = `${basePrompt}\n\nReturn JSON:\n{\n  "explanation": "Short educational explanation",\n  "next_step": "One clear practical next step",\n  "severity_reason": "Why severity level is justified",\n  "matched": true,\n  "confidence_alignment": 0.88\n}`;
-
-        const startedAt = Date.now();
-        const raw = await generateJSON(EXPLAIN_SYSTEM, userPrompt);
-        const llmLatencyMs = Date.now() - startedAt;
-
-        const data = validateExplainOutput(raw || {}, payload);
-
-        return res.json({
-            ok: true,
-            data,
-            llmLatencyMs,
+        const { json, model } = await generate({
+            system: EXPLAIN_SYSTEM,
+            schema: EXPLAIN_SCHEMA,
+            temperature: 0.4,
+            maxOutputTokens: 300,
+            contents: [{ role: 'user', parts: [{ text: JSON.stringify(facts) }] }],
+        });
+        if (!json?.why_it_matters) throw new Error('empty result');
+        res.json({
+            whyItMatters: clean(json.why_it_matters, 400),
+            whatHappensNext: clean(json.what_happens_next, 400),
+            staySafe: clean(json.stay_safe, 300),
+            model,
         });
     } catch (error) {
-        console.error('[AI explain] error:', error);
-        return res.status(500).json({
-            ok: false,
-            error: 'Failed to generate issue explanation',
-        });
+        console.warn('[ai/explain]', error.message);
+        res.status(503).json({ message: 'AI insight is unavailable right now.' });
     }
 });
 

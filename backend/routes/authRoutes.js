@@ -9,7 +9,8 @@ const SALT_ROUNDS = 10;
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
     try {
-        const { name, email, password, role, username } = req.body;
+        // Public sign-up always creates a citizen; staff roles are granted by an admin.
+        const { name, email, password, username } = req.body;
         if (!name || !email || !password) {
             return res.status(400).json({ message: 'Name, email, and password are required' });
         }
@@ -39,7 +40,7 @@ router.post('/register', async (req, res) => {
         const user = await store.createUser({
             name, email, password_hash,
             username: username ? username.toLowerCase() : null,
-            role: role || 'citizen',
+            role: 'citizen',
             points: 0, badges: [], reports_count: 0, reports_resolved: 0,
             impact_score: 0, region: 'General',
         });

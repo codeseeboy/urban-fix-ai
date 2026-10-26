@@ -4,9 +4,9 @@ const IS_LOCAL =
   typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
-const BASE_URL = IS_LOCAL
-  ? "http://localhost:5000/api"
-  : (process.env.NEXT_PUBLIC_API_URL || "https://urban-fix-ai.onrender.com/api");
+// Served from anywhere else (rag-pc, a tunnel), the dashboard calls its own origin and
+// Next.js proxies /api to the backend (see next.config.ts), so no API URL is baked in.
+const BASE_URL = IS_LOCAL ? "http://localhost:5000/api" : process.env.NEXT_PUBLIC_API_URL || "/api";
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -79,6 +79,10 @@ export const notificationsAPI = {
 
 export const usersAPI = {
   getProfile: () => api.get("/users/profile"),
+  getWorkers: () => api.get("/users/staff/workers"),
+  createStaff: (data: { name: string; email: string; password: string; department?: string; role?: string }) =>
+    api.post("/users/staff", data),
+  setRole: (id: string, data: { role?: string; department?: string }) => api.put(`/users/${id}/role`, data),
 };
 
 export const gamificationAPI = {
@@ -98,5 +102,19 @@ export const municipalAPI = {
     api.post(`/municipal/${id}/post`, data),
   getPosts: (id: string) => api.get(`/municipal/${id}/posts`),
 };
+
+export const bdaAPI = {
+  overview: () => api.get("/bda/overview"),
+  fusion: (ward?: string) => api.get("/bda/fusion", { params: ward ? { ward } : {} }),
+  wards: () => api.get("/bda/wards"),
+  planner: (rain: number, lag: number) => api.get("/bda/planner", { params: { rain, lag } }),
+  quality: () => api.get("/bda/quality"),
+  ml: () => api.get("/bda/ml"),
+  outlook: () => api.get("/bda/outlook"),
+  patterns: () => api.get("/bda/patterns"),
+  jobs: () => api.get("/bda/jobs"),
+};
+
+export const API_BASE = BASE_URL;
 
 export default api;

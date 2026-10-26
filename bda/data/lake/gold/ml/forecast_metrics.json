@@ -1,0 +1,54 @@
+{
+  "question": "How many incidents will a ward log, given rain today and the previous 3 days?",
+  "split": "blocked hold-out: every 5th ISO week is test",
+  "train_rows": 7104,
+  "test_rows": 1680,
+  "label": "complaint_count",
+  "features": [
+    "ward",
+    "rain_d0",
+    "rain_d1",
+    "rain_d2",
+    "rain_d3",
+    "rain_2d",
+    "month",
+    "is_monsoon",
+    "drainage_capacity"
+  ],
+  "models": {
+    "random_forest": {
+      "rmse": 1.0158,
+      "mae": 0.7701,
+      "r2": 0.263
+    },
+    "linear_regression": {
+      "rmse": 1.0055,
+      "mae": 0.7575,
+      "r2": 0.2779
+    },
+    "baseline_ward_mean": {
+      "rmse": 1.1716,
+      "mae": 0.8442,
+      "r2": 0.0196
+    },
+    "random_forest_wet_days": {
+      "rmse": 1.5804,
+      "mae": 1.251,
+      "r2": 0.0972
+    },
+    "baseline_wet_days": {
+      "rmse": 2.0513,
+      "mae": 1.5206,
+      "r2": -0.521
+    }
+  },
+  "best_model": "linear_regression",
+  "rmse_improvement_vs_baseline": 0.1418,
+  "wet_day_rmse_improvement_vs_baseline": 0.2296,
+  "random_forest_params": {
+    "numTrees": 80,
+    "maxDepth": 8,
+    "minInstancesPerNode": 5
+  },
+  "scenario_assumptions": "month = July (monsoon); only the scenario rain is non-zero"
+}

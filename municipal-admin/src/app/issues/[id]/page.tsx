@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { issuesAPI } from "@/lib/api";
+import { issuesAPI, usersAPI } from "@/lib/api";
 import { formatDate, SEVERITY_COLORS, STATUS_COLORS, DEPARTMENTS } from "@/lib/utils";
 import {
   ArrowLeft, MapPin, Clock, Users, MessageSquare, AlertTriangle,
-  CheckCircle2, ChevronRight, Send, Zap, Building2,
+  CheckCircle2, ChevronRight, Send, Zap, Building2, HardHat, CalendarClock,
 } from "lucide-react";
 
 export default function IssueDetailPage() {
@@ -21,6 +21,10 @@ export default function IssueDetailPage() {
   const [statusComment, setStatusComment] = useState("");
   const [deptAssign, setDeptAssign] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [workers, setWorkers] = useState<any[]>([]);
+  const [workerId, setWorkerId] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [actionError, setActionError] = useState("");
 
   const loadIssueData = async (issueId: string) => {
     const [issueRes, reportsRes, upvotersRes, downvotersRes] = await Promise.allSettled([
@@ -37,6 +41,8 @@ export default function IssueDetailPage() {
     const issueData = issueRes.value.data;
     setIssue(issueData);
     setDeptAssign(issueData.departmentTag || "");
+    setWorkerId(issueData.assignedTo || "");
+    setDeadline(issueData.deadline ? String(issueData.deadline).slice(0, 10) : "");
 
     if (reportsRes.status === "fulfilled") {
       const reportRows = reportsRes.value.data?.reports;
@@ -61,6 +67,10 @@ export default function IssueDetailPage() {
   };
 
   useEffect(() => {
+    usersAPI.getWorkers().then(({ data }) => setWorkers(Array.isArray(data) ? data : [])).catch(() => setWorkers([]));
+  }, []);
+
+  useEffect(() => {
     if (!id) return;
     loadIssueData(id as string)
       .catch(() => router.replace("/issues"))
@@ -75,8 +85,26 @@ export default function IssueDetailPage() {
       await loadIssueData(id as string);
       setStatusUpdate("");
       setStatusComment("");
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setActionError(e?.response?.data?.message || "Could not update status");
+    }
+    setUpdating(false);
+  };
+
+  const handleAssignWorker = async () => {
+    if (!workerId || updating) return;
+    setUpdating(true);
+    setActionError("");
+    try {
+      const w = workers.find((x) => x._id === workerId);
+      await issuesAPI.assign(id as string, {
+        assignedTo: workerId,
+        departmentTag: deptAssign || w?.department || undefined,
+        deadline: deadline ? new Date(deadline + "T18:00:00").toISOString() : undefined,
+      });
+      await loadIssueData(id as string);
+    } catch (e: any) {
+      setActionError(e?.response?.data?.message || "Could not assign worker");
     }
     setUpdating(false);
   };
@@ -174,6 +202,29 @@ export default function IssueDetailPage() {
               ))}
             </div>
           </div>
+
+          {/* Resolution proof */}
+          {issue.resolutionProof?.afterImage && (
+            <div className="glass-card p-3 sm:p-5">
+              <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Resolution Proof
+              </h2>
+              <div className="grid grid-cols-2 gap-3">
+                {[{ label: "Before", src: issue.image }, { label: "After", src: issue.resolutionProof.afterImage }].map((p) => (
+                  <div key={p.label}>
+                    {p.src ? <img src={p.src} alt={p.label} className="w-full h-44 object-cover rounded-lg border border-white/[0.06]" /> : <div className="w-full h-44 rounded-lg bg-white/[0.03]" />}
+                    <p className={`text-[11px] mt-1.5 ${p.label === "After" ? "text-emerald-400" : "text-white/40"}`}>{p.label}</p>
+                  </div>
+                ))}
+              </div>
+              {issue.resolutionProof.workerRemarks && (
+                <p className="text-xs text-white/55 mt-3">&ldquo;{issue.resolutionProof.workerRemarks}&rdquo;</p>
+              )}
+              {issue.resolutionProof.resolvedAt && (
+                <p className="text-[10px] text-white/30 mt-1">Resolved {formatDate(issue.resolutionProof.resolvedAt)}</p>
+              )}
+            </div>
+          )}
 
           {/* Community Reports */}
           {reports.length > 0 && (
@@ -298,6 +349,51 @@ export default function IssueDetailPage() {
             </button>
           </div>
 
+          {/* Assign Field Worker */}
+          <div className="glass-card p-3 sm:p-5">
+            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+              <HardHat className="w-4 h-4 text-amber-400" /> Assign Field Worker
+            </h3>
+            {workers.length === 0 ? (
+              <p className="text-xs text-white/40">
+                No field workers yet. Add one on the <a href="/workers" className="text-blue-400 hover:underline">Workers</a> page.
+              </p>
+            ) : (
+              <>
+                <select
+                  value={workerId}
+                  onChange={(e) => setWorkerId(e.target.value)}
+                  className="w-full h-9 px-3 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-white/70 focus:outline-none mb-2"
+                >
+                  <option value="">Select worker...</option>
+                  {workers.map((w) => (
+                    <option key={w._id} value={w._id}>
+                      {w.name}{w.department ? ` · ${w.department}` : ""} — {w.activeTasks} active
+                    </option>
+                  ))}
+                </select>
+                <label className="text-[10px] text-white/35 flex items-center gap-1 mb-1">
+                  <CalendarClock className="w-3 h-3" /> Deadline
+                </label>
+                <input
+                  type="date"
+                  value={deadline}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  className="w-full h-9 px-3 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-white/70 focus:outline-none mb-2 [color-scheme:dark]"
+                />
+                <button
+                  onClick={handleAssignWorker}
+                  disabled={!workerId || updating}
+                  className="w-full h-9 bg-amber-500 hover:bg-amber-600 text-black text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition disabled:opacity-40"
+                >
+                  {issue.assignedTo && issue.assignedTo === workerId ? "Update assignment" : "Assign worker"}
+                </button>
+              </>
+            )}
+            {actionError && <p className="text-[11px] text-red-400 mt-2">{actionError}</p>}
+          </div>
+
           {/* Assign Department */}
           <div className="glass-card p-3 sm:p-5">
             <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
@@ -330,6 +426,7 @@ export default function IssueDetailPage() {
               { label: "Upvotes", value: issue.upvotes?.length || 0 },
               { label: "Downvotes", value: issue.downvotes?.length || 0 },
               { label: "Assigned To", value: issue.assignedToUser?.name || "—" },
+              { label: "Deadline", value: issue.deadline ? formatDate(issue.deadline) : "—" },
               { label: "Resolved By", value: issue.resolvedByUser?.name || "—" },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between text-xs">

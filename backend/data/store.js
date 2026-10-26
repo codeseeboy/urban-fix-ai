@@ -122,7 +122,12 @@ async function getCitizensLeaderboard() {
 // ISSUE QUERIES
 // ════════════════════════════════════════════════════════════════════════════
 
-async function getIssues(filter, userId, municipalPageId = null, authorType = null, limit = null, offset = 0) {
+/**
+ * @param {object} [opts]
+ * @param {string} [opts.assignedTo]  only issues assigned to this user (field-worker task list)
+ * @param {string} [opts.search]      case-insensitive match on title, description or address
+ */
+async function getIssues(filter, userId, municipalPageId = null, authorType = null, limit = null, offset = 0, opts = {}) {
     return withRetry(async () => {
         const parsedLimit = limit ? Math.min(Math.max(parseInt(limit, 10) || 0, 1), 100) : null;
         const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
@@ -130,6 +135,16 @@ async function getIssues(filter, userId, municipalPageId = null, authorType = nu
 
         if (municipalPageId) {
             query = query.eq('municipal_page_id', municipalPageId);
+        }
+
+        if (opts.assignedTo) {
+            query = query.eq('assigned_to', opts.assignedTo);
+        }
+
+        // Strip characters that are syntax in PostgREST's or() filter.
+        const search = String(opts.search || '').replace(/[%,()*:"\\]/g, ' ').trim().slice(0, 80);
+        if (search) {
+            query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,location_address.ilike.%${search}%`);
         }
 
         if (authorType === 'MunicipalPage' || authorType === 'User') {
@@ -192,7 +207,9 @@ async function getIssues(filter, userId, municipalPageId = null, authorType = nu
             issues.sort((a, b) => (countMap[b.id] || 0) - (countMap[a.id] || 0));
         }
 
-        if (parsedLimit) {
+        // following/trending are filtered or sorted in memory, so page them here;
+        // every other filter was already paged by the range() above.
+        if (parsedLimit && (filter === 'following' || filter === 'trending')) {
             issues = issues.slice(parsedOffset, parsedOffset + parsedLimit);
         }
 

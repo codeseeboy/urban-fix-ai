@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import {
   LayoutDashboard, MapPin, AlertTriangle, Users, BarChart3,
-  Building2, Bell, Settings, LogOut, ChevronLeft, ChevronRight, Shield, X, Menu,
+  Building2, Bell, Settings, LogOut, ChevronLeft, ChevronRight, Shield, X, Menu, CloudRain,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
@@ -16,6 +16,7 @@ const NAV = [
   { href: "/map", label: "Civic Map", icon: MapPin },
   { href: "/workers", label: "Field Workers", icon: Users },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/bda", label: "Monsoon Intelligence", icon: CloudRain },
   { href: "/municipal", label: "Municipal Pages", icon: Building2 },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },

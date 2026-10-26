@@ -1,0 +1,99 @@
+{
+  "expo": {
+    "name": "UrbanFix",
+    "slug": "urbanfix",
+    "scheme": "urbanfix",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B1021",
+    "android": {
+      "package": "com.urbanfix.ai",
+      "versionCode": 20,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundImage": "./assets/adaptive-bg.png",
+        "backgroundColor": "#0F152D"
+      },
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "ios": {
+      "bundleIdentifier": "com.urbanfix.ai",
+      "supportsTablet": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 140,
+          "resizeMode": "contain",
+          "backgroundColor": "#0B1021"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-font",
+        {
+          "android": {
+            "fonts": [
+              {
+                "fontFamily": "Inter",
+                "fontDefinitions": [
+                  { "path": "node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf", "weight": 400 },
+                  { "path": "node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf", "weight": 500 },
+                  { "path": "node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf", "weight": 600 },
+                  { "path": "node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf", "weight": 700 },
+                  { "path": "node_modules/@expo-google-fonts/inter/800ExtraBold/Inter_800ExtraBold.ttf", "weight": 800 }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "UrbanFix uses your location to pin reports to the right place and show issues near you."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "UrbanFix uses the camera to photograph civic issues you report.",
+          "photosPermission": "UrbanFix lets you attach a photo of a civic issue from your gallery."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#2D7CF6"
+        }
+      ],
+      "expo-secure-store",
+      "expo-image",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

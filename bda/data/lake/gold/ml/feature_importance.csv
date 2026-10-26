@@ -1,0 +1,10 @@
+feature,importance
+ward,0.2983
+rain_d2,0.2252
+rain_d3,0.1529
+rain_d1,0.0999
+rain_2d,0.0743
+rain_d0,0.0659
+drainage_capacity,0.0504
+month,0.0281
+is_monsoon,0.0051

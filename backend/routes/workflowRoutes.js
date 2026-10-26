@@ -3,6 +3,8 @@ const router = express.Router();
 const { protect, admin, fieldWorker } = require('../middleware/authMiddleware');
 const store = require('../data/store');
 const NotificationService = require('../services/notificationService');
+const upload = require('../config/multer');
+const { uploadFile } = require('../config/storage');
 
 // PUT /api/workflows/:id/status — Admin: Change issue status
 router.put('/:id/status', protect, admin, async (req, res) => {
@@ -108,12 +110,24 @@ router.put('/:id/assign', protect, admin, async (req, res) => {
     }
 });
 
-// PUT /api/workflows/:id/worker-update — Field worker: Update progress + proof
-router.put('/:id/worker-update', protect, fieldWorker, async (req, res) => {
+// PUT /api/workflows/:id/worker-update — Field worker: Update progress + proof.
+// Accepts JSON or multipart; a Resolved update must carry a real after-photo
+// (uploaded `image` file or an existing `proofImage` URL).
+router.put('/:id/worker-update', protect, fieldWorker, upload.fields([{ name: 'image', maxCount: 1 }]), async (req, res) => {
     try {
-        const { status, proofImage, comment } = req.body;
+        const { status, comment } = req.body;
+        let proofImage = req.body.proofImage || null;
+        const file = req.files?.image?.[0];
+        if (file) proofImage = await uploadFile(file);
+
         const issue = await store.getIssueById(req.params.id);
         if (!issue) return res.status(404).json({ message: 'Issue not found' });
+        if (issue.assigned_to && issue.assigned_to !== req.user._id && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'This task is assigned to another worker' });
+        }
+        if (status === 'Resolved' && !proofImage) {
+            return res.status(400).json({ message: 'An after-photo is required to resolve a task' });
+        }
 
         const updates = {};
         if (status) {
@@ -133,8 +147,8 @@ router.put('/:id/worker-update', protect, fieldWorker, async (req, res) => {
             // Store resolution proof
             await store.setResolutionProof({
                 issue_id: issue.id,
-                after_image: proofImage || '/public/images/brokenfootpath.jpg',
-                worker_remarks: comment || 'Work completed and verified by site visit.',
+                after_image: proofImage,
+                worker_remarks: comment || '',
                 resolved_at: new Date().toISOString(),
                 resolved_by: req.user._id,
             });
@@ -160,6 +174,16 @@ router.put('/:id/worker-update', protect, fieldWorker, async (req, res) => {
         }
 
         const updatedIssue = await store.updateIssue(issue.id, updates);
+
+        if (status && issue.user_id && status !== issue.status) {
+            await NotificationService.sendToUser(
+                issue.user_id,
+                status === 'Resolved' ? `Fixed: ${issue.title.substring(0, 40)}` : `Work started: ${issue.title.substring(0, 40)}`,
+                status === 'Resolved' ? 'A field worker resolved your report and added an after-photo.' : 'A field worker is on site working on your report.',
+                { type: 'status', issueId: issue.id, navigationTarget: 'IssueDetails' }
+            ).catch(() => {});
+        }
+
         res.json({ ...updatedIssue, _id: updatedIssue.id });
     } catch (error) {
         console.error('Worker update error:', error.message);

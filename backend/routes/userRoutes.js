@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 const store = require('../data/store');
 const upload = require('../config/multer');
 const { uploadFile } = require('../config/storage');
@@ -192,6 +192,99 @@ router.post('/avatar', protect, upload.single('avatar'), async (req, res) => {
         });
     } catch (error) {
         console.error('Avatar upload error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// ── Staff management (municipal admins only) ────────────────────────────────
+
+const STAFF_ROLES = ['field_worker', 'department_admin', 'admin', 'citizen'];
+
+// GET /api/users/staff/workers — Field workers with their live workload
+router.get('/staff/workers', protect, admin, async (req, res) => {
+    try {
+        const { data: workers, error } = await store.supabase
+            .from('users')
+            .select('id, name, email, avatar, department, account_status, last_login_at, created_at')
+            .eq('role', 'field_worker')
+            .order('name');
+        if (error) throw new Error(error.message);
+
+        const ids = (workers || []).map((w) => w.id);
+        const { data: tasks } = ids.length
+            ? await store.supabase.from('issues').select('assigned_to, status, deadline').in('assigned_to', ids)
+            : { data: [] };
+
+        const now = Date.now();
+        res.json((workers || []).map((w) => {
+            const mine = (tasks || []).filter((t) => t.assigned_to === w.id);
+            const open = mine.filter((t) => t.status !== 'Resolved' && t.status !== 'Rejected');
+            return {
+                _id: w.id,
+                name: w.name,
+                email: w.email,
+                avatar: w.avatar,
+                department: w.department,
+                status: w.account_status || 'active',
+                lastLoginAt: w.last_login_at,
+                createdAt: w.created_at,
+                activeTasks: open.length,
+                inProgress: open.filter((t) => t.status === 'InProgress').length,
+                overdue: open.filter((t) => t.deadline && new Date(t.deadline).getTime() < now).length,
+                resolved: mine.filter((t) => t.status === 'Resolved').length,
+            };
+        }));
+    } catch (error) {
+        console.error('List workers error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// POST /api/users/staff — Admin creates a field worker / staff account
+router.post('/staff', protect, admin, async (req, res) => {
+    try {
+        const { name, email, password, department, role = 'field_worker' } = req.body || {};
+        if (!name || !email || !password) return res.status(400).json({ message: 'Name, email and password are required' });
+        if (String(password).length < 8) return res.status(400).json({ message: 'Password must be at least 8 characters' });
+        if (!STAFF_ROLES.includes(role) || role === 'citizen') return res.status(400).json({ message: 'Invalid staff role' });
+        if (role === 'admin' && req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+            return res.status(403).json({ message: 'Only admins can create admin accounts' });
+        }
+        const normalizedEmail = String(email).trim().toLowerCase();
+        if (await store.getUserByEmail(normalizedEmail)) return res.status(400).json({ message: 'This email is already registered' });
+
+        const bcrypt = require('bcryptjs');
+        const user = await store.createUser({
+            name: String(name).trim(),
+            email: normalizedEmail,
+            password_hash: await bcrypt.hash(String(password), 10),
+            role,
+            department: department || null,
+            points: 0, badges: [], reports_count: 0, reports_resolved: 0, impact_score: 0, region: 'General',
+        });
+        res.status(201).json({ _id: user.id, name: user.name, email: user.email, role: user.role, department: user.department });
+    } catch (error) {
+        console.error('Create staff error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// PUT /api/users/:id/role — Admin changes a user's role / department
+router.put('/:id/role', protect, admin, async (req, res) => {
+    try {
+        const { role, department } = req.body || {};
+        if (role && !STAFF_ROLES.includes(role)) return res.status(400).json({ message: 'Invalid role' });
+        if (req.params.id === req.user._id) return res.status(400).json({ message: 'You cannot change your own role' });
+        if (role === 'admin' && req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+            return res.status(403).json({ message: 'Only admins can grant admin access' });
+        }
+        const updates = {};
+        if (role) updates.role = role;
+        if (department !== undefined) updates.department = department || null;
+        const u = await store.updateUser(req.params.id, updates);
+        res.json({ _id: u.id, name: u.name, email: u.email, role: u.role, department: u.department });
+    } catch (error) {
+        console.error('Update role error:', error.message);
         res.status(500).json({ message: error.message });
     }
 });

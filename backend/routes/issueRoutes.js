@@ -23,6 +23,20 @@ function getTimeAgo(dateStr) {
     return `${days}d ago`;
 }
 
+/**
+ * Validate a GPS accuracy radius from the app. Phones commonly report 10-60 m near
+ * buildings, so the ceiling (MAX_GPS_ACCURACY_M, default 100) must be realistic or
+ * genuine reports are rejected. A missing value is treated as a typical 25 m fix.
+ */
+function readAccuracy(accuracyMeters) {
+    const max = Number(process.env.MAX_GPS_ACCURACY_M || 100);
+    if (accuracyMeters === null || accuracyMeters === undefined || accuracyMeters === '') return { acc: 25, error: null };
+    const acc = Number(accuracyMeters);
+    if (!Number.isFinite(acc) || acc < 0) return { acc: null, error: 'Invalid location accuracy' };
+    if (acc > max) return { acc, error: `GPS signal is too weak (±${Math.round(acc)} m). Step outside or wait a few seconds and try again.` };
+    return { acc, error: null };
+}
+
 function haversineDistanceMeters(lat1, lon1, lat2, lon2) {
     // Great-circle distance for small radii (meters).
     const toRad = (d) => (d * Math.PI) / 180;
@@ -213,17 +227,103 @@ async function enrichIssue(issue, req, options = {}) {
     };
 }
 
+/**
+ * Enrich a page of issues for list views in a fixed number of queries.
+ *
+ * enrichIssue() is right for one issue but costs ~7 round trips per issue, so a
+ * 20-item feed made 140+ database calls and took tens of seconds. This produces
+ * the same shape (minus timeline/proof, which list views never show) with five
+ * batched queries regardless of page size.
+ */
+async function enrichIssuesBatch(issues) {
+    if (!issues.length) return [];
+    const ids = issues.map((i) => i.id);
+    const userIds = [...new Set(issues.filter((i) => i.author_type !== 'MunicipalPage' && i.user_id).map((i) => i.user_id))];
+    const pageIds = [...new Set(issues.filter((i) => i.author_type === 'MunicipalPage' && i.municipal_page_id).map((i) => i.municipal_page_id))];
+    const db = store.supabase;
+
+    const [users, pages, ups, downs, follows, comments] = await Promise.all([
+        userIds.length ? db.from('users').select('id, name, avatar, role').in('id', userIds) : { data: [] },
+        pageIds.length ? db.from('municipal_pages').select('id, name, avatar, handle, verified').in('id', pageIds) : { data: [] },
+        db.from('issue_upvotes').select('issue_id, user_id').in('issue_id', ids),
+        db.from('issue_downvotes').select('issue_id, user_id').in('issue_id', ids),
+        db.from('issue_followers').select('issue_id, user_id').in('issue_id', ids),
+        db.from('comments').select('issue_id').in('issue_id', ids),
+    ]);
+
+    const byId = (rows) => new Map((rows || []).map((r) => [r.id, r]));
+    const groupUsers = (rows) => {
+        const m = new Map();
+        for (const r of rows || []) {
+            if (!m.has(r.issue_id)) m.set(r.issue_id, []);
+            m.get(r.issue_id).push(r.user_id);
+        }
+        return m;
+    };
+    const userMap = byId(users.data);
+    const pageMap = byId(pages.data);
+    const upMap = groupUsers(ups.data);
+    const downMap = groupUsers(downs.data);
+    const followMap = groupUsers(follows.data);
+    const commentCounts = new Map();
+    for (const c of comments.data || []) commentCounts.set(c.issue_id, (commentCounts.get(c.issue_id) || 0) + 1);
+
+    return issues.map((issue) => {
+        let author;
+        if (issue.author_type === 'MunicipalPage') {
+            const pg = pageMap.get(issue.municipal_page_id);
+            author = pg ? { _id: pg.id, name: pg.name, avatar: pg.avatar, handle: pg.handle, isPage: true, verified: pg.verified } : { name: 'Unknown Page' };
+        } else {
+            const u = issue.user_id ? userMap.get(issue.user_id) : null;
+            author = u ? { _id: u.id, name: u.name, avatar: u.avatar, role: u.role } : { name: 'Anonymous' };
+        }
+        return {
+            _id: issue.id,
+            user: author,
+            title: issue.title,
+            description: issue.description,
+            image: resolveImageUrl(issue.image),
+            video: issue.video,
+            location: {
+                type: 'Point',
+                coordinates: [issue.location_longitude || 0, issue.location_latitude || 0],
+                address: issue.location_address || '',
+            },
+            departmentTag: issue.department_tag,
+            status: issue.status,
+            category: issue.category,
+            priorityScore: issue.priority_score,
+            aiSeverity: issue.ai_severity,
+            aiTags: issue.ai_tags || [],
+            upvotes: upMap.get(issue.id) || [],
+            downvotes: downMap.get(issue.id) || [],
+            followers: followMap.get(issue.id) || [],
+            commentCount: commentCounts.get(issue.id) || 0,
+            statusTimeline: [],
+            resolutionProof: null,
+            assignedTo: issue.assigned_to,
+            resolvedBy: issue.resolved_by,
+            deadline: issue.deadline,
+            anonymous: issue.anonymous,
+            emergency: issue.emergency,
+            authorType: issue.author_type,
+            municipalPage: issue.municipal_page_id,
+            officialUpdateType: issue.official_update_type,
+            timeAgo: getTimeAgo(issue.created_at),
+            createdAt: issue.created_at,
+            updatedAt: issue.updated_at,
+        };
+    });
+}
+
 // GET /api/issues — Feed with filters
 router.get('/', async (req, res) => {
     try {
-        const { filter, userId, municipalPageId, authorType } = req.query;
+        const { filter, userId, municipalPageId, authorType, assignedTo, search } = req.query;
         const limit = req.query.limit ? Math.min(parseInt(req.query.limit, 10) || 50, 100) : null;
         const offset = req.query.offset ? Math.max(parseInt(req.query.offset, 10) || 0, 0) : 0;
-        const issues = await store.getIssues(filter, userId, municipalPageId, authorType, limit, offset);
-        const enriched = await Promise.all(
-            issues.map(i => enrichIssue(i, req, { includeTimelineProof: false }))
-        );
-        res.json(enriched);
+        const issues = await store.getIssues(filter, userId, municipalPageId, authorType, limit, offset, { assignedTo, search });
+        res.json(await enrichIssuesBatch(issues));
     } catch (error) {
         console.error('GET /issues error:', error.message);
         res.status(500).json({ message: error.message });
@@ -273,17 +373,13 @@ router.get('/municipal-feed', protect, async (req, res) => {
             });
 
         const feedRows = prioritized.slice(offset, offset + limit);
-        const enriched = await Promise.all(
-            feedRows.map(async (row) => {
-                const payload = await enrichIssue(row.issue, req, { includeTimelineProof: false });
-                return {
-                    ...payload,
-                    isSeen: row.isSeen,
-                    isFollowingPage: row.isFollowingPage,
-                    feedBucket: row.bucket,
-                };
-            })
-        );
+        const views = await enrichIssuesBatch(feedRows.map((row) => row.issue));
+        const enriched = views.map((payload, idx) => ({
+            ...payload,
+            isSeen: feedRows[idx].isSeen,
+            isFollowingPage: feedRows[idx].isFollowingPage,
+            feedBucket: feedRows[idx].bucket,
+        }));
 
         res.json(enriched);
     } catch (error) {
@@ -419,19 +515,12 @@ router.post('/analyze-image', protect, upload.fields([{ name: 'image', maxCount:
         if (!imageFile || !imageFile.buffer) {
             return res.status(400).json({ message: 'Image is required' });
         }
-
         const aiService = require('../services/ai');
-        const result = await aiService.callFastAPIAnalyze(imageFile.buffer, imageFile.originalname);
-
-        if (!result) {
-            return res.status(503).json({
-                message: 'AI service unavailable — please try again or fill manually',
-                fallback: true,
-            });
-        }
-
+        const result = await aiService.analyzeImage({ buffer: imageFile.buffer, note: req.body?.note });
         res.json(result);
     } catch (error) {
+        if (error.code === 'BAD_IMAGE') return res.status(400).json({ message: error.message });
+        if (error.code === 'AI_UNAVAILABLE') return res.status(503).json({ message: error.message, fallback: true });
         console.error('POST /analyze-image error:', error.message);
         res.status(500).json({ message: error.message });
     }
@@ -457,20 +546,15 @@ router.post('/duplicate-check', protect, async (req, res) => {
         if (typeof lat !== 'number' || !Number.isFinite(lat) || typeof lon !== 'number' || !Number.isFinite(lon)) {
             return res.status(400).json({ message: 'Valid latitude/longitude are required' });
         }
-        if (accuracyMeters === null || accuracyMeters === undefined) {
-            return res.status(400).json({ message: 'Location accuracy is required' });
-        }
-        const acc = Number(accuracyMeters);
-        if (!Number.isFinite(acc) || acc > 15) {
-            return res.status(400).json({ message: 'Location accuracy is too low (need <= 15m)' });
-        }
+        const { acc, error: accuracyError } = readAccuracy(accuracyMeters);
+        if (accuracyError) return res.status(400).json({ message: accuracyError });
 
         const aiService = require('../services/ai');
         const tags = await aiService.generateTags({ category: category || 'other', description: description || '', title: title || '' });
         const newIssueType = inferIssueTypeForMatching({ category: category || 'other', title, description, aiTags: tags });
 
         const baseRadiusUsed = radiusMetersForType(newIssueType);
-        // Accuracy-based trust: if GPS was measured with some error (<=15m),
+        // Accuracy-based trust: widen the merge radius with GPS error,
         // expand the merge radius proportionally but keep it bounded.
         const effectiveRadiusUsed = Math.min(70, baseRadiusUsed + acc * 1.5);
         const radiusUsed = effectiveRadiusUsed;
@@ -591,13 +675,8 @@ router.post('/:id/add-report', protect, upload.fields([{ name: 'image', maxCount
         if (typeof lat !== 'number' || !Number.isFinite(lat) || typeof lon !== 'number' || !Number.isFinite(lon)) {
             return res.status(400).json({ message: 'Valid latitude/longitude are required' });
         }
-        if (accuracyMeters === null || accuracyMeters === undefined) {
-            return res.status(400).json({ message: 'Location accuracy is required' });
-        }
-        const acc = Number(accuracyMeters);
-        if (!Number.isFinite(acc) || acc > 15) {
-            return res.status(400).json({ message: 'Location accuracy is too low (need <= 15m)' });
-        }
+        const { acc, error: accuracyError } = readAccuracy(accuracyMeters);
+        if (accuracyError) return res.status(400).json({ message: accuracyError });
 
         // Enforce merge join evidence quality: require at least an image for joining duplicates.
         const hasImage = !!(req.files && req.files.image && req.files.image[0]);
@@ -793,7 +872,7 @@ router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name:
             if (uploaded) videoPath = uploaded;
         }
 
-        // AI analysis (uses rule-based logic now; swap to ML models via services/ai/index.js)
+        // AI analysis — Gemini vision on Vertex AI, rules fallback (services/ai)
         const aiService = require('../services/ai');
         const isEmergency = emergency === 'true' || emergency === true;
 
@@ -805,19 +884,8 @@ router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name:
             return res.status(400).json({ message: 'Valid latitude/longitude are required' });
         }
 
-        // Production trust rule: community reports must have accurate location (<= 15m).
-        // Municipal posts are created via /api/municipal/:id/post and use a different flow.
-        if (req.user?._id && (accuracyMeters !== null && accuracyMeters !== undefined)) {
-            const acc = Number(accuracyMeters);
-            if (!Number.isFinite(acc) || acc > 15) {
-                return res.status(400).json({ message: 'Location accuracy is too low (need <= 15m)' });
-            }
-        }
-
-        // If accuracy is missing for a non-anonymous user, block (trust + trust score readiness).
-        if (req.user?._id && (accuracyMeters === null || accuracyMeters === undefined)) {
-            return res.status(400).json({ message: 'Location accuracy is required for reliable reports' });
-        }
+        const { error: accuracyError } = readAccuracy(accuracyMeters);
+        if (accuracyError) return res.status(400).json({ message: accuracyError });
 
         const imageFile = req.files?.image?.[0] || null;
         const aiResult = await aiService.analyzeIssue({
@@ -831,6 +899,15 @@ router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name:
             imageBuffer: imageFile?.buffer || null,
             filename: imageFile?.originalname || null,
         });
+
+        // A photo the model is confident is not a civic issue (selfie, meme, indoor
+        // object) is rejected rather than published to every citizen's feed.
+        if (aiResult.isValid === false && (aiResult.analysis?.confidence ?? 0) >= 0.75) {
+            return res.status(422).json({
+                message: aiResult.rejectionReason || 'This photo does not look like a public civic issue.',
+                code: 'NOT_CIVIC_ISSUE',
+            });
+        }
 
         const anonymousBool = anonymous === 'true' || anonymous === true;
         const reporterUser = anonymousBool ? null : await store.getUserById(req.user._id);
@@ -850,7 +927,7 @@ router.post('/', protect, upload.fields([{ name: 'image', maxCount: 1 }, { name:
             location_source: location?.location_source || null,
             department_tag: aiResult.departmentTag,
             status: 'Submitted',
-            category: category || 'other',
+            category: aiResult.category,
             priority_score: aiResult.priorityScore,
             ai_severity: aiResult.aiSeverity,
             ai_tags: aiResult.aiTags,
