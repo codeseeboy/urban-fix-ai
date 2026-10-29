@@ -1,81 +1,66 @@
-# 🌆 UrbanFix AI
+# UrbanFix AI
 
-> A computer-vision civic-issue reporting platform. A citizen photographs a problem (pothole, garbage, broken streetlight…); the AI classifies the issue, scores how urgent it is, and routes it to the right municipal department. Final-year capstone project.
+A civic-issue reporting platform. A citizen photographs a problem (a pothole, overflowing garbage, a broken streetlight), the system works out what it is and how urgent it is, and routes it to the right municipal department. Field workers close it with a proof photo.
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
-![YOLO](https://img.shields.io/badge/YOLO-111F68?style=flat-square&logo=ultralytics&logoColor=white)
-![React Native](https://img.shields.io/badge/React%20Native-61DAFB?style=flat-square&logo=react&logoColor=black)
-![Expo](https://img.shields.io/badge/Expo-000020?style=flat-square&logo=expo&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=flat-square&logo=supabase&logoColor=white)
+**[Citizen web app](https://urban-fix-ai.vercel.app)** · Final-year capstone, B.Tech AI & ML
 
 ---
 
-## What it does
-
-1. **Report** — a citizen snaps a photo of a civic issue from the mobile app (with GPS location).
-2. **Classify** — the AI service identifies the issue type from the image using YOLO + an open-vocabulary vision model (SigLIP), so it generalizes beyond a fixed label set.
-3. **Prioritize** — the issue is scored for urgency.
-4. **Route** — it's sent to the correct municipal department.
-5. **Track** — citizens, admins, and field workers follow status through to resolution on their dashboards.
-
-## Features
-
-- 📸 Photo-based issue reporting with GPS location
-- 🧠 CV pipeline: YOLO object detection + SigLIP open-vocabulary classification + Transformers
-- ⚡ Automatic urgency scoring and department routing
-- 👥 Role-based access — Citizen / Municipal Admin / Field Worker
-- 🗺️ Map view of reported issues
-- 🔔 Status tracking and notifications
-
-## Architecture (monorepo)
+## How a report moves
 
 ```
-urban-fix-ai/
-├── ai-service/        # Python + FastAPI — CV inference (YOLO, SigLIP, Transformers)
-├── backend/           # Node.js + Express API — Supabase (PostgreSQL), auth, uploads
-├── frontend/          # Expo / React Native — citizen mobile app
-├── municipal-admin/   # Admin dashboard for municipal staff
-└── docs/              # Capstone report, architecture & model docs
+photo + GPS ──► classify issue ──► score urgency ──► route to department ──► assign worker ──► proof photo ──► resolved
+   mobile         AI service          backend              backend              admin            mobile
 ```
 
-## Tech stack
+Citizens, municipal admins and field workers each get their own view of the same issue, with status updates and notifications along the way.
 
-| Layer | Stack |
-| --- | --- |
-| AI service | Python, FastAPI, PyTorch, Ultralytics YOLO, SigLIP, Hugging Face Transformers |
-| Backend | Node.js, Express, Supabase (PostgreSQL), JWT, Multer, Firebase Admin |
-| Mobile app | Expo, React Native, React Navigation, Supabase |
-| Admin | Web dashboard |
+## The AI, and how it changed
+
+**v1: own vision models.** A FastAPI service (`ai-service/`) first runs SigLIP as an open-vocabulary router, then YOLOv8 specialist detectors for five categories (roads, lighting, trash, water, parks), and fuses the two scores (0.32 router, 0.68 specialist). Training scripts for the lighting, trash, water and parks detectors are in `colab/`; the road detector uses public weights from Hugging Face.
+
+**v2: hosted model.** The backend now calls Gemini Flash-Lite on Vertex AI for image understanding and for the in-app assistant (`backend/services/ai`). The v1 service is still in the repo and still runs on its own.
+
+## Rain and complaints: the data side
+
+`bda/` is a separate big-data mini project. It asks whether civic complaints in a Mumbai ward rise after heavy rain, and at what lag.
+
+- Rainfall is **real** (Open-Meteo / ERA5). Complaints are **simulated**, and every simulated row is flagged.
+- Pipeline: Kafka → data lake (HDFS) → Spark jobs for cleaning, analytics and an MLlib forecast (random forest and linear regression on a blocked hold-out).
+- Best model: RMSE 1.006, about 14% lower than a ward-average baseline. The results feed the *Monsoon Intelligence* tab in the admin dashboard.
+
+See [`bda/README.md`](bda/README.md) for the setup and the rules that keep the experiment honest.
+
+## Repository
+
+| Folder | What it is | Stack |
+| --- | --- | --- |
+| `mobile/` | Current app for citizens and field workers | Expo, React Native, TypeScript |
+| `frontend/` | First app, also built for the web (the live link) | Expo, React Native |
+| `backend/` | API, routing logic, notifications, Vertex AI calls | Node.js, Express, Supabase (PostgreSQL) |
+| `municipal-admin/` | Admin dashboard and Monsoon Intelligence | Next.js |
+| `ai-service/` | v1 vision service | Python, FastAPI, PyTorch, SigLIP, YOLOv8 |
+| `bda/` | Rainfall and complaints analysis | Kafka, HDFS, Spark |
+| `docs/` | Capstone report, architecture and model notes | |
 
 ## Run locally
 
-**AI service**
 ```bash
-cd ai-service
-pip install -r requirements.txt
-uvicorn app.main:app --reload      # http://localhost:8000
-```
-
-**Backend**
-```bash
-cd backend
-npm install
-cp .env.example .env               # add Supabase + AI service URL + keys
+# API
+cd backend && npm install
+# create .env with PORT, JWT_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+# VERTEX_PROJECT and VERTEX_LOCATION
 npm run dev
+
+# Mobile app
+cd mobile && npm install && npx expo start
+
+# Admin dashboard
+cd municipal-admin && npm install && npm run dev
+
+# v1 vision service (optional)
+cd ai-service && pip install -r requirements.txt
+uvicorn app.main:app --reload    # http://localhost:8000
 ```
 
-**Mobile app**
-```bash
-cd frontend
-npm install
-npx expo start
-```
-
-> 📄 Detailed design, model choices, and system flow are documented in [`docs/`](docs/).
-
----
-
-Built by **Shashikant Rajput** — [LinkedIn](https://www.linkedin.com/in/shashikant-rajput) · [Portfolio](https://ezzshashi.netlify.app)
+`render.yaml` describes the hosted setup (API, web app and AI service on Render).
